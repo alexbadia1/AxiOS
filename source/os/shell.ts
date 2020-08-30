@@ -73,6 +73,24 @@ module TSOS {
                                   "<string> - Sets the prompt.");
             this.commandList[this.commandList.length] = sc;
 
+            // date <string>
+            sc = new ShellCommand(this.shellDate, 
+                                'date', 
+                                '<string> - Current date and time.');
+            this.commandList[this.commandList.length] = sc;
+
+            // location <string>
+            sc = new ShellCommand(this.shellLocation,
+                                'location',
+                                '<string> - Current date and time.');
+            this.commandList[this.commandList.length] = sc;
+                                
+            // eightball <String>
+            sc = new ShellCommand(this.shellMagicEightball,
+                                'eightball',
+                                '<string> - Ask me anything...');
+            this.commandList[this.commandList.length] = sc;
+
             // ps  - list the running processes and their IDs
             // kill <id> - kills the specified process id.
 
@@ -234,6 +252,15 @@ module TSOS {
                     case "help":
                         _StdOut.putText("Help displays a list of (hopefully) valid commands.");
                         break;
+                    case "date":
+                        _StdOut.putText("Date displays the current date and time.");
+                        break;
+                    case "location":
+                        _StdOut.putText("Location displays the approximate current location.");
+                        break;
+                    case "eightball":
+                        _StdOut.putText("Eightball will answer all of your questions.");
+                        break;
                     // TODO: Make descriptive MANual page entries for the the rest of the shell commands here.
                     default:
                         _StdOut.putText("No manual entry for " + args[0] + ".");
@@ -284,5 +311,51 @@ module TSOS {
             }
         }
 
+        public shellDate(args: string[]){
+            var myDate = new Date();
+            _StdOut.putText("" + myDate);
+        }
+
+        public shellLocation(args: string[]) {
+            var myLocation = "Whiterun";
+            _StdOut.putText("Approximate location: " + myLocation);
+        }
+
+        public shellMagicEightball(args: string[]) {
+            var min = 0;
+            var max = 19;
+            if (args.length > 0) {
+                /// Eightball answers may be subject to copyright.
+                var answers = [ 
+                    "It is certain.", 
+                    "It is decidedly so.", 
+                    "Without a doubt.", 
+                    "Yes – definitely.", 
+                    "You may rely on it.", 
+                    "As I see it, yes.", 
+                    "Most likely.",
+                    "Outlook good.", 
+                    "Yes.", 
+                    "Signs point to yes.", 
+                    "Reply hazy, try again.", 
+                    "Ask again later.", 
+                    "Better not tell you now.",
+                    "Cannot predict now.",
+                    "Concentrate and ask again.", 
+                    "Don't count on it.",
+                    "My reply is no.",
+                    "My sources say no.", 
+                    "Outlook not so good.", 
+                    "Very doubtful."
+                ];
+
+                var randomNum = Math.floor(Math.random()*(19-0+1)+0);
+                var ans = answers[randomNum];
+                _StdOut.putText("" + ans);
+
+            } else {
+                _StdOut.putText("Usage: magic eightball <string>  Please supply a string.");
+            }
+        }
     }
 }
