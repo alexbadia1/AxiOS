@@ -40,7 +40,7 @@ module TSOS {
             // shutdown
             sc = new ShellCommand(this.shellShutdown,
                                   "shutdown",
-                                  "- Shuts down the virtual OS but leaves the underlying host / hardware simulation running.");
+                                  "- Shuts down the virtual OS but leaves the underlying host / hardware simulation running. Add the new features as specified in your Issues and iProject 1. Demonstrate programming best practices or Alan will get bitchy.");
             this.commandList[this.commandList.length] = sc;
 
             // cls
@@ -91,12 +91,27 @@ module TSOS {
                                 '<string> - Ask me anything...');
             this.commandList[this.commandList.length] = sc;
 
+            // status <String>
+            sc = new ShellCommand(this.shellStatus,
+                                'status',
+                                '<string> - message as specified by the user.');
+            this.commandList[this.commandList.length] = sc;
+
             // ps  - list the running processes and their IDs
             // kill <id> - kills the specified process id.
 
             // Display the initial prompt.
             this.putPrompt();
         }
+
+        /// Feed one letter at a time, so the putText
+        /// function can wrap if the X position will overflow.
+        /// 
+        /// The other strategy is to manipulate the string in the putLetter function
+        /// and calculated the width of the string and blah blah blah... in the end I still
+        /// call drawText multiple times and it's more math and it just makes the putText function
+        /// to complicated.
+        /// This is a higher layer of abstraction and a bit more readable than partitioning the string with math.
 
         public putPrompt() {
             _StdOut.putText(this.promptStr);
@@ -229,7 +244,9 @@ module TSOS {
             _StdOut.putText("Commands:");
             for (var i in _OsShell.commandList) {
                 _StdOut.advanceLine();
-                _StdOut.putText("  " + _OsShell.commandList[i].command + " " + _OsShell.commandList[i].description);
+                var words = "  " + _OsShell.commandList[i].command + " " + _OsShell.commandList[i].description;
+                _StdOut.putText(words);
+                //this.printEachLetter(words);
             }
         }
 
@@ -261,7 +278,9 @@ module TSOS {
                     case "eightball":
                         _StdOut.putText("Eightball will answer all of your questions.");
                         break;
-                    // TODO: Make descriptive MANual page entries for the the rest of the shell commands here.
+                    case "status":
+                        _StdOut.putText("Status will recieve a message as specified by the user.");
+                        break;
                     default:
                         _StdOut.putText("No manual entry for " + args[0] + ".");
                 }
@@ -311,14 +330,23 @@ module TSOS {
             }
         }
 
-        public shellDate(args: string[]){
+        public shellDate(){
             var myDate = new Date();
             _StdOut.putText("" + myDate);
         }
 
-        public shellLocation(args: string[]) {
+        public shellLocation() {
             var myLocation = "Whiterun";
             _StdOut.putText("Approximate location: " + myLocation);
+        }
+
+        public shellStatus(args: string[]) {
+            if (args.length > 0) {
+                var ans =  args.toString();
+                _StdOut.putText("status " + ans);
+            } else {
+                _StdOut.putText("Usage: prompt <string>  Please supply a string.");
+            }
         }
 
         public shellMagicEightball(args: string[]) {
@@ -349,7 +377,7 @@ module TSOS {
                     "Very doubtful."
                 ];
 
-                var randomNum = Math.floor(Math.random()*(19-0+1)+0);
+                var randomNum = Math.floor(Math.random()*(max-min+1)+min);
                 var ans = answers[randomNum];
                 _StdOut.putText("" + ans);
 
