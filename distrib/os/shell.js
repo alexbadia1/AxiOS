@@ -49,7 +49,7 @@ var TSOS;
             sc = new TSOS.ShellCommand(this.shellDate, 'date', '<string> - Current date and time.');
             this.commandList[this.commandList.length] = sc;
             // location <string>
-            sc = new TSOS.ShellCommand(this.shellLocation, 'location', '<string> - Current date and time.');
+            sc = new TSOS.ShellCommand(this.shellLocation, 'whereami', '<string> - Current date and time.');
             this.commandList[this.commandList.length] = sc;
             // eightball <String>
             sc = new TSOS.ShellCommand(this.shellMagicEightball, 'eightball', '<string> - Ask me anything...');
@@ -62,14 +62,6 @@ var TSOS;
             // Display the initial prompt.
             this.putPrompt();
         }
-        /// Feed one letter at a time, so the putText
-        /// function can wrap if the X position will overflow.
-        /// 
-        /// The other strategy is to manipulate the string in the putLetter function
-        /// and calculated the width of the string and blah blah blah... in the end I still
-        /// call drawText multiple times and it's more math and it just makes the putText function
-        /// to complicated.
-        /// This is a higher layer of abstraction and a bit more readable than partitioning the string with math.
         putPrompt() {
             _StdOut.putText(this.promptStr);
         }
@@ -187,7 +179,7 @@ var TSOS;
         // Although args is unused in some of these functions, it is always provided in the 
         // actual parameter list when this function is called, so I feel like we need it.
         shellVer(args) {
-            _StdOut.putText(APP_NAME + " version " + APP_VERSION);
+            _StdOut.putText(APP_NAME + " version " + APP_VERSION + " Iteration Alex Badia's");
         }
         shellHelp(args) {
             _StdOut.putText("Commands:");
@@ -218,7 +210,7 @@ var TSOS;
                     case "date":
                         _StdOut.putText("Date displays the current date and time.");
                         break;
-                    case "location":
+                    case "whereami":
                         _StdOut.putText("Location displays the approximate current location.");
                         break;
                     case "eightball":
@@ -286,8 +278,11 @@ var TSOS;
             _StdOut.putText("Approximate location: " + myLocation);
         }
         shellStatus(args) {
+            var ans = "";
+            for (var h = 0; h < args.length; ++h) {
+                ans += " " + args[h];
+            }
             if (args.length > 0) {
-                var ans = args.toString();
                 _StdOut.putText("status " + ans);
             }
             else {
