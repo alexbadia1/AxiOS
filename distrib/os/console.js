@@ -7,7 +7,8 @@
 var TSOS;
 (function (TSOS) {
     class Console {
-        constructor(olderCommands = new Array(), newerCommands = new Array(), olderImages = new Array(), newerImages = new Array(), currentFont = _DefaultFontFamily, currentFontSize = _DefaultFontSize, currentXPosition = 0, currentYPosition = _DefaultFontSize, buffer = "") {
+        constructor(lineWrapPadding = new Array(), olderCommands = new Array(), newerCommands = new Array(), olderImages = new Array(), newerImages = new Array(), currentFont = _DefaultFontFamily, currentFontSize = _DefaultFontSize, currentXPosition = 0, currentYPosition = _DefaultFontSize, buffer = "") {
+            this.lineWrapPadding = lineWrapPadding;
             this.olderCommands = olderCommands;
             this.newerCommands = newerCommands;
             this.olderImages = olderImages;
@@ -93,12 +94,19 @@ var TSOS;
         }
         eraseChar() {
             if (this.buffer.length > 0) {
-                /// Check for line wrap
-                if (this.currentXPosition <= 0) {
+                /// Check for line wrap,
+                /// Chose 7 as the threshold to give room for rounding errors when deleting letters.
+                ///
+                /// Why 7? 
+                /// Because it's lucky! (And the smallest letter is 8 pixels long)
+                ///
+                /// This prevents me from deleting the last letter on the line but the X position is still not
+                /// of the canvas yet.
+                if (this.currentXPosition <= 4) {
                     this.reverseLineWrap();
                 } /// if
                 /// Instead of using text, just want to measure a single character from my buffer
-                var offset = _DrawingContext.measureText(this.currentFont, this.currentFontSize, this.buffer.slice(-1)); /// Can I use negative indexes...?. PLEASE.... YES!
+                var offset = _DrawingContext.measureText(this.currentFont, this.currentFontSize, this.buffer.slice(this.buffer.length - 1)); /// Can I use negative indexes...?. PLEASE.... YES!
                 /// Must move the X and Y positions back and up
                 var moveXback = this.currentXPosition - offset;
                 var moveYback = this.currentYPosition - (_DefaultFontSize + _DrawingContext.fontDescent(this.currentFont, this.currentFontSize) + _FontHeightMargin) + 4;
@@ -107,7 +115,7 @@ var TSOS;
                 /// Dunno why the 4 works, but 4 works (probably because of the screen resolution or dpi) and like that's the biggest letter you made so far...
                 /// Was really hoping to make it font dependent only, and not hard code it...
                 _DrawingContext.clearRect(moveXback, moveYback, this.currentXPosition, 4 + (_DefaultFontSize + _DrawingContext.fontDescent(this.currentFont, this.currentFontSize) + _FontHeightMargin));
-                /// I can use str instead of substring so i don't have to cannoyingly update a number to be subtracted.
+                /// Remove the last character
                 /// Ok now i'm starting to like this...
                 this.buffer = this.buffer.substr(0, this.buffer.length - 1);
                 /// Move X position backward
@@ -120,9 +128,6 @@ var TSOS;
                 /// Step 1: Delete a character
                 this.eraseChar();
             } /// for
-            /// Clean up any extra trailing text if any was missed
-            _DrawingContext.clearRect(0, this.currentYPosition - (_DefaultFontSize + _DrawingContext.fontDescent(this.currentFont, this.currentFontSize) + _FontHeightMargin) + 4, this.currentXPosition, 4 + (_DefaultFontSize + _DrawingContext.fontDescent(this.currentFont, this.currentFontSize) + _FontHeightMargin));
-            this.currentXPosition = 0;
             /// Buffer should be "empty" by now so let's actually empty it
             this.buffer = "";
         }
@@ -139,29 +144,34 @@ var TSOS;
                 for (var pos = 0; pos < sentence.length; ++pos) {
                     text = sentence[pos];
                     var offset = _DrawingContext.measureText(this.currentFont, this.currentFontSize, text);
+                    var nextXPositon = this.currentXPosition + offset;
                     /// Do we need to line wrap?
-                    if ((this.currentXPosition + offset >= _Canvas.width)) {
+                    if ((nextXPositon >= _Canvas.width * .99)) {
+                        this.lineWrapPadding.push(this.currentXPosition);
                         this.lineWrap(text, indent, offset);
                     } /// if
                     else {
                         // Draw the text at the current X and Y coordinates.
                         _DrawingContext.drawText(this.currentFont, this.currentFontSize, this.currentXPosition, this.currentYPosition, text);
                         // Move the current X position.
-                        this.currentXPosition = this.currentXPosition + offset;
+                        this.currentXPosition = nextXPositon;
                     } /// if-else
                 } /// for
             } ///if
         } /// This is tiresome
-        reverseLineWrap(indent = 0) {
-            /// RETREAT!
-            ///
+        reverseLineWrap() {
             /// Move to the previous line by changing Y position.
-            this.retreatLine();
-            /// Resetting the X postion moves us to the END of the RIGHT side of the screen.
-            ///
-            /// We COULD add an abstracted version of an indent, but our master MS DOS doesn't so why should I? (Not. really. funny. anymore...)
-            ///
-            this.currentXPosition = _Canvas.width - indent;
+            this.currentXPosition = Math.ceil(this.lineWrapPadding.pop());
+            /* (copy-pasted)
+            * Font size measures from the baseline to the highest point in the font.
+            * Font descent measures from the baseline to the lowest point in the font.
+            * Font height margin is extra spacing between the lines.
+            */
+            /// Move to the previous line by changing Y position.
+            this.currentYPosition -= _DefaultFontSize +
+                _DrawingContext.fontDescent(this.currentFont, this.currentFontSize) +
+                _FontHeightMargin;
+            /// TODO: Handle reverse scrolling? Wait...
             /// Back to where I came from, eraseText() I think?
         }
         lineWrap(myText, myIndent, myOffset) {
@@ -176,18 +186,6 @@ var TSOS;
             _DrawingContext.drawText(this.currentFont, this.currentFontSize, this.currentXPosition, this.currentYPosition, myText);
             /// Move the current X position (copy-pasted)
             this.currentXPosition = this.currentXPosition + myOffset;
-        }
-        retreatLine() {
-            this.currentXPosition = _Canvas.width;
-            /* (copy-pasted)
-            * Font size measures from the baseline to the highest point in the font.
-            * Font descent measures from the baseline to the lowest point in the font.
-            * Font height margin is extra spacing between the lines.
-            */
-            this.currentYPosition -= _DefaultFontSize +
-                _DrawingContext.fontDescent(this.currentFont, this.currentFontSize) +
-                _FontHeightMargin;
-            /// TODO: Handle reverse scrolling? Wait...
         }
         advanceLine() {
             this.currentXPosition = 0;
