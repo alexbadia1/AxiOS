@@ -86,6 +86,8 @@ module TSOS {
             } else {                       // If there are no interrupts and there is nothing being executed then just be idle.
                 this.krnTrace("Idle");
             }
+
+            /// Update time 
         }
 
 
@@ -170,6 +172,7 @@ module TSOS {
         public krnTrapError(msg) {
             Control.hostLog("OS ERROR - TRAP: " + msg);
             // TODO: Display error on console, perhaps in some sort of colored screen. (Maybe blue?)
+            document.getElementById('bsod').style.visibility = "visible"; /// Making layered image visible
             this.krnShutdown();
         }
     }

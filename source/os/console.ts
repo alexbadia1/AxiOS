@@ -36,6 +36,10 @@ module TSOS {
             this.currentYPosition = this.currentFontSize;
         }/// resetXY
 
+        public putX(position: number = 0): void {
+            this.currentXPosition = position;
+        }
+
         public handleInput(): void {
             while (_KernelInputQueue.getSize() > 0) 
             {
@@ -54,7 +58,35 @@ module TSOS {
                     // ... and reset our buffer.
                     this.buffer = "";
                 }/// if
+
+                // /// Handle Control-C
+                // else if (chr.ctrlKey) {
+
+                // }
                 
+                /// Handle Tab
+                else if (chr === String.fromCharCode(9)) {
+                    /// Use something advanced like a TRIE?
+                    /// ...
+                    /// I'm just gonna loop through a list...
+                    ///
+                    /// Rather not include the command that crashes the OS
+                    var cmds: string[] = ['ver', 'help', 'shutdown', 'cls', 'man', 'trace', 'rot13', 'prompt', 'date', 'whereami', 'eightball', 'status', 'load'];
+                    var pos: number = 0;
+                    var found: boolean = false;
+                    /// I think 2 letters is the minimum for uniqueness
+                    if (this.buffer.length >= 2) {
+                        while (pos < cmds.length && !found) {
+                            if (cmds[pos].includes(this.buffer)) {
+                                this.eraseText();
+                                this.putText(cmds[pos]);
+                                this.buffer = cmds[pos];
+                                found = true;
+                            } else pos++;
+                        }/// while
+                    }/// if
+                }/// else-if
+
                 /// Basically have one stack hold the old commands, LIFO is important to keep the order of commands correct
                 else if (chr === String.fromCharCode(38))
                 {
@@ -215,13 +247,15 @@ module TSOS {
               */
 
             /// Move to the previous line by changing Y position.
-             this.currentYPosition -= _DefaultFontSize + 
-             _DrawingContext.fontDescent(this.currentFont, this.currentFontSize) +
-             _FontHeightMargin;
+            this.currentYPosition -= _DefaultFontSize + 
+            _DrawingContext.fontDescent(this.currentFont, this.currentFontSize) +
+            _FontHeightMargin;
  
-             /// TODO: Handle reverse scrolling? Wait...
+            /// TODO: Handle reverse scrolling? Wait...
+            ///     Probably add some mouse driver first,
+            ///     then a two stack to hold forward and backward states if we go with the image thing...
 
-            /// Back to where I came from, eraseText() I think?
+            /// Back to where I came from, eraseChar() I think?
          }
 
          public lineWrap(myText, myIndent, myOffset): void {

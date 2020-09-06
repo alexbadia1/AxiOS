@@ -30,6 +30,9 @@ var TSOS;
             this.currentXPosition = 0;
             this.currentYPosition = this.currentFontSize;
         } /// resetXY
+        putX(position = 0) {
+            this.currentXPosition = position;
+        }
         handleInput() {
             while (_KernelInputQueue.getSize() > 0) {
                 // Get the next character from the kernel input queue.
@@ -44,6 +47,33 @@ var TSOS;
                     // ... and reset our buffer.
                     this.buffer = "";
                 } /// if
+                // /// Handle Control-C
+                // else if (chr.ctrlKey) {
+                // }
+                /// Handle Tab
+                else if (chr === String.fromCharCode(9)) {
+                    /// Use something advanced like a TRIE?
+                    /// ...
+                    /// I'm just gonna loop through a list...
+                    ///
+                    /// Rather not include the command that crashes the OS
+                    var cmds = ['ver', 'help', 'shutdown', 'cls', 'man', 'trace', 'rot13', 'prompt', 'date', 'whereami', 'eightball', 'status', 'load'];
+                    var pos = 0;
+                    var found = false;
+                    /// I think 2 letters is the minimum for uniqueness
+                    if (this.buffer.length >= 2) {
+                        while (pos < cmds.length && !found) {
+                            if (cmds[pos].includes(this.buffer)) {
+                                this.eraseText();
+                                this.putText(cmds[pos]);
+                                this.buffer = cmds[pos];
+                                found = true;
+                            }
+                            else
+                                pos++;
+                        } /// while
+                    } /// if
+                } /// else-if
                 /// Basically have one stack hold the old commands, LIFO is important to keep the order of commands correct
                 else if (chr === String.fromCharCode(38)) {
                     /// Arrow UP so start getting the the older commands
@@ -172,7 +202,9 @@ var TSOS;
                 _DrawingContext.fontDescent(this.currentFont, this.currentFontSize) +
                 _FontHeightMargin;
             /// TODO: Handle reverse scrolling? Wait...
-            /// Back to where I came from, eraseText() I think?
+            ///     Probably add some mouse driver first,
+            ///     then a two stack to hold forward and backward states if we go with the image thing...
+            /// Back to where I came from, eraseChar() I think?
         }
         lineWrap(myText, myIndent, myOffset) {
             /// Move to the next line by changing Y position... or calling this so I can scroll too.

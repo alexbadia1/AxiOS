@@ -46,3 +46,12 @@ h3 {
   font-size: 8pt;
   text-align: center;
 }
+
+/* 
+Clear fix not needed, hard-coded it for now
+  .bsod {
+    content: "";
+    clear: both;
+    display: table;
+  } 
+*/

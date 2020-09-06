@@ -82,7 +82,7 @@ module TSOS {
             // location <string>
             sc = new ShellCommand(this.shellLocation,
                                 'whereami',
-                                '<string> - Current date and time.');
+                                'Current location.');
             this.commandList[this.commandList.length] = sc;
                                 
             // eightball <String>
@@ -97,15 +97,322 @@ module TSOS {
                                 '<string> - message as specified by the user.');
             this.commandList[this.commandList.length] = sc;
 
+            // bsod
+            sc = new ShellCommand(this.shellBSOD,
+                'bsod',
+                'Forces a kernel error');
+            this.commandList[this.commandList.length] = sc;
+
+            // load
+            sc = new ShellCommand(this.shellLoad,
+                'load',
+                'Loads user HEX code');
+            this.commandList[this.commandList.length] = sc;
+
             // ps  - list the running processes and their IDs
             // kill <id> - kills the specified process id.
 
             // Display the initial prompt.
+            
+            /// Step 0: POLITICIZE this porject!
+            this.blackLivesMatter();
             this.putPrompt();
         }
 
         public putPrompt() {
             _StdOut.putText(this.promptStr);
+        }
+
+        public blackLivesMatter() {
+            /// I may be a computer scientist... but I'm also a progressive!
+            ///
+            /// And No... this is not for "comedic purposes"
+
+
+            /// BLACK
+            _StdOut.advanceLine();
+            _StdOut.putX(30);
+            _StdOut.putText(" ### ");
+            _StdOut.putX(90);
+            _StdOut.putText(" # ");
+            _StdOut.putX(150);
+            _StdOut.putText("  ## ");
+            _StdOut.putX(225);
+            _StdOut.putText(" ## ");
+            _StdOut.putX(295);
+            _StdOut.putText("#   #");
+
+
+            _StdOut.advanceLine();
+            _StdOut.putX(30);
+            _StdOut.putText(" #   #");
+            _StdOut.putX(90);
+            _StdOut.putText(" # ");
+            _StdOut.putX(150);
+            _StdOut.putText(" #   #");
+            _StdOut.putX(225);
+            _StdOut.putText("#  #");
+            _StdOut.putX(295);
+            _StdOut.putText("#  #");
+
+
+            _StdOut.advanceLine();
+            _StdOut.putX(30);
+            _StdOut.putText(" #   #");
+            _StdOut.putX(90);
+            _StdOut.putText(" # ");
+            _StdOut.putX(150);
+            _StdOut.putText(" #   # ");
+            _StdOut.putX(225);
+            _StdOut.putText("#");
+            _StdOut.putX(295);
+            _StdOut.putText("##  ");
+
+
+            _StdOut.advanceLine();
+            _StdOut.putX(30);
+            _StdOut.putText(" ####");
+            _StdOut.putX(90);
+            _StdOut.putText(" # ");
+            _StdOut.putX(150);
+            _StdOut.putText(" #### ");
+            _StdOut.putX(225);
+            _StdOut.putText("#");
+            _StdOut.putX(295);
+            _StdOut.putText("##  ");
+
+
+            _StdOut.advanceLine();
+            _StdOut.putX(30);
+            _StdOut.putText(" #   #");
+            _StdOut.putX(90);
+            _StdOut.putText(" # ");
+            _StdOut.putX(150);
+            _StdOut.putText(" #   # ");
+            _StdOut.putX(225);
+            _StdOut.putText("#");
+            _StdOut.putX(295);
+            _StdOut.putText("# # ");
+
+
+            _StdOut.advanceLine();
+            _StdOut.putX(30);
+            _StdOut.putText(" #   #");
+            _StdOut.putX(90);
+            _StdOut.putText(" # ");
+            _StdOut.putX(150);
+            _StdOut.putText(" #   # ");
+            _StdOut.putX(225);
+            _StdOut.putText("#  #");
+            _StdOut.putX(295);
+            _StdOut.putText("#  # ");
+
+
+            _StdOut.advanceLine();
+            _StdOut.putX(30);
+            _StdOut.putText(" ### ");
+            _StdOut.putX(90);
+            _StdOut.putText(" #### ");
+            _StdOut.putX(150);
+            _StdOut.putText(" #   # ");
+            _StdOut.putX(225);
+            _StdOut.putText(" ## ");
+            _StdOut.putX(295);
+            _StdOut.putText("#   #");
+
+            _StdOut.advanceLine();
+
+            /// LIVES
+            _StdOut.advanceLine();
+            _StdOut.putX(30);
+            _StdOut.putText(" # ");
+            _StdOut.putX(90);
+            _StdOut.putText(" ### ");
+            _StdOut.putX(150);
+            _StdOut.putText("#     # ");
+            _StdOut.putX(225);
+            _StdOut.putText(" #### ");
+            _StdOut.putX(295);
+            _StdOut.putText("  ### ");
+
+            _StdOut.advanceLine();
+            _StdOut.putX(30);
+            _StdOut.putText(" # ");
+            _StdOut.putX(90);
+            _StdOut.putText("  # ");
+            _StdOut.putX(150);
+            _StdOut.putText("#     # ");
+            _StdOut.putX(225);
+            _StdOut.putText(" # ");
+            _StdOut.putX(295);
+            _StdOut.putText(" # ");
+
+            _StdOut.advanceLine();
+            _StdOut.putX(30);
+            _StdOut.putText(" # ");
+            _StdOut.putX(90);
+            _StdOut.putText("  # ");
+            _StdOut.putX(150);
+            _StdOut.putText("#     # ");
+            _StdOut.putX(225);
+            _StdOut.putText(" # ");
+            _StdOut.putX(295);
+            _StdOut.putText(" # ");
+
+            _StdOut.advanceLine();
+            _StdOut.putX(30);
+            _StdOut.putText(" # ");
+            _StdOut.putX(90);
+            _StdOut.putText("  # ");
+            _StdOut.putX(150);
+            _StdOut.putText("#     # ");
+            _StdOut.putX(225);
+            _StdOut.putText(" ### ");
+            _StdOut.putX(295);
+            _StdOut.putText("  ## ");
+
+            _StdOut.advanceLine();
+            _StdOut.putX(30);
+            _StdOut.putText(" # ");
+            _StdOut.putX(90);
+            _StdOut.putText("  # ");
+            _StdOut.putX(150);
+            _StdOut.putText("#     # ");
+            _StdOut.putX(225);
+            _StdOut.putText(" # ");
+            _StdOut.putX(295);
+            _StdOut.putText("    # ");
+
+            _StdOut.advanceLine();
+            _StdOut.putX(30);
+            _StdOut.putText(" # ");
+            _StdOut.putX(90);
+            _StdOut.putText("  # ");
+            _StdOut.putX(150);
+            _StdOut.putText(" #   # ");
+            _StdOut.putX(225);
+            _StdOut.putText(" # ");
+            _StdOut.putX(295);
+            _StdOut.putText("    # ");
+
+            _StdOut.advanceLine();
+            _StdOut.putX(30);
+            _StdOut.putText(" #### ");
+            _StdOut.putX(90);
+            _StdOut.putText(" ### ");
+            _StdOut.putX(150);
+            _StdOut.putText("   #  ");
+            _StdOut.putX(225);
+            _StdOut.putText(" #### ");
+            _StdOut.putX(295);
+            _StdOut.putText(" ###  ");
+            _StdOut.advanceLine();
+
+
+            /// MATTER
+            _StdOut.advanceLine();
+            _StdOut.putX(30);
+            _StdOut.putText(" #    # ");
+            _StdOut.putX(100);
+            _StdOut.putText("  ## ");
+            _StdOut.putX(160);
+            _StdOut.putText(" ##### ");
+            _StdOut.putX(225);
+            _StdOut.putText(" ##### ");
+            _StdOut.putX(295);
+            _StdOut.putText(" #### ");
+            _StdOut.putX(365);
+            _StdOut.putText(" ###  ");
+
+            _StdOut.advanceLine();
+            _StdOut.putX(30);
+            _StdOut.putText(" ## ## ");
+            _StdOut.putX(100);
+            _StdOut.putText(" #   # ");
+            _StdOut.putX(160);
+            _StdOut.putText("   # ");
+            _StdOut.putX(225);
+            _StdOut.putText("   # ");
+            _StdOut.putX(295);
+            _StdOut.putText(" # ");
+            _StdOut.putX(365);
+            _StdOut.putText(" #  # ");
+
+            _StdOut.advanceLine();
+            _StdOut.putX(30);
+            _StdOut.putText(" # # # ");
+            _StdOut.putX(100);
+            _StdOut.putText(" #   # ");
+            _StdOut.putX(160);
+            _StdOut.putText("   # ");
+            _StdOut.putX(225);
+            _StdOut.putText("   # ");
+            _StdOut.putX(295);
+            _StdOut.putText(" # ");
+            _StdOut.putX(365);
+            _StdOut.putText(" #  # ");
+
+            _StdOut.advanceLine();
+            _StdOut.putX(30);
+            _StdOut.putText(" # # # ");
+            _StdOut.putX(100);
+            _StdOut.putText(" #### ");
+            _StdOut.putX(160);
+            _StdOut.putText("   # ");
+            _StdOut.putX(225);
+            _StdOut.putText("   # ");
+            _StdOut.putX(295);
+            _StdOut.putText(" ### ");
+            _StdOut.putX(365);
+            _StdOut.putText(" ###  ");
+
+            _StdOut.advanceLine();
+            _StdOut.putX(30);
+            _StdOut.putText(" #   # ");
+            _StdOut.putX(100);
+            _StdOut.putText(" #   # ");
+            _StdOut.putX(160);
+            _StdOut.putText("   # ");
+            _StdOut.putX(225);
+            _StdOut.putText("   # ");
+            _StdOut.putX(295);
+            _StdOut.putText(" # ");
+            _StdOut.putX(365);
+            _StdOut.putText(" # #  ");
+
+            _StdOut.advanceLine();
+            _StdOut.putX(30);
+            _StdOut.putText(" #   # ");
+            _StdOut.putX(100);
+            _StdOut.putText(" #   # ");
+            _StdOut.putX(160);
+            _StdOut.putText("   # ");
+            _StdOut.putX(225);
+            _StdOut.putText("   # ");
+            _StdOut.putX(295);
+            _StdOut.putText(" # ");
+            _StdOut.putX(365);
+            _StdOut.putText(" #  # ");
+
+            _StdOut.advanceLine();
+            _StdOut.putX(30);
+            _StdOut.putText(" #   # ");
+            _StdOut.putX(100);
+            _StdOut.putText(" #   # ");
+            _StdOut.putX(160);
+            _StdOut.putText("   # ");
+            _StdOut.putX(225);
+            _StdOut.putText("   # ");
+            _StdOut.putX(295);
+            _StdOut.putText(" ####  ");
+            _StdOut.putX(365);
+            _StdOut.putText(" #  # ");
+
+
+            /// OKAY, so now to the ACTUAL porgram
+            _StdOut.advanceLine();
+            _StdOut.advanceLine();
+            /// Onwards to putPrompt();
         }
 
         public handleInput(buffer) {
@@ -162,6 +469,7 @@ module TSOS {
             this.putPrompt();
         }
 
+        /// Thank you for this (seriously) makes our life a bit easier.
         public parseInput(buffer: string): UserCommand {
             var retVal = new UserCommand();
 
@@ -176,6 +484,7 @@ module TSOS {
 
             // 4. Take the first (zeroth) element and use that as the command.
             var cmd = tempList.shift();  // Yes, you can do that to an array in JavaScript. See the Queue class.
+            
             // 4.1 Remove any left-over spaces.
             cmd = Utils.trim(cmd);
             // 4.2 Record it in the return value.
@@ -237,7 +546,6 @@ module TSOS {
                 _StdOut.advanceLine();
                 var words = "  " + _OsShell.commandList[i].command + " " + _OsShell.commandList[i].description;
                 _StdOut.putText(words);
-                //this.printEachLetter(words);
             }
         }
 
@@ -271,6 +579,12 @@ module TSOS {
                         break;
                     case "status":
                         _StdOut.putText("Status will recieve a message as specified by the user.");
+                        break;
+                    case "bsod":
+                        _StdOut.putText("BSOD- forces a kernel error.");
+                        break;
+                    case "load":
+                        _StdOut.putText("Load- loads user HEX code");
                         break;
                     default:
                         _StdOut.putText("No manual entry for " + args[0] + ".");
@@ -343,6 +657,16 @@ module TSOS {
             }
         }
 
+        public shellBSOD() {
+            _Kernel.krnTrapError("I've failed you Alan :(");
+        }/// shellBSOD
+
+        public shellLoad() {
+            var userInput = _taProgramInput.value.trim();
+            var regexp = /^[0-9a-fA-F]+$/;
+            regexp.test(userInput) ? _StdOut.putText("Input: " + userInput) :_StdOut.putText("Invalid Hex Data. Type \'help\' for, well... help.");
+        }
+
         public shellMagicEightball(args: string[]) {
             var min = 0;
             var max = 19;
@@ -377,7 +701,7 @@ module TSOS {
 
             } else {
                 _StdOut.putText("Usage: magic eightball <string>  Please supply a string.");
-            }
-        }
+            }//if-else
+        }/// shellMagicEightball
     }
 }

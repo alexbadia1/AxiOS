@@ -66,13 +66,25 @@
              tabindex="2"
              onclick="TSOS.Control.hostBtnReset_click(this);">
    </div>
-
-   <div id="divConsole" style="margin:4px; width:500px; height:500px; float:left;">
+    
+    <!-- Increase the height of the console just to fit the Black Lives Matter Message-->
+   <div id="divConsole" style="position: absolute; margin:4px; width:500px; height:565px; float:left;">
       <canvas id="display"
               width="500px"
-              height="500px"
+              height="565px"
               tabindex="3">
       </canvas>
+   </div>
+
+   <!-- Source img https://windowsreport.com/bsod-error-0x000000ea/-->
+   <!-- I know using absolute positioning is a bit "crude," but I'd have to skim through a few textbooks to refresh my memory on this stuff-->
+   <div id="bsod" style="position: absolute; visibility: hidden; margin:6px; width:504px; height:549px; float:left; justify-content: center">
+      <img id="bsod--image"
+              width="500px"
+              height="565px"
+              z-index="100"
+              src = "images/BSoD-10.jpg"
+              alt = "Sorry for screwing up this image, it's been a while since I've done front end stuff">
    </div>
 
    <div id="divLog" style="margin-left:520px;">
