@@ -408,7 +408,6 @@ module TSOS {
             _StdOut.putX(365);
             _StdOut.putText(" #  # ");
 
-
             /// OKAY, so now to the ACTUAL porgram
             _StdOut.advanceLine();
             _StdOut.advanceLine();
@@ -552,6 +551,7 @@ module TSOS {
         public shellShutdown(args: string[]) {
              _StdOut.putText("Shutting down...");
              // Call Kernel shutdown routine.
+             this.shellStatus(['Shutdown']);
             _Kernel.krnShutdown();
             // TODO: Stop the final prompt from being displayed. If possible. Not a high priority. (Damn OCD!)
         }
@@ -651,7 +651,8 @@ module TSOS {
                 ans += " " + args[h];
             }
             if (args.length > 0) {
-                _StdOut.putText("status " + ans);
+                document.getElementById('divLog--status').innerText = "Status: " + ans;
+                _StdOut.putText("status changed to: " + ans);
             } else {
                 _StdOut.putText("Usage: prompt <string>  Please supply a string.");
             }

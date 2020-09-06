@@ -46,7 +46,7 @@
              class="normal_button"
              value="Start"
              tabindex="0"
-             onclick="TSOS.Control.hostBtnStartOS_click(this);">
+             onclick="TSOS.Control.hostBtnStartOS_click(this); document.getElementById('divLog--status').innerText = 'Running';">
 
       <input type="button"
              id = "btnHaltOS"
@@ -55,7 +55,7 @@
              disabled="disabled"
              value="Halt"
              tabindex="1"
-             onclick="TSOS.Control.hostBtnHaltOS_click(this);">
+             onclick="TSOS.Control.hostBtnHaltOS_click(this); document.getElementById('divLog--status').innerText = 'Halted';">
 
       <input type="button"
              id = "btnReset"
@@ -64,7 +64,7 @@
              disabled="disabled"
              value="Reset"
              tabindex="2"
-             onclick="TSOS.Control.hostBtnReset_click(this);">
+             onclick="TSOS.Control.hostBtnReset_click(this); document.getElementById('divLog--status').innerText = 'Resetting';">
    </div>
     
     <!-- Increase the height of the console just to fit the Black Lives Matter Message-->
@@ -77,7 +77,7 @@
    </div>
 
    <!-- Source img https://windowsreport.com/bsod-error-0x000000ea/-->
-   <!-- I know using absolute positioning is a bit "crude," but I'd have to skim through a few textbooks to refresh my memory on this stuff-->
+   <!-- I know using absolute positioning is a bit "crude"-->
    <div id="bsod" style="position: absolute; visibility: hidden; margin:6px; width:504px; height:549px; float:left; justify-content: center">
       <img id="bsod--image"
               width="500px"
@@ -88,9 +88,19 @@
    </div>
 
    <div id="divLog" style="margin-left:520px;">
+      <label>Host Log</label>
+      <br>
+      <label id = "divLog--time">
+         Date: [Press Start]
+      </label>
+      <br>
+      <label id = "divLog--date">
+         Time: [Press Start]
+      </label>
+      <br>
+      <label id = "divLog--status"> Status: Shutdown</label>
+      <br>
       <label>
-         Host Log
-         <br>
          <textarea name="taHostLog"
                    id  ="taHostLog"
                    rows="26"

@@ -460,6 +460,7 @@ var TSOS;
         shellShutdown(args) {
             _StdOut.putText("Shutting down...");
             // Call Kernel shutdown routine.
+            this.shellStatus(['Shutdown']);
             _Kernel.krnShutdown();
             // TODO: Stop the final prompt from being displayed. If possible. Not a high priority. (Damn OCD!)
         }
@@ -556,7 +557,8 @@ var TSOS;
                 ans += " " + args[h];
             }
             if (args.length > 0) {
-                _StdOut.putText("status " + ans);
+                document.getElementById('divLog--status').innerText = "Status: " + ans;
+                _StdOut.putText("status changed to: " + ans);
             }
             else {
                 _StdOut.putText("Usage: prompt <string>  Please supply a string.");

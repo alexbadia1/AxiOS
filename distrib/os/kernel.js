@@ -69,14 +69,27 @@ var TSOS;
                 var interrupt = _KernelInterruptQueue.dequeue();
                 this.krnInterruptHandler(interrupt.irq, interrupt.params);
             }
-            else if (_CPU.isExecuting) { // If there are no interrupts then run one CPU cycle if there is anything being processed.
+            else if (_CPU.isExecuting) {
+                this.getCurrentDateTime(); // If there are no interrupts then run one CPU cycle if there is anything being processed.
                 _CPU.cycle();
             }
             else { // If there are no interrupts and there is nothing being executed then just be idle.
+                this.getCurrentDateTime();
                 this.krnTrace("Idle");
             }
-            /// Update time 
         }
+        /// Hopefully Updates the time
+        getCurrentDateTime() {
+            var current = new Date();
+            var day = String(current.getDate()).padStart(2, '0');
+            var month = String(current.getMonth()).padStart(2, '0');
+            var year = String(current.getFullYear()).padStart(2, '0');
+            var hours = String(current.getHours()).padStart(2, '0');
+            var minutes = String(current.getMinutes()).padStart(2, '0');
+            var seconds = String(current.getSeconds()).padStart(2, '0');
+            document.getElementById('divLog--date').innerText = `${month}/${day}/${year}/`;
+            document.getElementById('divLog--time').innerText = `${hours}:${minutes}:${seconds}`;
+        } /// getCurrentDateTime
         //
         // Interrupt Handling
         //
