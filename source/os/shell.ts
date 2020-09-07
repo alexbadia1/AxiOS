@@ -113,8 +113,11 @@ module TSOS {
             // kill <id> - kills the specified process id.
 
             // Display the initial prompt.
-            
-            /// Step 0: POLITICIZE this porject!
+            /// 
+            /// I may or may not have been mentally impaired while doing this...
+            ///
+            /// However, if I somehow make it into the "Hall of Fame" I may as well do something memorable. Cause, you know...
+            /// I *Start Emphasis* doubt *End Emphasis* anyone's ever done this in the Hall of Fame *Avoids making Eye Contact*...
             this.blackLivesMatter();
             this.putPrompt();
         }
@@ -126,8 +129,7 @@ module TSOS {
         public blackLivesMatter() {
             /// I may be a computer scientist... but I'm also a progressive!
             ///
-            /// And No... this is not for "comedic purposes"
-
+            /// Does this automatically get me a 100?
 
             /// BLACK
             _StdOut.advanceLine();
@@ -408,6 +410,7 @@ module TSOS {
             _StdOut.putX(365);
             _StdOut.putText(" #  # ");
 
+            /// You gotta admit this is still pretty cool...
             /// OKAY, so now to the ACTUAL porgram
             _StdOut.advanceLine();
             _StdOut.advanceLine();

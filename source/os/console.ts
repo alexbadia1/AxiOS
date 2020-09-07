@@ -38,7 +38,7 @@ module TSOS {
 
         public putX(position: number = 0): void {
             this.currentXPosition = position;
-        }
+        }/// This is getting to tiring
 
         public handleInput(): void {
             while (_KernelInputQueue.getSize() > 0) 
@@ -58,11 +58,6 @@ module TSOS {
                     // ... and reset our buffer.
                     this.buffer = "";
                 }/// if
-
-                // /// Handle Control-C
-                // else if (chr.ctrlKey) {
-
-                // }
                 
                 /// Handle Tab
                 else if (chr === String.fromCharCode(9)) {
@@ -70,7 +65,7 @@ module TSOS {
                     /// ...
                     /// I'm just gonna loop through a list...
                     ///
-                    /// Rather not include the command that crashes the OS
+                    /// Rather not include "bsod", yah know... the command that crashes the OS.
                     var cmds: string[] = ['ver', 'help', 'shutdown', 'cls', 'man', 'trace', 'rot13', 'prompt', 'date', 'whereami', 'eightball', 'status', 'load'];
                     var pos: number = 0;
                     var found: boolean = false;
@@ -105,7 +100,6 @@ module TSOS {
                         this.eraseText();
                           
                         /// Don't forget to OVER WRITE what you need
-
                         this.putText("" + olderCommand);
 
                         this.buffer = olderCommand;
@@ -150,16 +144,19 @@ module TSOS {
                 }/// else
 
                 // TODO: Add a case for Ctrl-C that would allow the user to break the current program.
+                ///
+                /// Am I allowed to just use javascript keyboard events for this, but in a way that models
+                /// the keyboard driver format?
             }/// while
         }
 
         public eraseChar(): void {
             if (this.buffer.length > 0) {
                 /// Check for line wrap,
-                /// Chose 7 as the threshold to give room for rounding errors when deleting letters.
+                /// Chose 4 as the threshold to give room for rounding errors when deleting letters.
                 ///
-                /// Why 7? 
-                /// Because it's lucky! (And the smallest letter is 8 pixels long)
+                /// Why 4? 
+                /// Because it's my lucky number! (And the smallest letter is 8 pixels long)
                 ///
                 /// This prevents me from deleting the last letter on the line but the X position is still not
                 /// of the canvas yet.
@@ -211,15 +208,24 @@ module TSOS {
             */
             if (text !== "") 
             {
+                /// Split text into a list and each letter one at a time.
+                /// 
+                /// Might be wierd if "chunks" of letters and words started appearing on the screen at a time
+                ///
+                /// Simplifies the implementation as there's no need to do weird math on strings
+                /// and comparing them to the Canvas Width and blah blah blah.
                 var sentence = text.split("", text.length);
                 for (var pos = 0; pos < sentence.length; ++pos) 
                 {
                     text = sentence[pos];
 
+                    /// Measure the width of the letter
                     var offset = _DrawingContext.measureText(this.currentFont, this.currentFontSize, text);
+
+                    /// Advance the X position forward based on the letter width
                     var nextXPositon = this.currentXPosition + offset;
 
-                    /// Do we need to line wrap?
+                    /// Check for a line-wrap
                     if ((nextXPositon >= _Canvas.width * .99)) {
                         this.lineWrapPadding.push(this.currentXPosition);
                         this.lineWrap(text, indent, offset);
@@ -252,14 +258,14 @@ module TSOS {
             _FontHeightMargin;
  
             /// TODO: Handle reverse scrolling? Wait...
-            ///     Probably add some mouse driver first,
+            ///     Probably add some mouse driver first (by capping a scroll up and scroll down event in jQuery)
             ///     then a two stack to hold forward and backward states if we go with the image thing...
 
             /// Back to where I came from, eraseChar() I think?
          }
 
          public lineWrap(myText, myIndent, myOffset): void {
-             /// Move to the next line by changing Y position... or calling this so I can scroll too.
+             /// Move to the next line by changing Y position, which scrolls forward need be.
              this.advanceLine(); 
 
              /// Resetting the X postion moves us to the beiginning of the left side of the screen.
@@ -271,7 +277,7 @@ module TSOS {
              /// Drawing the remaining letters after the line-wrap.
              _DrawingContext.drawText(this.currentFont, this.currentFontSize, this.currentXPosition, this.currentYPosition, myText);
 
-             /// Move the current X position (copy-pasted)
+             /// Move the current X position (copy-pasted).
              this.currentXPosition = this.currentXPosition + myOffset;
          }
 
@@ -283,20 +289,28 @@ module TSOS {
              * Font height margin is extra spacing between the lines.
              */
                                      
-            // TODO: Handle scrolling. (iProject 1)
+            /// Move the current Y position down one line
             this.currentYPosition += _DefaultFontSize + 
             _DrawingContext.fontDescent(this.currentFont, this.currentFontSize) +
             _FontHeightMargin;
             
+            // TODO: Handle scrolling. (iProject 1)
+
+            /// If the Y position goes off the screen...
             if (this.currentYPosition > _Canvas.height)
             {
+                /// Snapshot the current screen
                 var img = _DrawingContext.getImageData(0, 0, _Canvas.width, _Canvas.height);
                 
+                /// Clear everything off the screen
                 this.clearScreen();
 
+                /// Put the snapshot back but shifted up one light
                 _DrawingContext.putImageData(img, 0, -(_DefaultFontSize + 
                     _DrawingContext.fontDescent(this.currentFont, this.currentFontSize) +
                     _FontHeightMargin));
+                
+                /// Move the current Y position down another line
                 this.currentYPosition = _Canvas.height - this.currentFontSize;
             }
         }

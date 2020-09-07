@@ -90,7 +90,7 @@ module TSOS {
             }
         }
 
-        /// Hopefully Updates the time
+        /// Hopefully Updates the Date and Time
         public getCurrentDateTime() {
             var current = new Date();
             var day = String(current.getDate()).padStart(2, '0');

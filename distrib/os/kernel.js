@@ -78,7 +78,7 @@ var TSOS;
                 this.krnTrace("Idle");
             }
         }
-        /// Hopefully Updates the time
+        /// Hopefully Updates the Date and Time
         getCurrentDateTime() {
             var current = new Date();
             var day = String(current.getDate()).padStart(2, '0');
