@@ -666,10 +666,16 @@ module TSOS {
         }/// shellBSOD
 
         public shellLoad() {
-            var userInput = _taProgramInput.value.trim();
-            var regexp = /^[0-9a-fA-F]+$/;
-            regexp.test(userInput) ? _StdOut.putText("Input: " + userInput) :_StdOut.putText("Invalid Hex Data. Type \'help\' for, well... help.");
-        }
+            ///Regular expressions, smh.
+            ///
+            /// Getting and Cleansing input
+            var userInput: string = _taProgramInput.value.trim();
+            userInput = userInput.toLowerCase().replace(/\s/g, '');
+
+            /// Javascript is testing my patience...
+            /// Grrr...
+            /^[A-F0-9]+$/i.test(userInput) ?_StdOut.putText("Input: " + userInput) : _StdOut.putText("Invalid Hex Data. Type \'help\' for, well... help."); 
+        }/// shellLoad
 
         public shellMagicEightball(args: string[]) {
             var min = 0;
@@ -707,5 +713,6 @@ module TSOS {
                 _StdOut.putText("Usage: magic eightball <string>  Please supply a string.");
             }//if-else
         }/// shellMagicEightball
+
     }
 }

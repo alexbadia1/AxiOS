@@ -573,9 +573,14 @@ var TSOS;
             _Kernel.krnTrapError("I've failed you Alan :(");
         } /// shellBSOD
         shellLoad() {
+            ///Regular expressions, smh.
+            ///
+            /// Getting and Cleansing input
             var userInput = _taProgramInput.value.trim();
-            var regexp = /^[0-9a-fA-F]+$/;
-            regexp.test(userInput) ? _StdOut.putText("Input: " + userInput) : _StdOut.putText("Invalid Hex Data. Type \'help\' for, well... help.");
+            userInput = userInput.toLowerCase().replace(/\s/g, '');
+            /// Javascript is testing my patience...
+            /// Grrr...
+            /^[A-F0-9]+$/i.test(userInput) ? _StdOut.putText("Input: " + userInput) : _StdOut.putText("Invalid Hex Data. Type \'help\' for, well... help.");
         }
         shellMagicEightball(args) {
             var min = 0;

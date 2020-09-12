@@ -65,8 +65,9 @@ var TSOS;
             else if (((keyCode >= 48) && (keyCode <= 57)) || // digits
                 (keyCode === 32) || // space
                 (keyCode === 13)) { // enter
-                var specialCharacters = [')', '!', '@', '#', '$', '%', '^', '&', '*', '('];
+                var specialCharacters = [')', '!', '@', '#', '$', '%', '^', '& ', '*', '( '];
                 if (isShifted === true && ((keyCode >= 48) && (keyCode <= 57))) {
+                    /// Should've read the hints...
                     chr = specialCharacters[keyCode - 48]; // Special number character from list.
                 }
                 else {

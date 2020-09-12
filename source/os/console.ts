@@ -138,15 +138,12 @@ module TSOS {
                 {
                     // This is a "normal" character, so ...
                     // ... draw it on the screen...
-                    this.putText(chr);
+                    this.putText(chr.trim());
                     // ... and add it to our buffer.
                     this.buffer += chr;
                 }/// else
 
                 // TODO: Add a case for Ctrl-C that would allow the user to break the current program.
-                ///
-                /// Am I allowed to just use javascript keyboard events for this, but in a way that models
-                /// the keyboard driver format?
             }/// while
         }
 

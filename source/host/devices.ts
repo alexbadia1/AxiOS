@@ -53,10 +53,36 @@ module TSOS {
             if (event.target.id === "display") {
                 event.preventDefault();
                 // Note the pressed key code in the params (Mozilla-specific).
-                var params = new Array(event.which, event.shiftKey);
+                var params = new Array(event.which, event.shiftKey, event.ctrlKey);
                 // Enqueue this interrupt on the kernel interrupt queue so that it gets to the Interrupt handler.
                 _KernelInterruptQueue.enqueue(new Interrupt(KEYBOARD_IRQ, params));
             }
         }
+
+        /// 
+        /// Mouse Interrupt, a HARDWARE Interrupt Request (Oh boy, here we go...)
+        ///
+        /// Not sure if it's "wheel" or "scroll." Still gotta do some googling...
+        public static hostEnabledMouseInterrupt(event): void {
+            /// Listen for mouse scroll (scroll up, scroll down) events in the Document
+            /// and call the simultation processor, which will in turn call the
+            /// OS interrupt handler... (Real original... I know).
+            document.addEventListener('wheel', Devices.hostOnMouseScroll, false);
+        }
+
+        public static hostDisableMouseInterrupt(): void {
+            document.removeEventListener("wheel", Devices.hostOnKeypress, false);
+        }
+
+        public static hostOnMouseScroll(event){
+            /// So, uh, copy what Alan did but look for mouse actions on the document, specifically on the canvas...
+            if(event.target.id === "display") {
+                event.preventDefault();
+                /// Lemme do some more googling...
+                
+
+            }
+        }
+
     }
 }
