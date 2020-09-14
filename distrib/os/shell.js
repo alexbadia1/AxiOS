@@ -371,13 +371,13 @@ var TSOS;
                 // It's not found, so check for curses and apologies before declaring the command invalid.
                 if (this.curses.indexOf("[" + TSOS.Utils.rot13(cmd) + "]") >= 0) { // Check for curses.
                     this.execute(this.shellCurse);
-                }
+                } /// if
                 else if (this.apologies.indexOf("[" + cmd + "]") >= 0) { // Check for apologies.
                     this.execute(this.shellApology);
-                }
+                } /// else-if
                 else { // It's just a bad command. {
                     this.execute(this.shellInvalidCommand);
-                }
+                } /// else
             }
         }
         // Note: args is an optional parameter, ergo the ? which allows TypeScript to understand that.
@@ -578,10 +578,67 @@ var TSOS;
             /// Getting and Cleansing input
             var userInput = _taProgramInput.value.trim();
             userInput = userInput.toLowerCase().replace(/\s/g, '');
+            /// Test for hexadecimal characters using regular expression...
             /// Javascript is testing my patience...
             /// Grrr...
-            /^[A-F0-9]+$/i.test(userInput) ? _StdOut.putText("Input: " + userInput) : _StdOut.putText("Invalid Hex Data. Type \'help\' for, well... help.");
-        }
+            if (/^[A-F0-9]+$/i.test(userInput)) {
+                /// User input is valid
+                _StdOut.putText("Input: " + userInput);
+                /// Making sure there are no incomplete hex data pairs
+                if (userInput.length % 2 === 0) {
+                    /// 1.) Find a free simple volume
+                    ///
+                    /// May as well use first fit since the volumes are all the same fixed size...
+                    var freeSimpleVolume;
+                    if (_MemoryManager.firstFit() === -1) {
+                        /// Memory is full
+                        _StdOut.putText("Memory is full!");
+                    } ///if
+                    else {
+                        /// Free Simple Volume was found
+                        freeSimpleVolume = _MemoryManager.simpleVolumes[_MemoryManager.firstFit()];
+                        /// Create a Process Control BLock
+                        var newProcessControlBlock = new TSOS.ProcessControlBlock('New');
+                        /// Add to list of processes
+                        _MemoryManager.pcbs.push(newProcessControlBlock);
+                        /// Assign continuosly growing process id's
+                        newProcessControlBlock.processID = _MemoryManager.pcbs.length - 1;
+                        /// 2.) Load user input into free memory segment
+                        ///
+                        /// 2.1) Split the input into pairs of 2
+                        for (var logicalAddress = 0; logicalAddress < userInput.length; logicalAddress += 2) {
+                            /// Format the hex into pairs of two
+                            var hexPair;
+                            /// Check if we're gonna overflow the array or not
+                            if (logicalAddress === userInput.length) {
+                                /// There is no other pair (this list has an incomplete instruction)
+                                /// So Throw error
+                                hexPair = `${userInput[logicalAddress]}`;
+                            }
+                            else {
+                                /// List was split into pairs nicely
+                                hexPair = `${userInput[logicalAddress]}${userInput[logicalAddress + 1]}`;
+                            }
+                            /// Write to memory
+                            if (_MemoryAccessor.write(freeSimpleVolume, logicalAddress, hexPair)) {
+                                _StdOut.putText(`Command ${hexPair} had SUCCESSFUL WRITE to logical memory location: ${logicalAddress}!`);
+                            } /// if 
+                            else {
+                                _StdOut.putText(`Command ${hexPair} FAILED to WRITE to logical memory location: ${logicalAddress}!`);
+                            } /// else
+                            _StdOut.putText(_MemoryAccessor.read(freeSimpleVolume, logicalAddress));
+                        } /// for
+                    } ///else
+                } /// if 
+                ///
+                /// 3.) If the program is properly loaded into memory... 
+                /// Update the process control block state to show it is loaded in memory
+                newProcessControlBlock.processState = "Residient";
+            } /// if
+            else {
+                _StdOut.putText("Invalid Hex Data. Type \'help\' for, well... help.");
+            } /// else
+        } /// shellLoad
         shellMagicEightball(args) {
             var min = 0;
             var max = 19;

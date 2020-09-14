@@ -30,8 +30,8 @@ var _CPU: TSOS.Cpu;  // Utilize TypeScript's type annotation system to ensure th
 /// Step -1: Learn from past mistakes and READ the fudgin' HINTS...
 ///
 /// Hardware (host)
-// var _Memory: TSOS.Memory;
-// var _MemoryAccessor: TSOS.MemortAccessor;
+var _Memory: TSOS.Memory;
+var _MemoryAccessor: TSOS.MemoryAccessor;
 
 /// Software (OS)
 var _MemoryManager: any = null;

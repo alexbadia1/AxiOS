@@ -27,74 +27,74 @@ module TSOS {
 
             // ver
             sc = new ShellCommand(this.shellVer,
-                                  "ver",
-                                  "- Displays the current version data.");
+                "ver",
+                "- Displays the current version data.");
             this.commandList[this.commandList.length] = sc;
 
             // help
             sc = new ShellCommand(this.shellHelp,
-                                  "help",
-                                  "- This is the help command. Seek help.");
+                "help",
+                "- This is the help command. Seek help.");
             this.commandList[this.commandList.length] = sc;
 
             // shutdown
             sc = new ShellCommand(this.shellShutdown,
-                                  "shutdown",
-                                  "- Shuts down the virtual OS but leaves the underlying host / hardware simulation running. Add the new features as specified in your Issues and iProject 1. Demonstrate programming best practices or Alan will get bitchy.");
+                "shutdown",
+                "- Shuts down the virtual OS but leaves the underlying host / hardware simulation running. Add the new features as specified in your Issues and iProject 1. Demonstrate programming best practices or Alan will get bitchy.");
             this.commandList[this.commandList.length] = sc;
 
             // cls
             sc = new ShellCommand(this.shellCls,
-                                  "cls",
-                                  "- Clears the screen and resets the cursor position.");
+                "cls",
+                "- Clears the screen and resets the cursor position.");
             this.commandList[this.commandList.length] = sc;
 
             // man <topic>
             sc = new ShellCommand(this.shellMan,
-                                  "man",
-                                  "<topic> - Displays the MANual page for <topic>.");
+                "man",
+                "<topic> - Displays the MANual page for <topic>.");
             this.commandList[this.commandList.length] = sc;
 
             // trace <on | off>
             sc = new ShellCommand(this.shellTrace,
-                                  "trace",
-                                  "<on | off> - Turns the OS trace on or off.");
+                "trace",
+                "<on | off> - Turns the OS trace on or off.");
             this.commandList[this.commandList.length] = sc;
 
             // rot13 <string>
             sc = new ShellCommand(this.shellRot13,
-                                  "rot13",
-                                  "<string> - Does rot13 obfuscation on <string>.");
+                "rot13",
+                "<string> - Does rot13 obfuscation on <string>.");
             this.commandList[this.commandList.length] = sc;
 
             // prompt <string>
             sc = new ShellCommand(this.shellPrompt,
-                                  "prompt",
-                                  "<string> - Sets the prompt.");
+                "prompt",
+                "<string> - Sets the prompt.");
             this.commandList[this.commandList.length] = sc;
 
             // date <string>
-            sc = new ShellCommand(this.shellDate, 
-                                'date', 
-                                '<string> - Current date and time.');
+            sc = new ShellCommand(this.shellDate,
+                'date',
+                '<string> - Current date and time.');
             this.commandList[this.commandList.length] = sc;
 
             // location <string>
             sc = new ShellCommand(this.shellLocation,
-                                'whereami',
-                                'Current location.');
+                'whereami',
+                'Current location.');
             this.commandList[this.commandList.length] = sc;
-                                
+
             // eightball <String>
             sc = new ShellCommand(this.shellMagicEightball,
-                                'eightball',
-                                '<string> - Ask me anything...');
+                'eightball',
+                '<string> - Ask me anything...');
             this.commandList[this.commandList.length] = sc;
 
             // status <String>
             sc = new ShellCommand(this.shellStatus,
-                                'status',
-                                '<string> - message as specified by the user.');
+                'status',
+                '<string> - message as specified by the user.');
             this.commandList[this.commandList.length] = sc;
 
             // bsod
@@ -449,11 +449,13 @@ module TSOS {
                 // It's not found, so check for curses and apologies before declaring the command invalid.
                 if (this.curses.indexOf("[" + Utils.rot13(cmd) + "]") >= 0) {     // Check for curses.
                     this.execute(this.shellCurse);
-                } else if (this.apologies.indexOf("[" + cmd + "]") >= 0) {        // Check for apologies.
+                }/// if
+                else if (this.apologies.indexOf("[" + cmd + "]") >= 0) {        // Check for apologies.
                     this.execute(this.shellApology);
-                } else { // It's just a bad command. {
+                }/// else-if
+                else { // It's just a bad command. {
                     this.execute(this.shellInvalidCommand);
-                }
+                }/// else
             }
         }
 
@@ -486,7 +488,7 @@ module TSOS {
 
             // 4. Take the first (zeroth) element and use that as the command.
             var cmd = tempList.shift();  // Yes, you can do that to an array in JavaScript. See the Queue class.
-            
+
             // 4.1 Remove any left-over spaces.
             cmd = Utils.trim(cmd);
             // 4.2 Record it in the return value.
@@ -525,14 +527,14 @@ module TSOS {
         }
 
         public shellApology() {
-           if (_SarcasticMode) {
-              _StdOut.putText("I think we can put our differences behind us.");
-              _StdOut.advanceLine();
-              _StdOut.putText("For science . . . You monster.");
-              _SarcasticMode = false;
-           } else {
-              _StdOut.putText("For what?");
-           }
+            if (_SarcasticMode) {
+                _StdOut.putText("I think we can put our differences behind us.");
+                _StdOut.advanceLine();
+                _StdOut.putText("For science . . . You monster.");
+                _SarcasticMode = false;
+            } else {
+                _StdOut.putText("For what?");
+            }
         }
 
         // Although args is unused in some of these functions, it is always provided in the 
@@ -552,15 +554,15 @@ module TSOS {
         }
 
         public shellShutdown(args: string[]) {
-             _StdOut.putText("Shutting down...");
-             // Call Kernel shutdown routine.
-             this.shellStatus(['Shutdown']);
+            _StdOut.putText("Shutting down...");
+            // Call Kernel shutdown routine.
+            this.shellStatus(['Shutdown']);
             _Kernel.krnShutdown();
             // TODO: Stop the final prompt from being displayed. If possible. Not a high priority. (Damn OCD!)
         }
 
-        public shellCls(args: string[]) {         
-            _StdOut.clearScreen();     
+        public shellCls(args: string[]) {
+            _StdOut.clearScreen();
             _StdOut.resetXY();
         }
 
@@ -624,7 +626,7 @@ module TSOS {
         public shellRot13(args: string[]) {
             if (args.length > 0) {
                 // Requires Utils.ts for rot13() function.
-                _StdOut.putText(args.join(' ') + " = '" + Utils.rot13(args.join(' ')) +"'");
+                _StdOut.putText(args.join(' ') + " = '" + Utils.rot13(args.join(' ')) + "'");
             } else {
                 _StdOut.putText("Usage: rot13 <string>  Please supply a string.");
             }
@@ -638,7 +640,7 @@ module TSOS {
             }
         }
 
-        public shellDate(){
+        public shellDate() {
             var myDate = new Date();
             _StdOut.putText("" + myDate);
         }
@@ -672,9 +674,73 @@ module TSOS {
             var userInput: string = _taProgramInput.value.trim();
             userInput = userInput.toLowerCase().replace(/\s/g, '');
 
+            /// Test for hexadecimal characters using regular expression...
             /// Javascript is testing my patience...
             /// Grrr...
-            /^[A-F0-9]+$/i.test(userInput) ?_StdOut.putText("Input: " + userInput) : _StdOut.putText("Invalid Hex Data. Type \'help\' for, well... help."); 
+            if (/^[A-F0-9]+$/i.test(userInput)) {
+                /// User input is valid
+                _StdOut.putText("Input: " + userInput);
+
+                /// Making sure there are no incomplete hex data pairs
+                if (userInput.length % 2 === 0) {
+                    /// 1.) Find a free simple volume
+                    ///
+                    /// May as well use first fit since the volumes are all the same fixed size...
+                    var freeSimpleVolume;
+                    if (_MemoryManager.firstFit() === -1) {
+                        /// Memory is full
+                        _StdOut.putText("Memory is full!");
+                    } ///if
+                    else {
+                        /// Free Simple Volume was found
+                        freeSimpleVolume = _MemoryManager.simpleVolumes[_MemoryManager.firstFit()];
+
+                        /// Create a Process Control BLock
+                        var newProcessControlBlock: ProcessControlBlock = new ProcessControlBlock('New');
+
+                        /// Add to list of processes
+                        _MemoryManager.pcbs.push(newProcessControlBlock);
+
+                        /// Assign continuosly growing process id's
+                        newProcessControlBlock.processID = _MemoryManager.pcbs.length - 1;
+
+                        /// 2.) Load user input into free memory segment
+                        ///
+                        /// 2.1) Split the input into pairs of 2
+                        for (var logicalAddress = 0; logicalAddress < userInput.length; logicalAddress += 2) {
+                            /// Format the hex into pairs of two
+                            var hexPair: string;
+
+                            /// Check if we're gonna overflow the array or not
+                            if (logicalAddress === userInput.length) {
+                                /// There is no other pair (this list has an incomplete instruction)
+                                /// So Throw error
+                                hexPair = `${userInput[logicalAddress]}`;
+                            }
+                            else {
+                                /// List was split into pairs nicely
+                                hexPair = `${userInput[logicalAddress]}${userInput[logicalAddress + 1]}`;
+                            }
+                            /// Write to memory
+                            if (_MemoryAccessor.write(freeSimpleVolume, logicalAddress, hexPair)) {
+                                _StdOut.putText(`Command ${hexPair} had SUCCESSFUL WRITE to logical memory location: ${logicalAddress}!`);
+                            }/// if 
+                            else {
+                                _StdOut.putText(`Command ${hexPair} FAILED to WRITE to logical memory location: ${logicalAddress}!`);
+                            }/// else
+                            _StdOut.putText(_MemoryAccessor.read(freeSimpleVolume, logicalAddress));
+                        }/// for
+                    } ///else
+                }/// if 
+
+                ///
+                /// 3.) If the program is properly loaded into memory... 
+                /// Update the process control block state to show it is loaded in memory
+                newProcessControlBlock.processState = "Residient";
+            } /// if
+            else {
+                _StdOut.putText("Invalid Hex Data. Type \'help\' for, well... help.");
+            }/// else
         }/// shellLoad
 
         public shellMagicEightball(args: string[]) {
@@ -682,30 +748,30 @@ module TSOS {
             var max = 19;
             if (args.length > 0) {
                 /// Eightball answers may be subject to copyright.
-                var answers = [ 
-                    "It is certain.", 
-                    "It is decidedly so.", 
-                    "Without a doubt.", 
-                    "Yes – definitely.", 
-                    "You may rely on it.", 
-                    "As I see it, yes.", 
+                var answers = [
+                    "It is certain.",
+                    "It is decidedly so.",
+                    "Without a doubt.",
+                    "Yes – definitely.",
+                    "You may rely on it.",
+                    "As I see it, yes.",
                     "Most likely.",
-                    "Outlook good.", 
-                    "Yes.", 
-                    "Signs point to yes.", 
-                    "Reply hazy, try again.", 
-                    "Ask again later.", 
+                    "Outlook good.",
+                    "Yes.",
+                    "Signs point to yes.",
+                    "Reply hazy, try again.",
+                    "Ask again later.",
                     "Better not tell you now.",
                     "Cannot predict now.",
-                    "Concentrate and ask again.", 
+                    "Concentrate and ask again.",
                     "Don't count on it.",
                     "My reply is no.",
-                    "My sources say no.", 
-                    "Outlook not so good.", 
+                    "My sources say no.",
+                    "Outlook not so good.",
                     "Very doubtful."
                 ];
 
-                var randomNum = Math.floor(Math.random()*(max-min+1)+min);
+                var randomNum = Math.floor(Math.random() * (max - min + 1) + min);
                 var ans = answers[randomNum];
                 _StdOut.putText("" + ans);
 

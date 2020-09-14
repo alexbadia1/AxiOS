@@ -2,7 +2,7 @@
 %
 % CMPT xxx
 % Fall 2020
-% Lab One
+% Lab Three
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -67,7 +67,7 @@
    \normalfont \normalsize 
    \textsc{CMPT 424 - Fall 2020 - Dr. Labouseur} \\[10pt] % Header stuff.
    \horrule{0.5pt} \\[0.25cm] 	% Top horizontal rule
-   \huge Lab One  \\     	    % Assignment title
+   \huge Lab Three  \\     	    % Assignment title
    \horrule{0.5pt} \\[0.25cm] 	% Bottom horizontal rule
 }
 
@@ -81,19 +81,27 @@
 %----------------------------------------------------------------------------------------
 %   start PROBLEM ONE
 %----------------------------------------------------------------------------------------
-\section{Problem One}
-
-\subsection{Command Interpreter}
-Q: What are the advantages and disadvantages of using the same system call interface for manipulating both files and devices?
-
-A: The main advantage of using the same system call interface for manipulating both files and devices is it seems easier to implement. Most devices can be treated like files with their drivers code like read, writes, request, release etc. I guess a file like treatment of devices allows for abstraction (for lack of a better word) of driver files and code as they can make calls to API's for easier use. A disadvantage is it seems like this could be a problem for a non-basic I/O devices that may not be able to be accurately modeled using a file like file system. 
-
 \section{Problem Two}
 
-\subsection{Character Devices}
-Q: Would it be possible for the user to develop a new command interpreter using the system interface provided by the operating system?
+\subsection{Variable Size}
+Q: Given Five (5) memory partitions	of 100KB, 500KB, 200KB, 300KB, and 600KB (in	that order), how would optimal, first-Fit, best-fit, and worst-fit algorithms place processes of 212KB, 417KB, 112KB, and 426KB (in that order)?
 
-A: Well, from what I learned so far, the command line is built on system calls. Since the command line gives the user access and control over system calls it should be possible. For example, I think of a batch file allowing for higher level of abstractions. So in theory you could have a Windows batch file have commands that search for other batch files in memory to run specific system calls, thus adding a "higher level" type of command interpreter.
+Assuming fixed-sized:
+
+First Fit: 212KB goes into the 500KB, 417KB goes into the 600KB, 112KB goes into the 500KB (that already has the 212KB program) and then there would be no room for the 426KB (and thus external fragmentation).
+
+Best-Fit: 212KB goes into 300KB, 417KB goes into the 500KB, 112KB goes into the 200KB, and 426KB goes into the 600KB.
+
+\section{Problem One}
+
+\subsection{Fragmentation}
+Q: Explain the difference between internal and external fragmentation?
+
+
+Internal Fragmentation: The partition does not full take up the partition allocated to it.
+
+External Fragmentation: The program takes up more space than the partition allocated to it and must rely on dynamic loading and dynamically linked libraries.
+
 
 
 \end{document}
