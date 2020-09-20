@@ -13,6 +13,7 @@ var TSOS;
         constructor(simpleVolumes = [], pcbs = []) {
             this.simpleVolumes = simpleVolumes;
             this.pcbs = pcbs;
+            this.init();
         }
         init() {
             /// Generate Memory Volumes
@@ -21,16 +22,16 @@ var TSOS;
             ///
             /// Calculate how many partitions you can make from memory
             var memorySize = _MemoryAccessor.mainMemorySize();
-            var simpleVolumeCapacity = 256;
             while (memorySize > 0) {
                 var temp = memorySize;
                 /// Well now we effectively lost the volume's capacity worth of memory
-                memorySize -= simpleVolumeCapacity;
+                memorySize -= MAX_SIMPLE_VOLUME_CAPACITY;
                 /// Create new volume
                 /// setting the physical base and physical limit as well
-                var newVolume = new SimpleVolume(memorySize, temp - 1, simpleVolumeCapacity);
-                newVolume.writeEnabled = true;
-                this.simpleVolumes.push(new SimpleVolume(memorySize, temp - 1, simpleVolumeCapacity));
+                var newVolume = new SimpleVolume(memorySize, temp - 1, MAX_SIMPLE_VOLUME_CAPACITY);
+                /// Make sure the volume is writeable too
+                newVolume.writeUnlock();
+                this.simpleVolumes.push(new SimpleVolume(memorySize, temp - 1, MAX_SIMPLE_VOLUME_CAPACITY));
             } ///while
         } /// init
         worstFit() {
@@ -67,14 +68,14 @@ var TSOS;
             /// Loop through the entire list and find the first Write Enabled file...
             ///
             /// Also O(n) time complexity?
-            var pos = -1;
+            var pos = this.simpleVolumes.length - 1;
             var found = false;
-            while (pos < this.simpleVolumes.length && !found) {
-                if (this.simpleVolumes[pos].writeEnabled) {
+            while (pos >= 0 && !found) {
+                if (this.simpleVolumes[pos].getWriteEnabled) {
                     found = true;
                 } /// if
                 else {
-                    pos++;
+                    pos--;
                 } /// else
             } /// while
             return pos; ///First write enabled volume's position in the list
@@ -85,7 +86,8 @@ var TSOS;
     class SimpleVolume {
         constructor(
         /// Put the required stuff first, sometimes this matters in other languages, I suck at typescript
-        physicalBase, physicalLimit, capacity, readEnabled = true, writeEnabled = true, ExecuteEnabled = false, layout = "Simple", type = 'Basic') {
+        physicalBase, physicalLimit, capacity, readEnabled = true, writeEnabled = true, ExecuteEnabled = false, layout = "Simple", /// Serves allusionary purpose to MS only
+        type = 'Basic') {
             this.physicalBase = physicalBase;
             this.physicalLimit = physicalLimit;
             this.capacity = capacity;
@@ -94,6 +96,22 @@ var TSOS;
             this.ExecuteEnabled = ExecuteEnabled;
             this.layout = layout;
             this.type = type;
+        }
+        getWriteEnabled() {
+            return this.writeEnabled;
+        } /// getWriteEnabled
+        writeLock() {
+            this.writeEnabled = false;
+            /// write lock each individual address
+            for (var logicalAddress = 0; logicalAddress < MAX_SIMPLE_VOLUME_CAPACITY; ++logicalAddress) {
+                _Memory.getAddress(logicalAddress + this.physicalBase).writeLock();
+            } /// for
+        } /// writeLock
+        writeUnlock() {
+            /// write unlock each individual address
+            for (var logicalAddress = 0; logicalAddress < MAX_SIMPLE_VOLUME_CAPACITY; ++logicalAddress) {
+                _Memory.getAddress(logicalAddress + this.physicalBase).writeUnlock();
+            } /// for
         }
     } /// class
     TSOS.SimpleVolume = SimpleVolume;

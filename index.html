@@ -1,8 +1,9 @@
 <!DOCTYPE HTML>
 <html lang="en">
+
 <head>
    <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
-   <meta name="author"             content="Alan G. Labouseur" />
+   <meta name="author" content="Alan G. Labouseur" />
    <link rel="stylesheet" href="tsos.css" type="text/css" media="screen" />
    <title>
       TSOS - a browser-based virtual Operating System in TypeScript
@@ -17,6 +18,7 @@
    <script type="text/javascript" src="distrib/host/cpu.js"></script>
    <script type="text/javascript" src="distrib/host/memory.js"></script>
    <script type="text/javascript" src="distrib/host/memoryAccessor.js"></script>
+   <script type="text/javascript" src="distrib/host/addressBlock.js"></script>
 
    <!-- Virtual OS Routines: Make sure Kernel code is last, since it needs those above it. -->
    <script type="text/javascript" src="distrib/os/interrupt.js"></script>
@@ -36,103 +38,83 @@
    <script type="text/javascript" src="distrib/utils.js"></script>
    <!-- Uncomment the line below to enable GLaDOS testing. -->
    <!-- <script type="text/javascript" src="http://alanclasses.github.io/TSOS/test/glados-ip0.js"></script> -->
-   
+
 </head>
 
 <body onload="onDocumentLoad()">
 
-<div id="divMain" style="width:100%;">
+   <div id="divMain" style="width:100%;">
 
-   <div id="divButtonBar" style="margin:4px;">
-      <input type="button"
-             id = "btnStartOS"
-             name="brnStartOS"
-             class="normal_button"
-             value="Start"
-             tabindex="0"
-             onclick="TSOS.Control.hostBtnStartOS_click(this); document.getElementById('divLog--status').innerText = 'Running';">
+      <div id="divButtonBar" style="margin:4px;">
+         <input type="button" id="btnStartOS" name="brnStartOS" class="normal_button" value="Start" tabindex="0"
+            onclick="TSOS.Control.hostBtnStartOS_click(this); document.getElementById('divLog--status').innerText = 'Running';">
 
-      <input type="button"
-             id = "btnHaltOS"
-             name="brnHaltOS"
-             class="normal_button"
-             disabled="disabled"
-             value="Halt"
-             tabindex="1"
-             onclick="TSOS.Control.hostBtnHaltOS_click(this); document.getElementById('divLog--status').innerText = 'Halted';">
+         <input type="button" id="btnHaltOS" name="brnHaltOS" class="normal_button" disabled="disabled" value="Halt"
+            tabindex="1"
+            onclick="TSOS.Control.hostBtnHaltOS_click(this); document.getElementById('divLog--status').innerText = 'Halted';">
 
-      <input type="button"
-             id = "btnReset"
-             name="brnReset"
-             class="normal_button"
-             disabled="disabled"
-             value="Reset"
-             tabindex="2"
-             onclick="TSOS.Control.hostBtnReset_click(this); document.getElementById('divLog--status').innerText = 'Resetting';">
-   </div>
-    
-    <!-- Increase the height of the console just to fit the Black Lives Matter Message-->
-   <div id="divConsole" style="position: absolute; margin:4px; width:500px; height:565px; float:left;">
-      <canvas id="display"
-              width="500px"
-              height="565px"
-              tabindex="3">
-      </canvas>
-   </div>
+         <input type="button" id="btnReset" name="brnReset" class="normal_button" disabled="disabled" value="Reset"
+            tabindex="2"
+            onclick="TSOS.Control.hostBtnReset_click(this); document.getElementById('divLog--status').innerText = 'Resetting';">
+      </div>
 
-   <!-- Source img https://windowsreport.com/bsod-error-0x000000ea/-->
-   <!-- I know using absolute positioning is a bit "crude"-->
-   <div id="bsod" style="position: absolute; visibility: hidden; margin:6px; width:504px; height:549px; float:left; justify-content: center">
-      <img id="bsod--image"
-              width="500px"
-              height="565px"
-              z-index="100"
-              src = "images/BSoD-10.jpg"
-              alt = "Sorry for screwing up this image, it's been a while since I've done front end stuff">
-   </div>
+      <!-- Increase the height of the console just to fit the Black Lives Matter Message-->
+      <div id="divConsole" style="position: absolute; margin:4px; width:500px; height:565px; float:left;">
+         <canvas id="display" width="500px" height="565px" tabindex="3">
+         </canvas>
+      </div>
 
-   <div id="divLog" style="margin-left:520px;">
-      <label>Host Log</label>
-      <br>
-      <label id = "divLog--time">
-         Date: [Press Start]
-      </label>
-      <br>
-      <label id = "divLog--date">
-         Time: [Press Start]
-      </label>
-      <br>
-      <label id = "divLog--status"> Status: Shutdown</label>
-      <br>
-      <label>
-         <textarea name="taHostLog"
-                   id  ="taHostLog"
-                   rows="26"
-                   cols="48"
-         ></textarea>
-      </label>
-   </div>
+      <!-- Source img https://windowsreport.com/bsod-error-0x000000ea/-->
+      <!-- I know using absolute positioning is a bit "crude"-->
+      <div id="bsod"
+         style="position: absolute; visibility: hidden; margin:6px; width:504px; height:549px; float:left; justify-content: center">
+         <img id="bsod--image" width="500px" height="565px" z-index="100" src="images/BSoD-10.jpg"
+            alt="Sorry for screwing up this image, it's been a while since I've done front end stuff">
+      </div>
 
-   <div id="divUserProgramInput" style="margin-left:520px;">
-      <label>
-         User Program Input
+      <div id="divLog" style="margin-left:520px;">
+         <label>Host Log</label>
          <br>
-         <textarea name="taProgramInput"
-                   id  ="taProgramInput"
-                   rows="8"
-                   cols="48"
-         ></textarea>
-      </label>
-   </div>
-</div>
+         <label id="divLog--time">
+            Date: [Press Start]
+         </label>
+         <br>
+         <label id="divLog--date">
+            Time: [Press Start]
+         </label>
+         <br>
+         <label id="divLog--status"> Status: Shutdown</label>
+         <br>
+         <label>
+            <textarea name="taHostLog" id="taHostLog" rows="26" cols="48"></textarea>
+         </label>
+      </div>
 
-<p class="footerText" style="clear:both;">
-   <br>
-   Copyright &copy; 2008 - 2019 No Rights Reserved.
-   <br>
-   Reproduction is inhibited without the express written consent of
-   Ted Codd, Stevie Ray Vaughan, and Ian Fleming.
-</p>
+      <div id="divUserProgramInput" style="margin-left:520px;">
+         <label>
+            User Program Input
+            <br>
+            <textarea name="taProgramInput" id="taProgramInput" rows="8" cols="48"></textarea>
+         </label>
+      </div>
+   </div>
+
+   <div style="width: 500px; height: 250px;">
+      <H1> Memory </H1>
+      <div id="visual--memory--container" style="width: 500px; height: 250px; overflow-y: scroll;">
+         <Table id="visual--memory--table" style="border: 1px solid black;">
+         </Table>
+      </div>
+   </div>
+
+   <p class="footerText" style="clear:both;">
+      <br>
+      Copyright &copy; 2008 - 2019 No Rights Reserved.
+      <br>
+      Reproduction is inhibited without the express written consent of
+      Ted Codd, Stevie Ray Vaughan, and Ian Fleming.
+   </p>
 
 </body>
+
 </html>

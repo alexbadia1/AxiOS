@@ -42,7 +42,8 @@ var _Mode: number = 0;     // (currently unused)  0 = Kernel Mode, 1 = User Mode
 
 var _Canvas: HTMLCanvasElement;          // Initialized in Control.hostInit().
 var _DrawingContext: any;                // = _Canvas.getContext("2d");  // Assigned here for type safety, but re-initialized in Control.hostInit() for OCD and logic.
-var _taProgramInput: any;                /// Initialized in Control.hostInit().
+var _taProgramInput: any;
+var _visualMemory: any;         /// global variable for the memory table
 var _DefaultFontFamily: string = "sans"; // Ignored, I think. The was just a place-holder in 2008, but the HTML canvas may have use for it.
 var _DefaultFontSize: number = 13;
 var _FontHeightMargin: number = 4;       // Additional space added to font size when advancing a line.
@@ -74,6 +75,10 @@ var  _hardwareClockID: any = null;
 // For testing (and enrichment)...
 var Glados: any = null;  // This is the function Glados() in glados-ip*.js http://alanclasses.github.io/TSOS/test/ .
 var _GLaDOS: any = null; // If the above is linked in, this is the instantiated instance of Glados.
+
+/// Define max number of volumes and their max size
+var MAX_NUMBER_OF_VOlUMES: number = 3;
+var MAX_SIMPLE_VOLUME_CAPACITY: number = 256;
 
 var onDocumentLoad = function() {
 	TSOS.Control.hostInit();

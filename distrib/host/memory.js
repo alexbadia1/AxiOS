@@ -15,14 +15,14 @@
 var TSOS;
 (function (TSOS) {
     class Memory {
-        constructor(memorySize = 768, addressBlock = new Array()) {
+        constructor(memorySize = 768, addressBlock = []) {
             this.memorySize = memorySize;
             this.addressBlock = addressBlock;
         }
         init() {
             /// Initialize 256 bytes of empty data in memory;
             for (var i = 0; i < this.memorySize; i++) {
-                this.addressBlock.push("00");
+                this.addressBlock.push(new TSOS.Address(i));
             } /// for
         } /// init
         /// Returns the address in memory requested by the memoryAccessor
@@ -37,31 +37,4 @@ var TSOS;
     }
     TSOS.Memory = Memory;
 })(TSOS || (TSOS = {}));
-// module TSOS {
-//     /// I might be making this up but I thought there were physical lights and "lock gates"
-//     /// in memory that would represent read, write, etc access...
-//     /// Am I delusional for doing this?
-//     export class Address {
-//         constructor(
-//             public physicalAddress,
-//             public data: string = '00',
-//             public wLock: boolean = true,
-//             public xLock: boolean = false,
-//         ) { }
-//         public writeLock() { this.wLock = false; }
-//         public writeUnlock() { this.wLock = true; }
-//         public executeLock() { this.xLock = false; }
-//         public executeUnlock() { this.xLock = true; }
-//         public getWriteLock() { return this.wLock; }
-//         public getExecuteLock() { return this.xLock; }
-//         public read() { return this.data }
-//         public write(newData: string) {
-//             if (this.getWriteLock) {
-//                 this.data = newData;
-//             } else {
-//                 _Kernel.krnTrapError(`Place: ${this.physicalAddress} is WRITE Protected`);
-//             }
-//         }
-//     }
-// }
 //# sourceMappingURL=memory.js.map

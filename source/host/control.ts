@@ -34,6 +34,9 @@ module TSOS {
             /// Get gloabal reference to the input log
             _taProgramInput = document.getElementById("taProgramInput");
 
+            /// Get global reference for visual memory
+            _visualMemory = document.getElementById("visual--memory--table");
+
             // Enable the added-in canvas text functions (see canvastext.ts for provenance and details).
             CanvasTextFunctions.enable(_DrawingContext);   // Text functionality is now built in to the HTML5 canvas. But this is old-school, and fun, so we'll keep it.
 
@@ -95,6 +98,9 @@ module TSOS {
             _Memory = new Memory();
             _Memory.init();
 
+            /// ... Create and initialize Memory Accessor
+            _MemoryAccessor = new MemoryAccessor();
+            
             // ... then set the host clock pulse ...
             _hardwareClockID = setInterval(Devices.hostClockPulse, CPU_CLOCK_INTERVAL);
             // .. and call the OS Kernel Bootstrap routine.

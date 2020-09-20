@@ -575,59 +575,61 @@ var TSOS;
         shellLoad() {
             ///Regular expressions, smh.
             ///
-            /// Getting and Cleansing input
+            /// Getting and cleansing input
             var userInput = _taProgramInput.value.trim();
-            userInput = userInput.toLowerCase().replace(/\s/g, '');
+            userInput = userInput.toUpperCase().replace(/\s/g, '');
+            var hexPairList = new Array();
             /// Test for hexadecimal characters using regular expression...
             /// Javascript is testing my patience...
             /// Grrr...
             if (/^[A-F0-9]+$/i.test(userInput)) {
-                /// User input is valid
-                _StdOut.putText("Input: " + userInput);
                 /// Making sure there are no incomplete hex data pairs
                 if (userInput.length % 2 === 0) {
                     /// 1.) Find a free simple volume
                     ///
                     /// May as well use first fit since the volumes are all the same fixed size...
-                    var freeSimpleVolume;
                     if (_MemoryManager.firstFit() === -1) {
                         /// Memory is full
                         _StdOut.putText("Memory is full!");
                     } ///if
                     else {
                         /// Free Simple Volume was found
-                        freeSimpleVolume = _MemoryManager.simpleVolumes[_MemoryManager.firstFit()];
+                        var freeSimpleVolume = _MemoryManager.simpleVolumes[_MemoryManager.firstFit()];
                         /// Create a Process Control BLock
                         var newProcessControlBlock = new TSOS.ProcessControlBlock('New');
                         /// Add to list of processes
                         _MemoryManager.pcbs.push(newProcessControlBlock);
-                        /// Assign continuosly growing process id's
+                        /// Assign continuosly growing list of process id's
                         newProcessControlBlock.processID = _MemoryManager.pcbs.length - 1;
+                        /// Show user said process id...
+                        ///
+                        /// What's this?! Temperate Literals? fancy... eh?
+                        /// (*whispers* Wow, I'm actually learning...)
+                        _StdOut.putText(`Process ID: ${newProcessControlBlock.processID}`);
+                        _StdOut.advanceLine();
                         /// 2.) Load user input into free memory segment
                         ///
                         /// 2.1) Split the input into pairs of 2
-                        for (var logicalAddress = 0; logicalAddress < userInput.length; logicalAddress += 2) {
-                            /// Format the hex into pairs of two
-                            var hexPair;
-                            /// Check if we're gonna overflow the array or not
-                            if (logicalAddress === userInput.length) {
-                                /// There is no other pair (this list has an incomplete instruction)
-                                /// So Throw error
-                                hexPair = `${userInput[logicalAddress]}`;
-                            }
-                            else {
-                                /// List was split into pairs nicely
-                                hexPair = `${userInput[logicalAddress]}${userInput[logicalAddress + 1]}`;
-                            }
-                            /// Write to memory
-                            if (_MemoryAccessor.write(freeSimpleVolume, logicalAddress, hexPair)) {
-                                _StdOut.putText(`Command ${hexPair} had SUCCESSFUL WRITE to logical memory location: ${logicalAddress}!`);
+                        for (var pos = 0; pos < userInput.length; pos += 2) {
+                            /// List splits into pairs nicely
+                            hexPairList.push("" + userInput[pos] + userInput[pos + 1]);
+                        } /// for
+                        for (var logicalAddress = 0; logicalAddress < hexPairList.length; ++logicalAddress) {
+                            /// Write to memory from hex pair list
+                            if (_MemoryAccessor.write(freeSimpleVolume, logicalAddress, hexPairList[logicalAddress])) {
+                                _StdOut.putText(`Command ${hexPairList[logicalAddress]} had SUCCESSFUL WRITE to logical memory location: ${logicalAddress}!`);
+                                _StdOut.advanceLine();
                             } /// if 
                             else {
-                                _StdOut.putText(`Command ${hexPair} FAILED to WRITE to logical memory location: ${logicalAddress}!`);
+                                _StdOut.putText(`Command ${hexPairList[logicalAddress]} FAILED to WRITE to logical memory location: ${logicalAddress}!`);
+                                _StdOut.advanceLine();
                             } /// else
-                            _StdOut.putText(_MemoryAccessor.read(freeSimpleVolume, logicalAddress));
+                            console.log(_MemoryAccessor.read(freeSimpleVolume, logicalAddress));
                         } /// for
+                        /// Protect volumes from being written into by accident...
+                        ///
+                        /// Each individual address at the memory level will be locked to to prevent such overflow issues
+                        freeSimpleVolume.writeLock();
                     } ///else
                 } /// if 
                 ///
@@ -638,6 +640,11 @@ var TSOS;
             else {
                 _StdOut.putText("Invalid Hex Data. Type \'help\' for, well... help.");
             } /// else
+            /// Update Visual Memory
+            ///
+            /// Regardless of success or fail, just cause I want to be able to make sure memory
+            /// ain't doin anything funky
+            _MemoryAccessor.updateVisualMemory();
         } /// shellLoad
         shellMagicEightball(args) {
             var min = 0;

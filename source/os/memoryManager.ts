@@ -15,7 +15,9 @@ module TSOS {
         constructor(
             public simpleVolumes: SimpleVolume[] = [],
             public pcbs: ProcessControlBlock[] = [],
-        ) {}
+        ) {
+            this.init();
+        }
 
         public init(): void {
             /// Generate Memory Volumes
@@ -24,18 +26,19 @@ module TSOS {
             ///
             /// Calculate how many partitions you can make from memory
             var memorySize:number = _MemoryAccessor.mainMemorySize();
-            var simpleVolumeCapacity: number = 256;
             while (memorySize > 0) {
                 var temp = memorySize;
 
                 /// Well now we effectively lost the volume's capacity worth of memory
-                memorySize -= simpleVolumeCapacity;
+                memorySize -= MAX_SIMPLE_VOLUME_CAPACITY;
 
                 /// Create new volume
                 /// setting the physical base and physical limit as well
-                var newVolume = new SimpleVolume(memorySize,  temp - 1, simpleVolumeCapacity);
-                newVolume.writeEnabled = true;
-                this.simpleVolumes.push(new SimpleVolume(memorySize,  temp - 1, simpleVolumeCapacity));
+                var newVolume = new SimpleVolume(memorySize,  temp - 1, MAX_SIMPLE_VOLUME_CAPACITY);
+
+                /// Make sure the volume is writeable too
+                newVolume.writeUnlock();
+                this.simpleVolumes.push(new SimpleVolume(memorySize,  temp - 1, MAX_SIMPLE_VOLUME_CAPACITY));
             }///while
         } /// init
 
@@ -78,14 +81,14 @@ module TSOS {
             /// Loop through the entire list and find the first Write Enabled file...
             ///
             /// Also O(n) time complexity?
-            var pos: number = -1;
+            var pos: number = this.simpleVolumes.length - 1;
             var found: boolean = false;
-            while (pos < this.simpleVolumes.length && !found) {
-                if (this.simpleVolumes[pos].writeEnabled) {
+            while (pos >= 0 && !found) {
+                if (this.simpleVolumes[pos].getWriteEnabled) {
                     found = true;
                 }/// if
                 else {
-                    pos++;
+                    pos--;
                 }/// else
             }/// while
 
@@ -101,11 +104,29 @@ module TSOS {
             public physicalLimit: number,
             public capacity: number,
             public readEnabled = true,
-            public writeEnabled = true,
+            private writeEnabled = true,
             public ExecuteEnabled = false,
-            public layout: string = "Simple",
-            public type: string = 'Basic',
+            public layout: string = "Simple", /// Serves allusionary purpose to MS only
+            public type: string = 'Basic', /// Serves allusionary purpose to MS only
         ) { }
 
+        public getWriteEnabled() {
+            return this.writeEnabled
+        }/// getWriteEnabled
+        public writeLock() {
+            this.writeEnabled = false;
+
+            /// write lock each individual address
+            for (var logicalAddress: number = 0; logicalAddress < MAX_SIMPLE_VOLUME_CAPACITY; ++logicalAddress) {
+                _Memory.getAddress(logicalAddress + this.physicalBase).writeLock();
+            }/// for
+        }/// writeLock
+
+        public writeUnlock(){
+            /// write unlock each individual address
+            for (var logicalAddress: number = 0; logicalAddress < MAX_SIMPLE_VOLUME_CAPACITY; ++logicalAddress) {
+            _Memory.getAddress(logicalAddress + this.physicalBase).writeUnlock();
+        }/// for
+        }
     }/// class
 }

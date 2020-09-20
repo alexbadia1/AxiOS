@@ -54,22 +54,46 @@ var TSOS;
                     /// I'm just gonna loop through a list...
                     ///
                     /// Rather not include "bsod", yah know... the command that crashes the OS.
-                    var cmds = ['ver', 'help', 'shutdown', 'cls', 'man', 'trace', 'rot13', 'prompt', 'date', 'whereami', 'eightball', 'status', 'load'];
-                    var pos = 0;
-                    var found = false;
-                    /// I think 2 letters is the minimum for uniqueness
-                    if (this.buffer.length >= 2) {
-                        while (pos < cmds.length && !found) {
-                            if (cmds[pos].includes(this.buffer)) {
-                                this.eraseText();
-                                this.putText(cmds[pos]);
-                                this.buffer = cmds[pos];
-                                found = true;
-                            }
-                            else
-                                pos++;
-                        } /// while
+                    var cmds = [
+                        'ver',
+                        'help',
+                        'shutdown',
+                        'cls',
+                        'man',
+                        'trace',
+                        'rot13',
+                        'prompt',
+                        'date',
+                        'whereami',
+                        'eightball',
+                        'status',
+                        'load'
+                    ];
+                    var matches = [];
+                    for (var pos = 0; pos < cmds.length; ++pos) {
+                        if (cmds[pos].startsWith(this.buffer)) {
+                            matches.push(cmds[pos]);
+                        } /// if
+                    } /// for
+                    /// If there's only one matching command, replace current buffer
+                    /// and text with the new command
+                    if (matches.length === 1) {
+                        this.eraseText();
+                        this.putText(matches[0]);
+                        this.buffer = matches[0];
                     } /// if
+                    /// If there's multiple matching commands print out said matching commands
+                    else {
+                        this.eraseText();
+                        this.advanceLine();
+                        this.putText("Multiple commands wer found:");
+                        this.advanceLine();
+                        for (var num = 0; num < matches.length; ++num) {
+                            this.putText(`  ${matches[num]}`);
+                            this.advanceLine();
+                        } /// for
+                        _OsShell.putPrompt();
+                    } /// else
                 } /// else-if
                 /// Basically have one stack hold the old commands, LIFO is important to keep the order of commands correct
                 else if (chr === String.fromCharCode(38)) {
@@ -112,7 +136,12 @@ var TSOS;
                 else {
                     // This is a "normal" character, so ...
                     // ... draw it on the screen...
-                    this.putText(chr.trim());
+                    if (chr === String.fromCharCode(32)) {
+                        this.putText(" ");
+                    } /// if
+                    else {
+                        this.putText(chr.trim());
+                    } /// else
                     // ... and add it to our buffer.
                     this.buffer += chr;
                 } /// else

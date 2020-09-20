@@ -28,6 +28,8 @@ var TSOS;
             _DrawingContext = _Canvas.getContext("2d");
             /// Get gloabal reference to the input log
             _taProgramInput = document.getElementById("taProgramInput");
+            /// Get global reference for visual memory
+            _visualMemory = document.getElementById("visual--memory--table");
             // Enable the added-in canvas text functions (see canvastext.ts for provenance and details).
             TSOS.CanvasTextFunctions.enable(_DrawingContext); // Text functionality is now built in to the HTML5 canvas. But this is old-school, and fun, so we'll keep it.
             // Clear the log text box.
@@ -74,6 +76,8 @@ var TSOS;
             /// ... Create and initialize the Memory
             _Memory = new TSOS.Memory();
             _Memory.init();
+            /// ... Create and initialize Memory Accessor
+            _MemoryAccessor = new TSOS.MemoryAccessor();
             // ... then set the host clock pulse ...
             _hardwareClockID = setInterval(TSOS.Devices.hostClockPulse, CPU_CLOCK_INTERVAL);
             // .. and call the OS Kernel Bootstrap routine.
