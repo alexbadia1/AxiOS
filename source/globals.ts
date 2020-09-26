@@ -35,6 +35,7 @@ var _MemoryAccessor: TSOS.MemoryAccessor;
 
 /// Software (OS)
 var _MemoryManager: any = null;
+var _ProcessControlBlockQueue: TSOS.ProcessControlBlockQueue;
 
 var _OSclock: number = 0;  // Page 23.
 
@@ -44,6 +45,8 @@ var _Canvas: HTMLCanvasElement;          // Initialized in Control.hostInit().
 var _DrawingContext: any;                // = _Canvas.getContext("2d");  // Assigned here for type safety, but re-initialized in Control.hostInit() for OCD and logic.
 var _taProgramInput: any;
 var _visualMemory: any;         /// global variable for the memory table
+var _visualCpu: any; /// global variable for the CPU table
+var _visualPcb: any; /// global variable for the PCB table
 var _DefaultFontFamily: string = "sans"; // Ignored, I think. The was just a place-holder in 2008, but the HTML canvas may have use for it.
 var _DefaultFontSize: number = 13;
 var _FontHeightMargin: number = 4;       // Additional space added to font size when advancing a line.
@@ -81,5 +84,5 @@ var MAX_NUMBER_OF_VOlUMES: number = 3;
 var MAX_SIMPLE_VOLUME_CAPACITY: number = 256;
 
 var onDocumentLoad = function() {
-	TSOS.Control.hostInit();
+   TSOS.Control.hostInit();
 };

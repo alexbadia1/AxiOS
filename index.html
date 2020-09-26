@@ -33,6 +33,7 @@
    <script type="text/javascript" src="distrib/os/kernel.js"></script>
    <script type="text/javascript" src="distrib/os/memoryManager.js"></script>
    <script type="text/javascript" src="distrib/os/processControlBlock.js"></script>
+   <script type="text/javascript" src="distrib/os/processControlBlockQueue.js"></script>
 
    <!-- Other Routines -->
    <script type="text/javascript" src="distrib/utils.js"></script>
@@ -99,9 +100,12 @@
       </div>
    </div>
 
-   <div style="width: 500px; height: 250px;">
+    <!-- Functionality over fancy styling stuff for now... probably gonna switch this entire index.html to a simple flex layout
+      but now that I'm thinking about this, maybe a more modern grid layout.
+   -->
+   <div style="width: 500px; height: 100px; position: relative;">
       <H1> Memory </H1>
-      <div id="visual--memory--container" style="width: 500px; height: 250px; overflow-y: scroll;">
+      <div id="visual--memory--container" style="width: 500px; height: 200px; overflow-y: scroll;">
          <Table id="visual--memory--table" style="border: 1px solid black;">
          </Table>
       </div>

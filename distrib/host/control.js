@@ -30,6 +30,10 @@ var TSOS;
             _taProgramInput = document.getElementById("taProgramInput");
             /// Get global reference for visual memory
             _visualMemory = document.getElementById("visual--memory--table");
+            /// Get global reference for visual cpu
+            _visualCpu = document.getElementById("visual--cpu--table");
+            /// Get global reference for visual pcb
+            _visualPcb = document.getElementById("visual--pcb--table");
             // Enable the added-in canvas text functions (see canvastext.ts for provenance and details).
             TSOS.CanvasTextFunctions.enable(_DrawingContext); // Text functionality is now built in to the HTML5 canvas. But this is old-school, and fun, so we'll keep it.
             // Clear the log text box.
@@ -78,6 +82,9 @@ var TSOS;
             _Memory.init();
             /// ... Create and initialize Memory Accessor
             _MemoryAccessor = new TSOS.MemoryAccessor();
+            /// ...Create a PCB queue to keep track of currently running pcb's
+            _ProcessControlBlockQueue = new TSOS.ProcessControlBlockQueue();
+            _ProcessControlBlockQueue.init();
             // ... then set the host clock pulse ...
             _hardwareClockID = setInterval(TSOS.Devices.hostClockPulse, CPU_CLOCK_INTERVAL);
             // .. and call the OS Kernel Bootstrap routine.

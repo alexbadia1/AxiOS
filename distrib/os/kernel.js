@@ -34,7 +34,7 @@ var TSOS;
             //
             _MemoryManager = new TSOS.MemoryManager();
             /// Visualize Memory...
-            _MemoryAccessor.createVisualMemory();
+            _MemoryAccessor.initializeVisualMemory();
             // Enable the OS Interrupts.  (Not the CPU clock interrupt, as that is done in the hardware sim.)
             this.krnTrace("Enabling the interrupts.");
             this.krnEnableInterrupts();
@@ -93,6 +93,8 @@ var TSOS;
             document.getElementById('divLog--date').innerText = `${month}/${day}/${year}/`;
             document.getElementById('divLog--time').innerText = `${hours}:${minutes}:${seconds}`;
         } /// getCurrentDateTime
+        /// Hopefully Visualizes CPU Data
+        visualizeCPU() { } ///visualizeCPU
         //
         // Interrupt Handling
         //

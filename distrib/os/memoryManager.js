@@ -10,9 +10,8 @@
 var TSOS;
 (function (TSOS) {
     class MemoryManager {
-        constructor(simpleVolumes = [], pcbs = []) {
+        constructor(simpleVolumes = []) {
             this.simpleVolumes = simpleVolumes;
-            this.pcbs = pcbs;
             this.init();
         }
         init() {
@@ -42,9 +41,11 @@ var TSOS;
             var maxVolIndex = -1;
             /// Simple find max (Schwartz taught me this one)
             for (var pos = 0; pos < this.simpleVolumes.length; ++pos) {
-                if (this.simpleVolumes[pos].capacity > maxVol) {
-                    maxVol = this.simpleVolumes[pos].capacity;
-                    maxVolIndex = pos;
+                if (this.simpleVolumes[pos].getWriteEnabled()) {
+                    if (this.simpleVolumes[pos].capacity > maxVol) {
+                        maxVol = this.simpleVolumes[pos].capacity;
+                        maxVolIndex = pos;
+                    } /// if
                 } /// if
             } ///for
             return maxVolIndex;
@@ -57,9 +58,11 @@ var TSOS;
             var minVolIndex = -1;
             /// Simple find min (Schwartz taught me this one too)
             for (var pos = 0; pos < this.simpleVolumes.length; ++pos) {
-                if (this.simpleVolumes[pos].capacity < minVol) {
-                    minVol = this.simpleVolumes[pos].capacity;
-                    minVolIndex = pos;
+                if (this.simpleVolumes[pos].getWriteEnabled()) {
+                    if (this.simpleVolumes[pos].capacity < minVol) {
+                        minVol = this.simpleVolumes[pos].capacity;
+                        minVolIndex = pos;
+                    } /// if
                 } /// if
             } ///for
             return minVolIndex;
@@ -71,7 +74,7 @@ var TSOS;
             var pos = this.simpleVolumes.length - 1;
             var found = false;
             while (pos >= 0 && !found) {
-                if (this.simpleVolumes[pos].getWriteEnabled) {
+                if (this.simpleVolumes[pos].getWriteEnabled()) {
                     found = true;
                 } /// if
                 else {
@@ -108,6 +111,7 @@ var TSOS;
             } /// for
         } /// writeLock
         writeUnlock() {
+            this.writeEnabled = true;
             /// write unlock each individual address
             for (var logicalAddress = 0; logicalAddress < MAX_SIMPLE_VOLUME_CAPACITY; ++logicalAddress) {
                 _Memory.getAddress(logicalAddress + this.physicalBase).writeUnlock();

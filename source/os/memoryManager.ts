@@ -14,7 +14,6 @@ module TSOS {
 
         constructor(
             public simpleVolumes: SimpleVolume[] = [],
-            public pcbs: ProcessControlBlock[] = [],
         ) {
             this.init();
         }
@@ -25,7 +24,7 @@ module TSOS {
             /// While there is room in memory for more volumes, keep making volumes
             ///
             /// Calculate how many partitions you can make from memory
-            var memorySize:number = _MemoryAccessor.mainMemorySize();
+            var memorySize: number = _MemoryAccessor.mainMemorySize();
             while (memorySize > 0) {
                 var temp = memorySize;
 
@@ -34,11 +33,11 @@ module TSOS {
 
                 /// Create new volume
                 /// setting the physical base and physical limit as well
-                var newVolume = new SimpleVolume(memorySize,  temp - 1, MAX_SIMPLE_VOLUME_CAPACITY);
+                var newVolume = new SimpleVolume(memorySize, temp - 1, MAX_SIMPLE_VOLUME_CAPACITY);
 
                 /// Make sure the volume is writeable too
                 newVolume.writeUnlock();
-                this.simpleVolumes.push(new SimpleVolume(memorySize,  temp - 1, MAX_SIMPLE_VOLUME_CAPACITY));
+                this.simpleVolumes.push(new SimpleVolume(memorySize, temp - 1, MAX_SIMPLE_VOLUME_CAPACITY));
             }///while
         } /// init
 
@@ -46,20 +45,22 @@ module TSOS {
             /// Loop through the entire list and find the biggest volume...
             ///
             /// O(n) time complexity?
-            var maxVol: number= this.simpleVolumes[0].capacity;
+            var maxVol: number = this.simpleVolumes[0].capacity;
             var maxVolIndex: number = -1;
 
             /// Simple find max (Schwartz taught me this one)
             for (var pos = 0; pos < this.simpleVolumes.length; ++pos) {
-                if (this.simpleVolumes[pos].capacity > maxVol) {
-                    maxVol = this.simpleVolumes[pos].capacity;
-                    maxVolIndex = pos;
+                if (this.simpleVolumes[pos].getWriteEnabled()) {
+                    if (this.simpleVolumes[pos].capacity > maxVol) {
+                        maxVol = this.simpleVolumes[pos].capacity;
+                        maxVolIndex = pos;
+                    }/// if
                 }/// if
             }///for
             return maxVolIndex;
         }/// worstFit
 
-        public bestFit(){
+        public bestFit() {
             /// Loop through the entire list and find the smallest volume...
             ///
             /// Also O(n) time complexity?
@@ -68,23 +69,25 @@ module TSOS {
 
             /// Simple find min (Schwartz taught me this one too)
             for (var pos = 0; pos < this.simpleVolumes.length; ++pos) {
-                if (this.simpleVolumes[pos].capacity < minVol) {
-                    minVol = this.simpleVolumes[pos].capacity;
-                    minVolIndex = pos;
+                if (this.simpleVolumes[pos].getWriteEnabled()) {
+                    if (this.simpleVolumes[pos].capacity < minVol) {
+                        minVol = this.simpleVolumes[pos].capacity;
+                        minVolIndex = pos;
+                    }/// if
                 }/// if
             }///for
 
             return minVolIndex;
         }/// bestFit
 
-        public firstFit(){
+        public firstFit() {
             /// Loop through the entire list and find the first Write Enabled file...
             ///
             /// Also O(n) time complexity?
             var pos: number = this.simpleVolumes.length - 1;
             var found: boolean = false;
             while (pos >= 0 && !found) {
-                if (this.simpleVolumes[pos].getWriteEnabled) {
+                if (this.simpleVolumes[pos].getWriteEnabled()) {
                     found = true;
                 }/// if
                 else {
@@ -111,8 +114,9 @@ module TSOS {
         ) { }
 
         public getWriteEnabled() {
-            return this.writeEnabled
+            return this.writeEnabled;
         }/// getWriteEnabled
+
         public writeLock() {
             this.writeEnabled = false;
 
@@ -122,11 +126,12 @@ module TSOS {
             }/// for
         }/// writeLock
 
-        public writeUnlock(){
+        public writeUnlock() {
+            this.writeEnabled = true;
             /// write unlock each individual address
             for (var logicalAddress: number = 0; logicalAddress < MAX_SIMPLE_VOLUME_CAPACITY; ++logicalAddress) {
-            _Memory.getAddress(logicalAddress + this.physicalBase).writeUnlock();
-        }/// for
+                _Memory.getAddress(logicalAddress + this.physicalBase).writeUnlock();
+            }/// for
         }
     }/// class
 }

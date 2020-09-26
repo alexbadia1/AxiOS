@@ -109,6 +109,12 @@ module TSOS {
                 'Loads user HEX code');
             this.commandList[this.commandList.length] = sc;
 
+            // Run
+            sc = new ShellCommand(this.shellRun,
+                'run',
+                'Runs process id in cpu');
+            this.commandList[this.commandList.length] = sc;
+
             // ps  - list the running processes and their IDs
             // kill <id> - kills the specified process id.
 
@@ -589,7 +595,10 @@ module TSOS {
                         _StdOut.putText("BSOD- forces a kernel error.");
                         break;
                     case "load":
-                        _StdOut.putText("Load- loads user HEX code");
+                        _StdOut.putText("Load- loads user HEX code.");
+                        break;
+                    case "run":
+                        _StdOut.putText("Run- runs process id in cpu.");
                         break;
                     default:
                         _StdOut.putText("No manual entry for " + args[0] + ".");
@@ -676,8 +685,7 @@ module TSOS {
             var hexPairList: Array<string> = new Array();
 
             /// Test for hexadecimal characters using regular expression...
-            /// Javascript is testing my patience...
-            /// Grrr...
+            /// Learning hurts, ugh...
             if (/^[A-F0-9]+$/i.test(userInput)) {
 
                 /// Making sure there are no incomplete hex data pairs
@@ -688,19 +696,27 @@ module TSOS {
                     if (_MemoryManager.firstFit() === -1) {
                         /// Memory is full
                         _StdOut.putText("Memory is full!");
+                        _StdOut.advanceLine();
                     } ///if
                     else {
                         /// Free Simple Volume was found
-                        var freeSimpleVolume = _MemoryManager.simpleVolumes[_MemoryManager.firstFit()];
+                        var freeSpot: number = _MemoryManager.firstFit();
+                        var freeSimpleVolume: SimpleVolume = _MemoryManager.simpleVolumes[freeSpot];
 
                         /// Create a Process Control BLock
-                        var newProcessControlBlock: ProcessControlBlock = new ProcessControlBlock('New');
+                        var newProcessControlBlock: ProcessControlBlock = new ProcessControlBlock();
 
-                        /// Add to list of processes
-                        _MemoryManager.pcbs.push(newProcessControlBlock);
+                        /// Set state to new process as new until it is a resident
+                        newProcessControlBlock.processState = "NEW";
+
+                        /// Set location of the new process in memory segment
+                        newProcessControlBlock.volumeIndex = freeSpot;
 
                         /// Assign continuosly growing list of process id's
-                        newProcessControlBlock.processID = _MemoryManager.pcbs.length - 1;
+                        newProcessControlBlock.processID = _ProcessControlBlockQueue.pcbsQueue.length;
+
+                        /// Add to list of processes
+                        _ProcessControlBlockQueue.pcbsQueue.push(newProcessControlBlock);
 
                         /// Show user said process id...
                         ///
@@ -714,47 +730,102 @@ module TSOS {
                         /// 2.1) Split the input into pairs of 2
                         for (var pos: number = 0; pos < userInput.length; pos += 2) {
                             /// List splits into pairs nicely
-                            hexPairList.push ("" + userInput[pos] + userInput[pos + 1]);
+                            hexPairList.push("" + userInput[pos] + userInput[pos + 1]);
                         }/// for
 
 
                         for (var logicalAddress = 0; logicalAddress < hexPairList.length; ++logicalAddress) {
-                            
+
                             /// Write to memory from hex pair list
                             if (_MemoryAccessor.write(freeSimpleVolume, logicalAddress, hexPairList[logicalAddress])) {
-                                _StdOut.putText(`Command ${hexPairList[logicalAddress]} had SUCCESSFUL WRITE to logical memory location: ${logicalAddress}!`);
+                                _StdOut.putText(`Command ${hexPairList[logicalAddress]}:`);
+                                _StdOut.advanceLine();
+                                _StdOut.putText(` SUCCESSFUL WRITE to logical memory location: ${logicalAddress}!`);
                                 _StdOut.advanceLine();
                             }/// if 
                             else {
-                                _StdOut.putText(`Command ${hexPairList[logicalAddress]} FAILED to WRITE to logical memory location: ${logicalAddress}!`);
+                                _StdOut.putText(`Command ${hexPairList[logicalAddress]}:`);
+                                _StdOut.advanceLine();
+                                _StdOut.putText(` FAILED to WRITE to logical memory location: ${logicalAddress}!`);
                                 _StdOut.advanceLine();
                             }/// else
 
-                            console.log(_MemoryAccessor.read(freeSimpleVolume, logicalAddress));
+                            /// console.log(_MemoryAccessor.read(freeSimpleVolume, logicalAddress));
                         }/// for
 
                         /// Protect volumes from being written into by accident...
                         ///
                         /// Each individual address at the memory level will be locked to to prevent such overflow issues
                         freeSimpleVolume.writeLock();
+
+                        ///
+                        /// 3.) If the program is properly loaded into memory... 
+                        /// Update the process control block state to show it is loaded in memory
+                        newProcessControlBlock.processState = "Residient";
                     } ///else
                 }/// if 
 
-                ///
-                /// 3.) If the program is properly loaded into memory... 
-                /// Update the process control block state to show it is loaded in memory
-                newProcessControlBlock.processState = "Residient";
+                /// The user inputted an odd amount of hex characters meaning there is an unmatched pair, so 
+                /// print out to the console that is ain't gonna work.
+                else {
+                    _StdOut.putText("Invalid Hex Data.");
+                    _StdOut.advanceLine();
+                    _StdOut.putText("Hex Command or Hex Data is incomplete.");
+                    _StdOut.advanceLine();
+                    _StdOut.putText("Type \'help\' for, well... help.");
+                    _StdOut.advanceLine();
+                }
             } /// if
             else {
-                _StdOut.putText("Invalid Hex Data. Type \'help\' for, well... help.");
+                _StdOut.putText("Invalid Hex Data.");
+                _StdOut.advanceLine();
+                _StdOut.putText("Type \'help\' for, well... help.");
+                _StdOut.advanceLine();
             }/// else
 
             /// Update Visual Memory
             ///
             /// Regardless of success or fail, just cause I want to be able to make sure memory
-            /// ain't doin anything funky
+            /// ain't doin anything funky...
             _MemoryAccessor.updateVisualMemory();
         }/// shellLoad
+
+        public shellRun(args: string[]) {
+            /// Apparently Javascripts tolerance of NaN completly defeats the purpose of using this 
+            /// try catch... nice!
+            try {
+                /// Check if the process exists with basic linear search
+                var curr: number = 0;
+                var found: boolean = false;
+                while (curr < _ProcessControlBlockQueue.pcbsQueue.length && !found) {
+                    if (_ProcessControlBlockQueue.pcbsQueue[curr].processID == parseInt(args[0])) {
+                        found = true;
+                    }/// if
+                    else {
+                        curr++;
+                    }/// else
+                }/// while
+
+                if (!found) {
+                    _StdOut.putText(`No process control blocks found with pid: ${parseInt(args[0])}.`);
+                }/// if
+                else {
+                    /// Run the process
+                    ///
+                    /// Update the proces state
+                    _ProcessControlBlockQueue.pcbsQueue[curr].processState = "Running";
+                    
+                    /// Set the local pcb in the cpu
+                    _CPU.setLocalProcessControlBlock(_ProcessControlBlockQueue.pcbsQueue[curr]);
+
+                    /// "Turn on" the cpu
+                    _CPU.isExecuting = true;
+                }/// else
+            }/// try
+            catch (e) {
+                _StdOut.putText(`Usage: run <int> please supply a process id.`);
+            }/// catch
+        }/// run
 
         public shellMagicEightball(args: string[]) {
             var min = 0;
