@@ -628,16 +628,10 @@ var TSOS;
                         for (var logicalAddress = 0; logicalAddress < hexPairList.length; ++logicalAddress) {
                             /// Write to memory from hex pair list
                             if (_MemoryAccessor.write(freeSimpleVolume, logicalAddress, hexPairList[logicalAddress])) {
-                                _StdOut.putText(`Command ${hexPairList[logicalAddress]}:`);
-                                _StdOut.advanceLine();
-                                _StdOut.putText(` SUCCESSFUL WRITE to logical memory location: ${logicalAddress}!`);
-                                _StdOut.advanceLine();
+                                TSOS.Control.hostLog(`Command ${hexPairList[logicalAddress]}: SUCCESSFUL WRITE to logical memory location: ${logicalAddress}!`);
                             } /// if 
                             else {
-                                _StdOut.putText(`Command ${hexPairList[logicalAddress]}:`);
-                                _StdOut.advanceLine();
-                                _StdOut.putText(` FAILED to WRITE to logical memory location: ${logicalAddress}!`);
-                                _StdOut.advanceLine();
+                                TSOS.Control.hostLog(`Command ${hexPairList[logicalAddress]}: FAILED to WRITE to logical memory location: ${logicalAddress}!`);
                             } /// else
                             /// console.log(_MemoryAccessor.read(freeSimpleVolume, logicalAddress));
                         } /// for

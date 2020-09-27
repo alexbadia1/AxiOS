@@ -19,9 +19,9 @@ module TSOS {
             public PC: number = 0,
             public IR: string = "00",
             public Acc: string = "00",
-            public Xreg: number = 0,
-            public Yreg: number = 0,
-            public Zflag: number = 0,
+            public Xreg: string = "00",
+            public Yreg: string = "00",
+            public Zflag: string = "00",
             public isExecuting: boolean = false,
 
             /// So far it's either make a global reference
@@ -33,9 +33,9 @@ module TSOS {
             this.PC = 0;
             this.IR = "00";
             this.Acc = "00";
-            this.Xreg = 0;
-            this.Yreg = 0;
-            this.Zflag = 0;
+            this.Xreg = "00";
+            this.Yreg = "00";
+            this.Zflag = "00";
             this.isExecuting = false;
             this.localPCB = null;
         }/// init
@@ -47,8 +47,10 @@ module TSOS {
             // Do the real work here. Be sure to set this.isExecuting appropriately.
             ///
             /// Classic fetch(), decode(), execute()...
-            this.fetch();
-            // this.decode(addressData.read());
+            var addressData: string = this.fetch();
+
+            /// Decode using a giant switch case
+            this.decode(addressData);
 
             /// TODO: Move definitions into Control.ts and call methods in Kernel.OnClockPulse(); or something....
             ///
@@ -56,6 +58,11 @@ module TSOS {
             /// Clearly, they do not belong here as we are trying to model a cpu as close as possible.
             this.updateVisualCpu();
             this.updatePcb();
+            _MemoryAccessor.updateVisualMemory();
+
+            this.isExecuting = false;
+            /// Call clock pulse
+            // Increment the hardware (host) clock
         }
 
         public setLocalProcessControlBlock(newProcessControlBlock: ProcessControlBlock) {
@@ -89,30 +96,32 @@ module TSOS {
 
                 /// Load Accumulator from memory
                 case 'AD':
-                    break;
-
-                /// Take what's in the accumulator and put it in memory
-                case '8D':
-                    break;
-
-                /// Load X-register with a constant
-                case 'A2':
-                    break;
-
-                /// Load X-register from memory
-                case 'AE':
-                    break;
-
-                /// Load the Y-register with a constant
-                case 'A0':
-                    break;
-
-                /// Load the Y-register from memory
-                case 'AC':
+                    this.ldaAccMemory();
                     break;
 
                 /// Store the accumulator in memory
                 case '8D':
+                    this.staAccMemory();
+                    break;
+
+                /// Load X-register with a constant
+                case 'A2':
+                    this.ldaXConst();
+                    break;
+
+                /// Load X-register from memory
+                case 'AE':
+                    this.ldaXMemory();
+                    break;
+
+                /// Load the Y-register with a constant
+                case 'A0':
+                    this.ldaYConst();
+                    break;
+
+                /// Load the Y-register from memory
+                case 'AC':
+                    this.ldaYMemory();
                     break;
 
                 /// Add with carry
@@ -148,12 +157,18 @@ module TSOS {
 
                 default:
                     /// Throw error
+                    _StdOut.putText(`Data: ${newAddressData} could not be decoded into an instruction!`);
+                    _StdOut.advanceLine();
+                    _OsShell.putPrompt();
+                    this.isExecuting = false;
                     break;
             }/// switch
         }///decode
 
-        // Loads the accumulator with a constant.
-        ldaAccConstant() {
+        /// Load the accumulator with a constant.
+        public ldaAccConstant() {
+            this.visualizeInstructionRegister('A9');
+
             /// Increase the accumulator to read data argument of the constructor
             this.PC += 1;
 
@@ -172,24 +187,92 @@ module TSOS {
         }/// ldaAccConstant
 
 
-        // //Loads the accumulator with a value from memory.
-        // loadAccMem() {
-        //     let locationOfValue1 = _MemoryAccessor.read(_CurrentPCB.segment, this.PC + 1);
-        //     let locationOfValue2 = _MemoryAccessor.read(_CurrentPCB.segment, this.PC + 2);
-        //     let newValue = parseInt(locationOfValue2 + locationOfValue1, 16);
-        //     this.Acc = parseInt(_MemoryAccessor.read(_CurrentPCB.segment, newValue), 16);
-        //     this.PC += 3;
-        // }
-        // //Stores the accumulator's value in memory.
-        // /*The padStart ensures exactly two (2) digits are stored since the accumulator uses number variables (and I did not want to change this in the spirit thereof).
-        //     For example, the accumulator only stores '1', but memory needs '01' since the program length matters. The CPU display of '01' is strictly graphical.*/
-        // storeInMem() {
-        //     let locationOfValue1 = _MemoryAccessor.read(_CurrentPCB.segment, this.PC + 1);
-        //     let locationOfValue2 = _MemoryAccessor.read(_CurrentPCB.segment, this.PC + 2);
-        //     let newValue = parseInt(locationOfValue2 + locationOfValue1, 16);
-        //     _MemoryAccessor.write(_CurrentPCB.segment, (this.Acc).toString(16).toUpperCase().padStart(2, "0"), newValue);
-        //     this.PC += 3;
-        // }
+        /// Load the accumulator from memory.
+        public ldaAccMemory() {
+            this.visualizeInstructionRegister('AD');
+
+            /// Adjust for inversion and wrapping
+            var wrapAdjustedLogicalAddress: number = this.getWrapAdjustedLogicalAddress();
+
+            /// Actually read from memory using the wrapped logical address that is also adjusted for inversion
+            this.Acc =  _MemoryAccessor.read(_MemoryManager.simpleVolumes[this.localPCB.volumeIndex], wrapAdjustedLogicalAddress);
+
+            /// Increment program counter as usual
+            this.PC += 1;
+        }/// ldaAccMem
+
+
+        /// Store the accumulator in memory
+        public staAccMemory() {
+            this.visualizeInstructionRegister('8D');
+
+            /// Adjust for inversion and wrapping
+            var wrapAdjustedLogicalAddress: number = this.getWrapAdjustedLogicalAddress();
+
+            /// Actually read from memory using the wrapped logical address that is also adjusted for inversion
+            _MemoryAccessor.write(_MemoryManager.simpleVolumes[this.localPCB.volumeIndex], wrapAdjustedLogicalAddress, this.Acc);
+
+            /// Increment program counter as usual
+            this.PC += 1;
+        }/// staAccMemory
+
+        /// Load the X register with a constant
+        public ldaXConst() {
+            this.visualizeInstructionRegister('A2');
+
+            /// Increase the accumulator to read data argument of the constructor
+            this.PC += 1;
+
+            /// Actually read from memory using the wrapped logical address that is also adjusted for inversion
+            this.Xreg = _MemoryAccessor.read(_MemoryManager.simpleVolumes[this.localPCB.volumeIndex], this.PC);
+
+            /// Increment program counter as usual
+            this.PC += 1;
+        }/// loadXConstant
+
+        /// Load the X register from memory
+        public ldaXMemory() {
+            this.visualizeInstructionRegister('AE');
+
+            /// Adjust for inversion and wrapping
+            var wrapAdjustedLogicalAddress: number = this.getWrapAdjustedLogicalAddress();
+
+            /// Actually read from memory using the wrapped logical address that is also adjusted for inversion
+            this.Xreg = _MemoryAccessor.read(_MemoryManager.simpleVolumes[this.localPCB.volumeIndex], wrapAdjustedLogicalAddress);
+
+            /// Increment program counter as usual
+            this.PC += 1;
+        }/// LoadXMemory
+
+        /// Load the Y register with a constant
+        public ldaYConst() {
+            this.visualizeInstructionRegister('A0');
+
+            /// Increase the accumulator to read data argument of the constructor
+            this.PC += 1;
+
+            /// Actually read from memory using the wrapped logical address that is also adjusted for inversion
+            this.Yreg = _MemoryAccessor.read(_MemoryManager.simpleVolumes[this.localPCB.volumeIndex], this.PC);
+
+            /// Increment program counter as usual
+            this.PC += 1;
+        }/// loadXConstant
+
+        /// Load the Y register from memory
+        public ldaYMemory() {
+            this.visualizeInstructionRegister('AC');
+
+            /// Adjust for inversion and wrapping
+            var wrapAdjustedLogicalAddress: number = this.getWrapAdjustedLogicalAddress();
+
+            /// Actually read from memory using the wrapped logical address that is also adjusted for inversion
+            this.Yreg = _MemoryAccessor.read(_MemoryManager.simpleVolumes[this.localPCB.volumeIndex], wrapAdjustedLogicalAddress);
+
+            /// Increment program counter as usual
+            this.PC += 1;
+        }/// LoadXMemory
+
+
         // //Adds a value to the accumulator. If the value is greater than 255, it 'rolls over' to 0 + remainder.
         // addWCarry() {
         //     let locationOfValue1 = _MemoryAccessor.read(_CurrentPCB.segment, this.PC + 1);
@@ -201,32 +284,7 @@ module TSOS {
         //         this.Acc %= 256;
         //     this.PC += 3;
         // }
-        // //Loads the X register with a constant.
-        // loadXConst() {
-        //     this.Xreg = parseInt(_MemoryAccessor.read(_CurrentPCB.segment, this.PC + 1), 16);
-        //     this.PC += 2;
-        // }
-        // //Loads the X register from memory.
-        // loadXMem() {
-        //     let locationOfValue1 = _MemoryAccessor.read(_CurrentPCB.segment, this.PC + 1);
-        //     let locationOfValue2 = _MemoryAccessor.read(_CurrentPCB.segment, this.PC + 2);
-        //     let newValue = parseInt(locationOfValue2 + locationOfValue1, 16);
-        //     this.Xreg = parseInt(_MemoryAccessor.read(_CurrentPCB.segment, newValue), 16);
-        //     this.PC += 3;
-        // }
-        // //Loads the Y register with a constant.
-        // loadYConst() {
-        //     this.Yreg = parseInt(_MemoryAccessor.read(_CurrentPCB.segment, this.PC + 1), 16);
-        //     this.PC += 2;
-        // }
-        // //Loads the Y register from memory.
-        // loadYMem() {
-        //     let locationOfValue1 = _MemoryAccessor.read(_CurrentPCB.segment, this.PC + 1);
-        //     let locationOfValue2 = _MemoryAccessor.read(_CurrentPCB.segment, this.PC + 2);
-        //     let newValue = parseInt(locationOfValue2 + locationOfValue1, 16);
-        //     this.Yreg = parseInt(_MemoryAccessor.read(_CurrentPCB.segment, newValue), 16);
-        //     this.PC += 3;
-        // }
+        
         // //Compares a value in memory with the X register. If it's true, set the Zflag.
         // compXMem() {
         //     let locationOfValue1 = _MemoryAccessor.read(_CurrentPCB.segment, this.PC + 1);
@@ -259,7 +317,29 @@ module TSOS {
         //     this.PC += 3;
         // }
 
-        updateVisualCpu() {
+        public getWrapAdjustedLogicalAddress () {
+             /// Read the "first" argument which is really the second
+             this.PC += 1;
+             var secondArg: string = _MemoryAccessor.read(_MemoryManager.simpleVolumes[this.localPCB.volumeIndex], this.PC);
+ 
+             /// Read the "second" argument which is really the first
+             this.PC += 1;
+             var firstArg: string = _MemoryAccessor.read(_MemoryManager.simpleVolumes[this.localPCB.volumeIndex], this.PC);
+ 
+             /// Deal with the inversion
+             var reversedArgs: number = parseInt(firstArg + secondArg, 16);
+ 
+             /// I'm assuming these are logical addresses being passed in...
+             ///
+             /// If I remember you want a wrap around effect so use modulo then...
+             return reversedArgs % MAX_SIMPLE_VOLUME_CAPACITY;
+        }
+
+        //////////////////////////////////////////////////////////////////////////////////////////////
+        //////////////////////////// TODO: Move UI methods to Control.ts /////////////////////////////
+        //////////////////////////////////////////////////////////////////////////////////////////////
+
+        public updateVisualCpu() {
             _visualCpu.rows[1].cells[0].innerHTML = this.PC;
             _visualCpu.rows[1].cells[1].innerHTML = this.IR;
             _visualCpu.rows[1].cells[2].innerHTML = this.Acc;
@@ -268,7 +348,7 @@ module TSOS {
             _visualCpu.rows[1].cells[5].innerHTML = this.Zflag;
         }/// createVisualMemory
 
-        updatePcb() {
+        public updatePcb() {
             _visualPcb.rows[1].cells[0].innerHTML = this.localPCB.processID;
             _visualPcb.rows[1].cells[1].innerHTML = this.localPCB.programCounter;
             _visualPcb.rows[1].cells[2].innerHTML = this.localPCB.instructionRegister;
@@ -281,5 +361,9 @@ module TSOS {
             _visualPcb.rows[1].cells[9].innerHTML = `Vol ${this.localPCB.volumeIndex}`;
         }/// createVisualMemory
 
+        public visualizeInstructionRegister(newInsruction: string) {
+            this.IR = newInsruction;
+            this.localPCB.instructionRegister = newInsruction;
+        }/// visualizeInstructionRegiste
     }/// Class
 }/// Module

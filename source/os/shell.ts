@@ -738,16 +738,10 @@ module TSOS {
 
                             /// Write to memory from hex pair list
                             if (_MemoryAccessor.write(freeSimpleVolume, logicalAddress, hexPairList[logicalAddress])) {
-                                _StdOut.putText(`Command ${hexPairList[logicalAddress]}:`);
-                                _StdOut.advanceLine();
-                                _StdOut.putText(` SUCCESSFUL WRITE to logical memory location: ${logicalAddress}!`);
-                                _StdOut.advanceLine();
+                                Control.hostLog(`Command ${hexPairList[logicalAddress]}: SUCCESSFUL WRITE to logical memory location: ${logicalAddress}!`);
                             }/// if 
                             else {
-                                _StdOut.putText(`Command ${hexPairList[logicalAddress]}:`);
-                                _StdOut.advanceLine();
-                                _StdOut.putText(` FAILED to WRITE to logical memory location: ${logicalAddress}!`);
-                                _StdOut.advanceLine();
+                                Control.hostLog(`Command ${hexPairList[logicalAddress]}: FAILED to WRITE to logical memory location: ${logicalAddress}!`);
                             }/// else
 
                             /// console.log(_MemoryAccessor.read(freeSimpleVolume, logicalAddress));
@@ -814,7 +808,7 @@ module TSOS {
                     ///
                     /// Update the proces state
                     _ProcessControlBlockQueue.pcbsQueue[curr].processState = "Running";
-                    
+
                     /// Set the local pcb in the cpu
                     _CPU.setLocalProcessControlBlock(_ProcessControlBlockQueue.pcbsQueue[curr]);
 
