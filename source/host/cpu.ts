@@ -21,12 +21,12 @@ module TSOS {
             public Acc: string = "00",
             public Xreg: string = "00",
             public Yreg: string = "00",
-            public Zflag: string = "00",
+            public Zflag: number = 0,
             public isExecuting: boolean = false,
 
             /// So far it's either make a global reference
             /// or pass the reference
-            private localPCB: ProcessControlBlock = null) {
+            public localPCB: ProcessControlBlock = null) {
         }
 
         public init(): void {
@@ -35,7 +35,7 @@ module TSOS {
             this.Acc = "00";
             this.Xreg = "00";
             this.Yreg = "00";
-            this.Zflag = "00";
+            this.Zflag = 0;
             this.isExecuting = false;
             this.localPCB = null;
         }/// init
@@ -46,10 +46,11 @@ module TSOS {
             // TODO: Accumulate CPU usage and profiling statistics here.
             // Do the real work here. Be sure to set this.isExecuting appropriately.
             ///
+            this.PC = this.PC % MAX_SIMPLE_VOLUME_CAPACITY;
             /// Classic fetch(), decode(), execute()...
             var addressData: string = this.fetch();
 
-            /// Decode using a giant switch case
+            /// Decode and Execute using a giant switch case
             this.decode(addressData);
 
             /// TODO: Move definitions into Control.ts and call methods in Kernel.OnClockPulse(); or something....
@@ -60,7 +61,7 @@ module TSOS {
             this.updatePcb();
             _MemoryAccessor.updateVisualMemory();
 
-            this.isExecuting = false;
+            // this.isExecuting = false;
             /// Call clock pulse
             // Increment the hardware (host) clock
         }
@@ -126,33 +127,39 @@ module TSOS {
 
                 /// Add with carry
                 case '6D':
+                    this.addWithCarry();
                     break;
 
                 /// No Operation
                 case 'EA':
+                    this.nOp();
                     break;
 
                 /// Break (which is really a system call)
                 case '00':
+                    this.break();
                     break;
 
                 /// Compare a byte in memory to the X register
                 ///
                 /// Sets the Z(zero) flag if equal
                 case 'EC':
+                    this.cpx();
                     break;
 
                 /// Branch n bytes if z flag = 0
                 case 'D0':
+                    this.branchZero();
                     break;
 
                 /// Increment the value of a byte
                 case 'EE':
+                    this.incrementByte();
                     break;
 
                 /// System Call
                 case 'FF':
-                    /// 
+                    this.sysCall();
                     break;
 
                 default:
@@ -165,12 +172,18 @@ module TSOS {
             }/// switch
         }///decode
 
+        ///
+        /// Sorry, no fancy "one-liners"
+        /// Going Line By Line makes this literally impossible to mess up
+        /// Or so I thought...
+        ///
+
         /// Load the accumulator with a constant.
         public ldaAccConstant() {
             this.visualizeInstructionRegister('A9');
 
             /// Increase the accumulator to read data argument of the constructor
-            this.PC += 1;
+            this.PC++;
 
             /// Read data from memory 
             ///
@@ -183,7 +196,7 @@ module TSOS {
             ///
             /// I could probably call this after the switch case, but I rather each
             /// instruction method be stand alone.
-            this.PC += 1;
+            this.PC++;
         }/// ldaAccConstant
 
 
@@ -198,7 +211,7 @@ module TSOS {
             this.Acc =  _MemoryAccessor.read(_MemoryManager.simpleVolumes[this.localPCB.volumeIndex], wrapAdjustedLogicalAddress);
 
             /// Increment program counter as usual
-            this.PC += 1;
+            this.PC++;
         }/// ldaAccMem
 
 
@@ -213,7 +226,7 @@ module TSOS {
             _MemoryAccessor.write(_MemoryManager.simpleVolumes[this.localPCB.volumeIndex], wrapAdjustedLogicalAddress, this.Acc);
 
             /// Increment program counter as usual
-            this.PC += 1;
+            this.PC++;
         }/// staAccMemory
 
         /// Load the X register with a constant
@@ -221,13 +234,13 @@ module TSOS {
             this.visualizeInstructionRegister('A2');
 
             /// Increase the accumulator to read data argument of the constructor
-            this.PC += 1;
+            this.PC++;
 
             /// Actually read from memory using the wrapped logical address that is also adjusted for inversion
             this.Xreg = _MemoryAccessor.read(_MemoryManager.simpleVolumes[this.localPCB.volumeIndex], this.PC);
 
             /// Increment program counter as usual
-            this.PC += 1;
+            this.PC++;
         }/// loadXConstant
 
         /// Load the X register from memory
@@ -241,7 +254,7 @@ module TSOS {
             this.Xreg = _MemoryAccessor.read(_MemoryManager.simpleVolumes[this.localPCB.volumeIndex], wrapAdjustedLogicalAddress);
 
             /// Increment program counter as usual
-            this.PC += 1;
+            this.PC++;
         }/// LoadXMemory
 
         /// Load the Y register with a constant
@@ -249,13 +262,13 @@ module TSOS {
             this.visualizeInstructionRegister('A0');
 
             /// Increase the accumulator to read data argument of the constructor
-            this.PC += 1;
+            this.PC++;
 
             /// Actually read from memory using the wrapped logical address that is also adjusted for inversion
             this.Yreg = _MemoryAccessor.read(_MemoryManager.simpleVolumes[this.localPCB.volumeIndex], this.PC);
 
             /// Increment program counter as usual
-            this.PC += 1;
+            this.PC++;
         }/// loadXConstant
 
         /// Load the Y register from memory
@@ -269,61 +282,130 @@ module TSOS {
             this.Yreg = _MemoryAccessor.read(_MemoryManager.simpleVolumes[this.localPCB.volumeIndex], wrapAdjustedLogicalAddress);
 
             /// Increment program counter as usual
-            this.PC += 1;
+            this.PC++;
         }/// LoadXMemory
 
 
-        // //Adds a value to the accumulator. If the value is greater than 255, it 'rolls over' to 0 + remainder.
-        // addWCarry() {
-        //     let locationOfValue1 = _MemoryAccessor.read(_CurrentPCB.segment, this.PC + 1);
-        //     let locationOfValue2 = _MemoryAccessor.read(_CurrentPCB.segment, this.PC + 2);
-        //     let newValue = parseInt(locationOfValue2 + locationOfValue1, 16);
-        //     let toAdd = parseInt(_MemoryAccessor.read(_CurrentPCB.segment, newValue), 16);
-        //     this.Acc += toAdd;
-        //     if (this.Acc >= 256)
-        //         this.Acc %= 256;
-        //     this.PC += 3;
-        // }
+        /// Add with carry
+        /// 
+        /// Adds contents of an address to the contents of the accumulator and keeps the result in the accumulator
+        public addWithCarry() {
+            this.visualizeInstructionRegister('6D');
+
+            /// Adjust for inversion and wrapping
+            var wrapAdjustedLogicalAddress: number = this.getWrapAdjustedLogicalAddress();
+
+            /// Actually read from memory using the wrapped logical address that is also adjusted for inversion
+            var numberToBeAdded: number = parseInt(_MemoryAccessor.read(_MemoryManager.simpleVolumes[this.localPCB.volumeIndex], wrapAdjustedLogicalAddress), 16);
+
+            /// Convert Numbers to decimal for addition
+            var accNum: number = parseInt(this.Acc, 16);
+
+            /// Add numbers
+            var ans: number = numberToBeAdded + accNum;
+
+            /// Conert answer back to hex string
+
+            /// Apply to the calculator
+            this.Acc = ans.toString(16);
+
+            /// Increment program counter as usual
+            this.PC++;
+        }/// addWithCarry
+
+        /// No operation
+        public nOp() {
+            this.visualizeInstructionRegister('EA');
+            this.PC++;
+        }/// nOp
+
+        /// Break
+        public break() {
+            /// Process break as an interrupt as well.
+            this.visualizeInstructionRegister('00');
+
+            _KernelInterruptQueue.enqueue(new TSOS.Interrupt(TERMINATE_PROCESS_IRQ, []));
+
+            _CPU.localPCB.processState = "Terminated";
+        }/// break
         
-        // //Compares a value in memory with the X register. If it's true, set the Zflag.
-        // compXMem() {
-        //     let locationOfValue1 = _MemoryAccessor.read(_CurrentPCB.segment, this.PC + 1);
-        //     let locationOfValue2 = _MemoryAccessor.read(_CurrentPCB.segment, this.PC + 2);
-        //     let newValue = parseInt(locationOfValue2 + locationOfValue1, 16);
-        //     let toCompare = parseInt(_MemoryAccessor.read(_CurrentPCB.segment, newValue), 16);
-        //     if (this.Xreg == toCompare)
-        //         this.Zflag = 1;
-        //     else
-        //         this.Zflag = 0;
-        //     this.PC += 3;
-        // }
-        // //Branches to a value in memory if the Zflag is false (0).
-        // branchOnZ() {
-        //     if (this.Zflag == 0) {
-        //         this.PC += parseInt(_MemoryAccessor.read(_CurrentPCB.segment, this.PC + 1), 16);
-        //         this.PC += 2;
-        //         this.PC %= 256;
-        //     }
-        //     else
-        //         this.PC += 2;
-        // }
-        // //Increment the value of a byte in memory by 1.
-        // incByte() {
-        //     let locationOfValue1 = _MemoryAccessor.read(_CurrentPCB.segment, this.PC + 1);
-        //     let locationOfValue2 = _MemoryAccessor.read(_CurrentPCB.segment, this.PC + 2);
-        //     let newValue = parseInt(locationOfValue2 + locationOfValue1, 16);
-        //     let toIncrement = parseInt(_MemoryAccessor.read(_CurrentPCB.segment, newValue), 16) + 1;
-        //     _MemoryAccessor.write(_CurrentPCB.segment, (toIncrement.toString(16).toUpperCase() + "").padStart(2, "0"), newValue);
-        //     this.PC += 3;
-        // }
+        /// Compare a byte in memory to the X reg EC CPX EC $0010 EC 10 00
+        /// Sets the Z (zero) flag if equal...
+        public cpx() {
+            this.visualizeInstructionRegister('EC');
+
+            /// Adjust for inversion and wrapping
+            var wrapAdjustedLogicalAddress: number = this.getWrapAdjustedLogicalAddress();
+
+            /// Number is converted to decimal
+            var memoryNum: number = parseInt(_MemoryAccessor.read(_MemoryManager.simpleVolumes[this.localPCB.volumeIndex], wrapAdjustedLogicalAddress), 16);
+            var xRegNum: number = parseInt(this.Xreg, 16);
+
+            /// Set z flag... don't have to worry about the -stupid- conversion
+            this.Zflag = xRegNum === memoryNum ? 1 : 0;
+
+            this.PC++;
+        }///cpx
+
+
+        /// Branch n bytes if Z flag = 0
+        branchZero() {
+            this.visualizeInstructionRegister('D0');
+            /// Increment the program counter by one to read argument
+            this.PC++;
+
+            /// Get n 
+            var nUnits: number = parseInt(_MemoryAccessor.read(_MemoryManager.simpleVolumes[this.localPCB.volumeIndex], this.PC), 16);
+
+            /// Check if Z-flag is zero
+            if (this.Zflag === 0) {
+                /// No fancy stuff...
+                /// I'm really trying to make this hard to mess up
+                this.PC = this.PC + nUnits;
+
+                this.PC = this.PC % MAX_SIMPLE_VOLUME_CAPACITY;
+            }/// if
+
+            /// Regardless of a succesful branch or not, just advance the program counter as usual to next instruction
+            this.PC++;
+        }///branchZero
+
+        /// Increment the value of a byte
+        incrementByte() {
+            this.visualizeInstructionRegister('D0');
+
+            /// Adjust for inversion and wrapping
+            var wrapAdjustedLogicalAddress: number = this.getWrapAdjustedLogicalAddress();
+
+            /// Actually increment the data by one then convert back to a hex string
+            var incrementedNumber: string = (parseInt(_MemoryAccessor.read(_MemoryManager.simpleVolumes[this.localPCB.volumeIndex], wrapAdjustedLogicalAddress), 16) + 1).toString(16);
+
+            /// Write to memory the data plus 1.
+            _MemoryAccessor.write(_MemoryManager.simpleVolumes[this.localPCB.volumeIndex], wrapAdjustedLogicalAddress, incrementedNumber);
+            this.PC++;
+        }//incrementByte
+
+        public sysCall () {
+            /// Process handling Y register as an interrupt
+            if (parseInt(this.Xreg, 16) === 1) {
+                _KernelInterruptQueue.enqueue(new TSOS.Interrupt(SYS_CALL_IRQ, [1]));
+            }/// if
+            else if (parseInt(this.Xreg, 16) === 2) {
+                _KernelInterruptQueue.enqueue(new TSOS.Interrupt(SYS_CALL_IRQ, [2]));
+            }/// else if
+            this.PC++;
+        }/// sysCall
+
+
 
         public getWrapAdjustedLogicalAddress () {
+
              /// Read the "first" argument which is really the second
-             this.PC += 1;
+             this.PC++;
              var secondArg: string = _MemoryAccessor.read(_MemoryManager.simpleVolumes[this.localPCB.volumeIndex], this.PC);
  
              /// Read the "second" argument which is really the first
-             this.PC += 1;
+             this.PC++;
              var firstArg: string = _MemoryAccessor.read(_MemoryManager.simpleVolumes[this.localPCB.volumeIndex], this.PC);
  
              /// Deal with the inversion
@@ -332,8 +414,9 @@ module TSOS {
              /// I'm assuming these are logical addresses being passed in...
              ///
              /// If I remember you want a wrap around effect so use modulo then...
-             return reversedArgs % MAX_SIMPLE_VOLUME_CAPACITY;
-        }
+             /// I'll do this in the cycle() method for through protection...
+             return reversedArgs;
+        }/// getWrapAdjustedLogicalAddress
 
         //////////////////////////////////////////////////////////////////////////////////////////////
         //////////////////////////// TODO: Move UI methods to Control.ts /////////////////////////////
@@ -349,6 +432,16 @@ module TSOS {
         }/// createVisualMemory
 
         public updatePcb() {
+            /// Process Control Block should be updated but not wiped.
+            /// Should be able to see the last state of the PCB
+            this.localPCB.programCounter = this.PC;
+            this.localPCB.accumulator = this.Acc;
+            this.localPCB.xRegister = this.Xreg;
+            this.localPCB.yRegister = this.Yreg;
+            this.localPCB.zFlag = this.Zflag;
+
+            /// Visual Updates
+            /// TODO: Move to Control.ts or Util.ts... It Doesn't Belong Here!!!
             _visualPcb.rows[1].cells[0].innerHTML = this.localPCB.processID;
             _visualPcb.rows[1].cells[1].innerHTML = this.localPCB.programCounter;
             _visualPcb.rows[1].cells[2].innerHTML = this.localPCB.instructionRegister;
@@ -358,10 +451,11 @@ module TSOS {
             _visualPcb.rows[1].cells[6].innerHTML = this.localPCB.zFlag;
             _visualPcb.rows[1].cells[7].innerHTML = this.localPCB.priority;
             _visualPcb.rows[1].cells[8].innerHTML = this.localPCB.processState;
-            _visualPcb.rows[1].cells[9].innerHTML = `Vol ${this.localPCB.volumeIndex}`;
+            _visualPcb.rows[1].cells[9].innerHTML = `Vol ${this.localPCB.volumeIndex + 1}`;
         }/// createVisualMemory
 
         public visualizeInstructionRegister(newInsruction: string) {
+            /// Instruction Register
             this.IR = newInsruction;
             this.localPCB.instructionRegister = newInsruction;
         }/// visualizeInstructionRegiste

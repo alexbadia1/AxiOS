@@ -106,9 +106,6 @@ module TSOS {
             document.getElementById('divLog--date').innerText = `${month}/${day}/${year}/`;
             document.getElementById('divLog--time').innerText = `${hours}:${minutes}:${seconds}`;
         }/// getCurrentDateTime
-
-        /// Hopefully Visualizes CPU Data
-        public visualizeCPU () {}///visualizeCPU
         
         //
         // Interrupt Handling
@@ -142,10 +139,55 @@ module TSOS {
                     _krnKeyboardDriver.isr(params);   // Kernel mode device driver
                     _StdIn.handleInput();
                     break;
+                case TERMINATE_PROCESS_IRQ:
+                    this.terminateProcessISR();
+                    break;
+                case SYS_CALL_IRQ:
+                    this.sysCallISR();
+                    break;
                 default:
                     this.krnTrapError("Invalid Interrupt Request. irq=" + irq + " params=[" + params + "]");
             }
         }
+
+        public terminateProcessISR() {
+            _CPU.isExecuting = false;
+            _StdOut.advanceLine();
+            _OsShell.putPrompt();
+        }/// terminateProcessISR
+
+        public sysCallISR() {
+            /// Print out the Y-reg if X-reg has 01
+            if (parseInt(_CPU.Xreg, 16) === 1) {
+                _StdOut.putText(` ${_CPU.Yreg} `);
+            }/// if
+            
+            /// Print from memeory starting at address
+            if (parseInt(_CPU.Xreg, 16) === 2) {
+                var ans: string = "";
+
+                /// I'm assuming the program is using the logical address
+                ///
+                /// I'll find out the hard-way if I'm right or wrong...
+                var logicalCurrAddress: number = parseInt(_CPU.Yreg, 16);
+
+                /// Use Y-reg to find out which memory location to start reading from
+                ///
+                /// Convert to decimal char chode as well
+                var decimalCharCode: number = parseInt(_MemoryAccessor.read(_MemoryManager.simpleVolumes[_CPU.localPCB.volumeIndex], logicalCurrAddress), 16);
+
+                /// Keep going until we hit a 00 which represents the end of the string
+                while (decimalCharCode !== 0) {
+                    ans += String.fromCharCode(decimalCharCode);
+
+                    /// Read nex character
+                    logicalCurrAddress++;
+                    decimalCharCode = parseInt(_MemoryAccessor.read(_MemoryManager.simpleVolumes[_CPU.localPCB.volumeIndex], logicalCurrAddress), 16);
+                }/// while
+                _StdOut.putText(ans);
+            }/// if
+        }/// sysCallISR
+
 
         public krnTimerISR() {
             // The built-in TIMER (not clock) Interrupt Service Routine (as opposed to an ISR coming from a device driver). {
