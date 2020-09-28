@@ -20,4 +20,4 @@ Branches:
 - [iProject4](https://github.com/alexbadia1/myAlanClasses/tree/iProject4)
 
 Labs:
-- [iLabs](https://github.com/alexbadia1/myAlanClasses/tree/iProject4)
+- [iLabs](https://github.com/alexbadia1/myAlanClasses/tree/iLabs)
