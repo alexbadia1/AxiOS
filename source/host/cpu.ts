@@ -385,6 +385,5 @@ module TSOS {
              /// I'll do this in the cycle() method for through protection...
              return reversedArgs;
         }/// getWrapAdjustedLogicalAddress
-
     }/// Class
 }/// Module

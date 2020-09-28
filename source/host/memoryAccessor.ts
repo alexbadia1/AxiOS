@@ -26,7 +26,12 @@ module TSOS {
             /// Using said "physical address",
             /// Make sure I can't overflow into other parts of memory
             /// I am very paranoid...
-            if ((physicalAddress >= newVolume.physicalLimit) || (newLogicalAddress > 255)) {
+            ///
+            /// Had a OFF by ONE error with physicalAddress >= newVolume.physicalLimit
+            ///
+            /// Thought I did the branching wrong, but the comparison should be:
+            /// physicalAddress > neVolume.physicalLimit
+            if ((physicalAddress > newVolume.physicalLimit) || (newLogicalAddress > 255)) {
                 _StdOut.putText("Memory Upper Bound Limit Reached, Cannot Read Out of Bounds Address!");
                 /// Terminate Program (don't forget to update the PCB process state)
             }///else-if
