@@ -781,7 +781,7 @@ module TSOS {
             ///
             /// Regardless of success or fail, just cause I want to be able to make sure memory
             /// ain't doin anything funky...
-            _MemoryAccessor.updateVisualMemory();
+            TSOS.Control.updateVisualMemory();
         }/// shellLoad
 
         public shellRun(args: string[]) {

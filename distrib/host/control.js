@@ -119,6 +119,88 @@ var TSOS;
             /// Process single step interrupt
             _KernelInterruptQueue.enqueue(new TSOS.Interrupt(NEXT_STEP, []));
         }
+        static initializeVisualMemory() {
+            /// Increment by 8 on order to create a row every 8 bytes
+            for (var physicalAddressRow = 0; physicalAddressRow < _MemoryAccessor.mainMemorySize() / 8; ++physicalAddressRow) {
+                var row = _visualMemory.insertRow(physicalAddressRow); /// This multiplication works since all volumes are the cam size
+                /// Write to 8 cells
+                for (var cellInRow = 0; cellInRow < 9; ++cellInRow) {
+                    if (cellInRow === 0) {
+                        /// Add the row header
+                        /// Formating the row headers
+                        ///
+                        /// Using 8 to calculate the correct decimal starting value of the row
+                        var decimalTemp = physicalAddressRow * 8;
+                        /// Convert decimal number to a hex base decimal string
+                        var hexTemp = decimalTemp.toString(16);
+                        /// Add left 0 padding
+                        var formattedHexTemp = "000" + hexTemp;
+                        formattedHexTemp = formattedHexTemp.substr(formattedHexTemp.length - 3).toUpperCase();
+                        /// Add the '0x' universal prefix for base 16 numbers
+                        formattedHexTemp = `0x${formattedHexTemp}`;
+                        /// Finally put memory into it
+                        row.insertCell(cellInRow).innerHTML = formattedHexTemp;
+                    } /// if
+                    else {
+                        /// Add the actual data
+                        row.insertCell(cellInRow).innerHTML = _Memory.getAddress(physicalAddressRow + cellInRow).read();
+                    } /// else
+                } /// for
+            } /// for
+        } /// intializeVisualMemory
+        static updateVisualMemory() {
+            var physicalAddress = 0;
+            /// Increment by 8 on order to create a row every 8 bytes
+            for (var currentRow = 0; currentRow < _MemoryAccessor.mainMemorySize() / 8; ++currentRow) {
+                /// Write to 8 cells
+                for (var cellInRow = 0; cellInRow < 8; ++cellInRow) {
+                    /// Plus one because we don't want to overwrite the row header
+                    _visualMemory.rows[currentRow].cells[cellInRow + 1].innerHTML = _Memory.getAddress(physicalAddress).read();
+                    physicalAddress++;
+                } /// for
+            } /// for
+        } /// updateVisualMemory
+        static updateVisualCpu() {
+            _visualCpu.rows[1].cells[0].innerHTML = _CPU.PC;
+            _visualCpu.rows[1].cells[1].innerHTML = _CPU.IR;
+            _visualCpu.rows[1].cells[2].innerHTML = _CPU.Acc;
+            _visualCpu.rows[1].cells[3].innerHTML = _CPU.Xreg;
+            _visualCpu.rows[1].cells[4].innerHTML = _CPU.Yreg;
+            _visualCpu.rows[1].cells[5].innerHTML = _CPU.Zflag;
+        } /// updateVisualCpu
+        static updateVisualPcb() {
+            /// Process Control Block should be updated but not wiped.
+            /// Should be able to see the last state of the PCB
+            _CPU.localPCB.programCounter = _CPU.PC;
+            _CPU.localPCB.accumulator = _CPU.Acc;
+            _CPU.localPCB.xRegister = _CPU.Xreg;
+            _CPU.localPCB.yRegister = _CPU.Yreg;
+            _CPU.localPCB.zFlag = _CPU.Zflag;
+            /// Visual Updates
+            /// TODO: Move to Control.ts or Util.ts... It Doesn't Belong Here!!!
+            _visualPcb.rows[1].cells[0].innerHTML = _CPU.localPCB.processID;
+            _visualPcb.rows[1].cells[1].innerHTML = _CPU.localPCB.programCounter;
+            _visualPcb.rows[1].cells[2].innerHTML = _CPU.localPCB.instructionRegister;
+            _visualPcb.rows[1].cells[3].innerHTML = _CPU.localPCB.accumulator;
+            _visualPcb.rows[1].cells[4].innerHTML = _CPU.localPCB.xRegister;
+            _visualPcb.rows[1].cells[5].innerHTML = _CPU.localPCB.yRegister;
+            _visualPcb.rows[1].cells[6].innerHTML = _CPU.localPCB.zFlag;
+            _visualPcb.rows[1].cells[7].innerHTML = _CPU.localPCB.priority;
+            _visualPcb.rows[1].cells[8].innerHTML = _CPU.localPCB.processState;
+            _visualPcb.rows[1].cells[9].innerHTML = `Vol ${_CPU.localPCB.volumeIndex + 1}`;
+        } /// updateVisualPcb
+        static visualizeInstructionRegister(newInsruction) {
+            /// Instruction Register
+            _CPU.IR = newInsruction;
+            _CPU.localPCB.instructionRegister = newInsruction;
+        } /// visualizeInstructionRegister
+        static formatToHexWithPadding(decimalNum) {
+            var hexNumber = decimalNum.toString(16);
+            /// Add left 0 padding
+            var paddedhexNumber = "00" + hexNumber;
+            paddedhexNumber = paddedhexNumber.substr(paddedhexNumber.length - 2).toUpperCase();
+            return paddedhexNumber;
+        } /// formatToHexWithPadding
     }
     TSOS.Control = Control;
 })(TSOS || (TSOS = {}));

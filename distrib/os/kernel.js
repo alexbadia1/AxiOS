@@ -34,7 +34,7 @@ var TSOS;
             //
             _MemoryManager = new TSOS.MemoryManager();
             /// Visualize Memory...
-            _MemoryAccessor.initializeVisualMemory();
+            TSOS.Control.initializeVisualMemory();
             // Enable the OS Interrupts.  (Not the CPU clock interrupt, as that is done in the hardware sim.)
             this.krnTrace("Enabling the interrupts.");
             this.krnEnableInterrupts();
@@ -77,12 +77,18 @@ var TSOS;
                 if (_SingleStepMode) {
                     if (_NextStep) {
                         _CPU.cycle();
+                        TSOS.Control.updateVisualMemory();
+                        TSOS.Control.updateVisualCpu();
+                        TSOS.Control.updateVisualPcb();
                         _NextStep = false;
                     } /// if
                 } /// if
                 else {
                     /// Run normally
                     _CPU.cycle();
+                    TSOS.Control.updateVisualMemory();
+                    TSOS.Control.updateVisualCpu();
+                    TSOS.Control.updateVisualPcb();
                 } /// else
                 this.getCurrentDateTime();
             }
@@ -175,7 +181,7 @@ var TSOS;
             _CPU.isExecuting = false;
             /// TODO: Update PCB State
             _CPU.localPCB.processState = "Terminated";
-            _CPU.updatePcb();
+            TSOS.Control.updateVisualPcb();
             /// TODO: Turn "off Single Step"
             _SingleStepMode = false;
             _NextStep = false;

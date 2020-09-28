@@ -76,54 +76,5 @@ module TSOS {
         mainMemorySize() {
             return _Memory.size();
         }/// mainMemorySize
-
-        initializeVisualMemory() {
-            /// Increment by 8 on order to create a row every 8 bytes
-            for (var physicalAddressRow: number = 0; physicalAddressRow < this.mainMemorySize() / 8; ++physicalAddressRow) {
-                var row = _visualMemory.insertRow(physicalAddressRow); /// This multiplication works since all volumes are the cam size
-
-                /// Write to 8 cells
-                for (var cellInRow: number = 0; cellInRow < 9; ++cellInRow) {
-                    if (cellInRow === 0) {
-                        /// Add the row header
-
-                        /// Formating the row headers
-                        ///
-                        /// Using 8 to calculate the correct decimal starting value of the row
-                        var decimalTemp: number = physicalAddressRow * 8;
-
-                        /// Convert decimal number to a hex base decimal string
-                        var hexTemp: string = decimalTemp.toString(16);
-
-                        /// Add left 0 padding
-                        var formattedHexTemp: string = "000" + hexTemp;
-                        formattedHexTemp = formattedHexTemp.substr(formattedHexTemp.length - 3).toUpperCase();
-
-                        /// Add the '0x' universal prefix for base 16 numbers
-                        formattedHexTemp = `0x${formattedHexTemp}`;
-
-                        /// Finally put memory into it
-                        row.insertCell(cellInRow).innerHTML = formattedHexTemp;
-                    }/// if
-                    else {
-                        /// Add the actual data
-                        row.insertCell(cellInRow).innerHTML = _Memory.getAddress(physicalAddressRow + cellInRow).read();
-                    }/// else
-                }/// for
-            }/// for
-        }/// intializeVisualMemory
-
-        updateVisualMemory() {
-            var physicalAddress: number = 0;
-            /// Increment by 8 on order to create a row every 8 bytes
-            for (var currentRow: number = 0; currentRow < this.mainMemorySize() / 8; ++currentRow) {
-                /// Write to 8 cells
-                for (var cellInRow: number = 0; cellInRow < 8; ++cellInRow) {
-                    /// Plus one because we don't want to overwrite the row header
-                    _visualMemory.rows[currentRow].cells[cellInRow + 1].innerHTML = _Memory.getAddress(physicalAddress).read();
-                    physicalAddress++;
-                }/// for
-            }/// for
-        }/// createVisualMemory
     }
 }
