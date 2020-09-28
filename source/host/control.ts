@@ -116,6 +116,10 @@ module TSOS {
             // ... then set the host clock pulse ...
             _hardwareClockID = setInterval(Devices.hostClockPulse, CPU_CLOCK_INTERVAL);
             // .. and call the OS Kernel Bootstrap routine.
+
+            /// Change Status to Alive BEFORE GlaDos, so nothing is overwritten
+            document.getElementById('divLog--status').innerText = 'AxiOS Alive';
+
             _Kernel = new Kernel();
             _Kernel.krnBootstrap();  // _GLaDOS.afterStartup() will get called in there, if configured.
         }
@@ -200,7 +204,7 @@ module TSOS {
         }/// updateVisualMemory
 
         public static updateVisualCpu() {
-            _visualCpu.rows[1].cells[0].innerHTML = _CPU.PC;
+            _visualCpu.rows[1].cells[0].innerHTML = this.formatToHexWithPadding(_CPU.PC);
             _visualCpu.rows[1].cells[1].innerHTML = _CPU.IR;
             _visualCpu.rows[1].cells[2].innerHTML = _CPU.Acc;
             _visualCpu.rows[1].cells[3].innerHTML = _CPU.Xreg;
@@ -220,7 +224,7 @@ module TSOS {
             /// Visual Updates
             /// TODO: Move to Control.ts or Util.ts... It Doesn't Belong Here!!!
             _visualPcb.rows[1].cells[0].innerHTML = _CPU.localPCB.processID;
-            _visualPcb.rows[1].cells[1].innerHTML = _CPU.localPCB.programCounter;
+            _visualPcb.rows[1].cells[1].innerHTML = this.formatToHexWithPadding(_CPU.localPCB.programCounter);
             _visualPcb.rows[1].cells[2].innerHTML = _CPU.localPCB.instructionRegister;
             _visualPcb.rows[1].cells[3].innerHTML = _CPU.localPCB.accumulator;
             _visualPcb.rows[1].cells[4].innerHTML = _CPU.localPCB.xRegister;

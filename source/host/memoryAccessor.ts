@@ -14,14 +14,14 @@ module TSOS {
 
         constructor() { }
 
-        read(newVolume: SimpleVolume, newLogicalAddress: number = -1) {
+        public read(newVolume: SimpleVolume, newLogicalAddress: number = -1) {
             var myData: string = null;
 
             /// Step 1: Translate the logical address to the physical address in memory
             ///
             /// Should be: logical address + base of partition
             /// I'm pretty sure I'm not off by one....
-            var physicalAddress: number = newLogicalAddress + newVolume.physicalBase;
+            var physicalAddress: number = this.getPhysicalAddress(newLogicalAddress, newVolume);
 
             /// Using said "physical address",
             /// Make sure I can't overflow into other parts of memory
@@ -46,19 +46,18 @@ module TSOS {
         }/// read
 
 
-        write(newVolume, newLogicalAddress, newData) {
+        public write(newVolume, newLogicalAddress, newData) {
             var success: number = 0;
 
             /// Step 1 (Again): Translate the logical address to the physical address in memory
             ///
             /// Should be: logical address + base of partition
             /// I'm pretty sure I'm not off by one....
-            var physicalAddress: number = newLogicalAddress + newVolume.physicalBase;
+            var physicalAddress: number = this.getPhysicalAddress(newLogicalAddress, newVolume);
 
             /// Using said "physical address",
             /// Make sure I can't overflow into other parts of memory
             /// I am very paranoid...
-
             if ((physicalAddress >= newVolume.physialLimit) || (newLogicalAddress > 255)) {
                 _StdOut.advanceLine();
                 _StdOut.putText("Memory Upper Bound Limit Reached, Cannot Write Out of Bounds Address!");
@@ -78,7 +77,13 @@ module TSOS {
             return success; ///returns 1 if successful, 0 if not successful
         }/// write
 
-        mainMemorySize() {
+        public getPhysicalAddress(someLogicalAddress, someVolume) {
+            /// Thought this would be more complex...
+            /// Guess this isn't a useful abstraction, maybe for future proofing need be
+            return someLogicalAddress + someVolume.physicalBase;
+        }/// getPhysicalAddress
+
+        public mainMemorySize() {
             return _Memory.size();
         }/// mainMemorySize
     }

@@ -40,7 +40,7 @@
    <!-- Other Routines -->
    <script type="text/javascript" src="distrib/utils.js"></script>
    <!-- Uncomment the line below to enable GLaDOS testing. -->
-   <!-- <script type="text/javascript" src="http://alanclasses.github.io/TSOS/test/glados-ip2.js"></script> -->
+   <script type="text/javascript" src="http://alanclasses.github.io/TSOS/test/glados-ip2.js"></script>
 
 </head>
 
@@ -56,7 +56,7 @@
 
             <!-- Thanks for the Start Button -->
             <input type="button" id="btnStartOS" name="brnStartOS" class="normal_button" value="Start" tabindex="0"
-               onclick="TSOS.Control.hostBtnStartOS_click(this); document.getElementById('divLog--status').innerText = 'Running';">
+               onclick="TSOS.Control.hostBtnStartOS_click(this);">
 
             <!-- Thanks for the Halt Button -->
             <input type="button" id="btnHaltOS" name="brnHaltOS" class="normal_button" disabled="disabled" value="Halt"
@@ -171,10 +171,10 @@
                Time: [Press Start]
             </label>
             <br>
-            <label id="divLog--status"> Status: Shutdown </label>
+            <label> Status: <label id = divLog--status>AxiOS Dead</label></label>
             <br>
             <label>
-               <textarea name="taHostLog" id="taHostLog" rows="26" cols="48"></textarea>
+               <textarea name="taHostLog" id="taHostLog" rows="26" cols="48" style = 'width: 98.75%; height: 100%; resize: none;'></textarea>
             </label>
          </div>
       </div>
@@ -189,7 +189,7 @@
             <label>
                User Program Input
                <br>
-               <textarea name="taProgramInput" id="taProgramInput" rows="8" cols="48"></textarea>
+               <textarea name="taProgramInput" id="taProgramInput" rows="8" cols="48" style = 'width: 100%; height: 90%; resize: none;'></textarea>
             </label>
          </div>
       </div>

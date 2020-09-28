@@ -17,7 +17,7 @@ var TSOS;
             ///
             /// Should be: logical address + base of partition
             /// I'm pretty sure I'm not off by one....
-            var physicalAddress = newLogicalAddress + newVolume.physicalBase;
+            var physicalAddress = this.getPhysicalAddress(newLogicalAddress, newVolume);
             /// Using said "physical address",
             /// Make sure I can't overflow into other parts of memory
             /// I am very paranoid...
@@ -45,7 +45,7 @@ var TSOS;
             ///
             /// Should be: logical address + base of partition
             /// I'm pretty sure I'm not off by one....
-            var physicalAddress = newLogicalAddress + newVolume.physicalBase;
+            var physicalAddress = this.getPhysicalAddress(newLogicalAddress, newVolume);
             /// Using said "physical address",
             /// Make sure I can't overflow into other parts of memory
             /// I am very paranoid...
@@ -67,6 +67,11 @@ var TSOS;
             } ///else
             return success; ///returns 1 if successful, 0 if not successful
         } /// write
+        getPhysicalAddress(someLogicalAddress, someVolume) {
+            /// Thought this would be more complex...
+            /// Guess this isn't a useful abstraction, maybe for future proofing need be
+            return someLogicalAddress + someVolume.physicalBase;
+        } /// getPhysicalAddress
         mainMemorySize() {
             return _Memory.size();
         } /// mainMemorySize

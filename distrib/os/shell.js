@@ -568,7 +568,7 @@ var TSOS;
                 ans += " " + args[h];
             }
             if (args.length > 0) {
-                document.getElementById('divLog--status').innerText = "Status: " + ans;
+                document.getElementById('divLog--status').innerText = ans;
                 _StdOut.putText("status changed to: " + ans);
             }
             else {
