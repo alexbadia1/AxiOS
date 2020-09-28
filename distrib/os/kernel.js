@@ -73,10 +73,21 @@ var TSOS;
                 this.krnInterruptHandler(interrupt.irq, interrupt.params);
             }
             else if (_CPU.isExecuting) {
-                this.getCurrentDateTime(); // If there are no interrupts then run one CPU cycle if there is anything being processed.
-                _CPU.cycle();
+                /// Perform One Single Step
+                if (_SingleStepMode) {
+                    if (_NextStep) {
+                        _CPU.cycle();
+                        _NextStep = false;
+                    } /// if
+                } /// if
+                else {
+                    /// Run normally
+                    _CPU.cycle();
+                } /// else
+                this.getCurrentDateTime();
             }
-            else { // If there are no interrupts and there is nothing being executed then just be idle.
+            else {
+                /// If there are no interrupts and there is nothing being executed then just be idle.
                 this.getCurrentDateTime();
                 this.krnTrace("Idle");
             }
@@ -128,12 +139,51 @@ var TSOS;
                 case SYS_CALL_IRQ:
                     this.sysCallISR();
                     break;
+                case SINGLE_STEP:
+                    this.singleStepISR();
+                    break;
+                case NEXT_STEP:
+                    this.nextStepISR();
+                    break;
                 default:
                     this.krnTrapError("Invalid Interrupt Request. irq=" + irq + " params=[" + params + "]");
-            }
-        }
+            } /// switch
+        } /// krnInterruptHandler
+        singleStepISR() {
+            /// Enter Single step mode...
+            /// Or out of single step mode
+            _SingleStepMode = !_SingleStepMode;
+            if (_SingleStepMode) {
+                /// Stop the CPU from executing
+                _CPU.isExecuting = false;
+            } /// if
+            else {
+                /// Go back to cpu executing
+                _CPU.isExecuting = true;
+            } /// else
+        } /// singleStepISR
+        nextStepISR() {
+            /// If we're in single step mode
+            if (_SingleStepMode) {
+                /// Run 1 cycle
+                _NextStep = true;
+                _CPU.isExecuting = true;
+            } /// if
+        } /// singleStepISR
         terminateProcessISR() {
+            /// TDOO: "Turn off" cpu
             _CPU.isExecuting = false;
+            /// TODO: Update PCB State
+            _CPU.localPCB.processState = "Terminated";
+            _CPU.updatePcb();
+            /// TODO: Turn "off Single Step"
+            _SingleStepMode = false;
+            _NextStep = false;
+            /// Reset visuals for Single Step
+            document.getElementById("btnNextStep").disabled = true;
+            document.getElementById("btnSingleStepMode").value = "Single Step OFF";
+            document.getElementById("btnSingleStepMode").innerHTML = "Single Step ON";
+            /// TODO: Prompt for more input
             _StdOut.advanceLine();
             _OsShell.putPrompt();
         } /// terminateProcessISR

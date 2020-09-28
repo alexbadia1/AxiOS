@@ -18,6 +18,8 @@ const TIMER_IRQ = 0; // Pages 23 (timer), 9 (interrupts), and 561 (interrupt pri
 const KEYBOARD_IRQ = 1;
 const TERMINATE_PROCESS_IRQ = 2;
 const SYS_CALL_IRQ = 3;
+const SINGLE_STEP = 4;
+const NEXT_STEP = 5;
 //
 // Global Variables
 // TODO: Make a global object and use that instead of the "_" naming convention in the global namespace.
@@ -33,6 +35,8 @@ var _MemoryManager = null;
 var _ProcessControlBlockQueue;
 var _OSclock = 0; // Page 23.
 var _Mode = 0; // (currently unused)  0 = Kernel Mode, 1 = User Mode.  See page 21.
+var _SingleStepMode = false;
+var _NextStep = false;
 var _Canvas; // Initialized in Control.hostInit().
 var _DrawingContext; // = _Canvas.getContext("2d");  // Assigned here for type safety, but re-initialized in Control.hostInit() for OCD and logic.
 var _taProgramInput;

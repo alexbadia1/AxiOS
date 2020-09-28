@@ -31,6 +31,10 @@ module TSOS {
             // Parse the params.  TODO: Check that the params are valid and osTrapError if not.
             var keyCode = params[0];
             var isShifted = params[1];
+            /// Statically defining this creates issues.. saw you had shift not strictly typed an it works...
+            /// This is why I ha- I mean love this project
+            var isCtrled: any = params[2];
+            var isAlted: any = params[3];
             _Kernel.krnTrace("Key code:" + keyCode + " shifted:" + isShifted);
             var chr = "";
 
@@ -41,12 +45,26 @@ module TSOS {
             ///
             /// TODO: Google frequency of keys and organize based on said frequency:
 
-    
+            /// Detect Alt
+            if (isAlted) {
+                /// Alt-h
+                if (keyCode === 72) {
+                    _KernelInputQueue.enqueue(`alt-${String.fromCharCode(keyCode)}`);
+                }/// else-if
+            }/// if
+            
+            /// Detect Ctrl
+            else if (isCtrled) {
+                if (keyCode === 67) {
+                    /// Lower case control 
+                    _KernelInputQueue.enqueue(`^${String.fromCharCode(keyCode)}`);
+                }/// if
+            }/// else-if
          
             /// Check for the UP arrow or DOWN arrow
             /// UP = 38
             /// Down = 40
-            if (keyCode === 38 || keyCode === 40) {
+            else if (keyCode === 38 || keyCode === 40) {
                 chr = String.fromCharCode(keyCode);
                 _KernelInputQueue.enqueue(chr);
             }/// else-if

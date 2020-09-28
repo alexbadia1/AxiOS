@@ -19,10 +19,14 @@ const CPU_CLOCK_INTERVAL: number = 100;   // This is in ms (milliseconds) so 100
 const TIMER_IRQ: number = 0;  // Pages 23 (timer), 9 (interrupts), and 561 (interrupt priority).
                               // NOTE: The timer is different from hardware/host clock pulses. Don't confuse these.
 const KEYBOARD_IRQ: number = 1;
+
 const TERMINATE_PROCESS_IRQ: number = 2;
+
 const SYS_CALL_IRQ: number = 3;
 
+const SINGLE_STEP: number = 4;
 
+const NEXT_STEP: number = 5;
 
 //
 // Global Variables
@@ -43,6 +47,8 @@ var _ProcessControlBlockQueue: TSOS.ProcessControlBlockQueue;
 var _OSclock: number = 0;  // Page 23.
 
 var _Mode: number = 0;     // (currently unused)  0 = Kernel Mode, 1 = User Mode.  See page 21.
+var _SingleStepMode: boolean = false;
+var _NextStep: boolean = false;
 
 var _Canvas: HTMLCanvasElement;          // Initialized in Control.hostInit().
 var _DrawingContext: any;                // = _Canvas.getContext("2d");  // Assigned here for type safety, but re-initialized in Control.hostInit() for OCD and logic.

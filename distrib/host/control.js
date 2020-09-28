@@ -70,8 +70,10 @@ var TSOS;
             // Disable the (passed-in) start button...
             btn.disabled = true;
             // .. enable the Halt and Reset buttons ...
+            /// and the single step buttons
             document.getElementById("btnHaltOS").disabled = false;
             document.getElementById("btnReset").disabled = false;
+            document.getElementById("btnSingleStepMode").disabled = false;
             // .. set focus on the OS console display ...
             document.getElementById("display").focus();
             // ... Create and initialize the CPU (because it's part of the hardware)  ...
@@ -106,6 +108,16 @@ var TSOS;
             // That boolean parameter is the 'forceget' flag. When it is true it causes the page to always
             // be reloaded from the server. If it is false or not specified the browser may reload the
             // page from its cache, which is not what we want.
+        }
+        static hostBtnSingleStep_click(btn) {
+            /// Enable Next Step Button
+            document.getElementById("btnNextStep").disabled = false;
+            document.getElementById("btnSingleStepMode").value = "Single Step OFF";
+            _KernelInterruptQueue.enqueue(new TSOS.Interrupt(SINGLE_STEP, []));
+        }
+        static hostBtnNextStep_click(btn) {
+            /// Process single step interrupt
+            _KernelInterruptQueue.enqueue(new TSOS.Interrupt(NEXT_STEP, []));
         }
     }
     TSOS.Control = Control;

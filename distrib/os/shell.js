@@ -694,6 +694,7 @@ var TSOS;
                     /// Set the local pcb in the cpu
                     _CPU.setLocalProcessControlBlock(_ProcessControlBlockQueue.pcbsQueue[curr]);
                     /// "Turn on" the cpu
+                    /// WAIT, but Single step mode
                     _CPU.isExecuting = true;
                 } /// else
             } /// try

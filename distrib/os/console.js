@@ -38,7 +38,32 @@ var TSOS;
                 // Get the next character from the kernel input queue.
                 var chr = _KernelInputQueue.dequeue();
                 // Check to see if it's "special" (enter or ctrl-c) or "normal" (anything else that the keyboard device driver gave us).
-                if (chr === String.fromCharCode(13)) { // the Enter key
+                ///
+                /// Pause the cpu
+                if (chr === 'alt-H') {
+                    TSOS.Control.hostLog("Emergency halt", "host");
+                    TSOS.Control.hostLog("Attempting Kernel shutdown.", "host");
+                    // Call the OS shutdown routine.
+                    _Kernel.krnShutdown();
+                    // Stop the interval that's simulating our clock pulse.
+                    clearInterval(_hardwareClockID);
+                } /// if
+                else if (chr === '^C') {
+                    if (_CPU.isExecuting) {
+                        /// Queue an interrupt for termination of the program
+                        _KernelInterruptQueue.enqueue(new TSOS.Interrupt(TERMINATE_PROCESS_IRQ, []));
+                        this.eraseText();
+                        this.putText("^c");
+                    } /// if
+                    else {
+                        /// Just do what MS does
+                        this.eraseText();
+                        this.putText("^c");
+                        this.advanceLine();
+                        _OsShell.putPrompt();
+                    } /// else
+                } /// else-if
+                else if (chr === String.fromCharCode(13)) { // the Enter key
                     // The enter key marks the end of a console command, so ...
                     // ... tell the shell ...
                     _OsShell.handleInput(this.buffer);
@@ -46,7 +71,7 @@ var TSOS;
                     this.olderCommands.push(this.buffer);
                     // ... and reset our buffer.
                     this.buffer = "";
-                } /// if
+                } /// else- if
                 /// Handle Tab
                 else if (chr === String.fromCharCode(9)) {
                     /// Use something advanced like a TRIE?
@@ -145,9 +170,8 @@ var TSOS;
                     // ... and add it to our buffer.
                     this.buffer += chr;
                 } /// else
-                // TODO: Add a case for Ctrl-C that would allow the user to break the current program.
             } /// while
-        }
+        } /// handleInput
         eraseChar() {
             if (this.buffer.length > 0) {
                 /// Check for line wrap,

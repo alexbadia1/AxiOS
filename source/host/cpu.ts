@@ -25,7 +25,7 @@ module TSOS {
             public isExecuting: boolean = false,
 
             /// So far it's either make a global reference
-            /// or pass the reference
+            /// or pass the reference for now
             public localPCB: ProcessControlBlock = null) {
         }
 
@@ -41,7 +41,6 @@ module TSOS {
         }/// init
 
         public cycle(): void {
-            /// Add delay to synchronize host log and cpu other wise the cpu just go brrrrrrrrrrrrrrr
             _Kernel.krnTrace('CPU cycle');
             // TODO: Accumulate CPU usage and profiling statistics here.
             // Do the real work here. Be sure to set this.isExecuting appropriately.
@@ -190,7 +189,7 @@ module TSOS {
             /// Should already be stored in memory as Hex from Shell...
             ///
             /// Read from process control block queue
-            this.Acc = _MemoryAccessor.read(_MemoryManager.simpleVolumes[this.localPCB.volumeIndex], this.PC);
+            this.Acc = this.formatToHexWithPadding(parseInt(_MemoryAccessor.read(_MemoryManager.simpleVolumes[this.localPCB.volumeIndex], this.PC), 16));
 
             /// Increase the program counter to the next instruction
             ///
@@ -208,7 +207,7 @@ module TSOS {
             var wrapAdjustedLogicalAddress: number = this.getWrapAdjustedLogicalAddress();
 
             /// Actually read from memory using the wrapped logical address that is also adjusted for inversion
-            this.Acc =  _MemoryAccessor.read(_MemoryManager.simpleVolumes[this.localPCB.volumeIndex], wrapAdjustedLogicalAddress);
+            this. Acc = this.formatToHexWithPadding(parseInt(_MemoryAccessor.read(_MemoryManager.simpleVolumes[this.localPCB.volumeIndex], wrapAdjustedLogicalAddress), 16));
 
             /// Increment program counter as usual
             this.PC++;
@@ -222,8 +221,11 @@ module TSOS {
             /// Adjust for inversion and wrapping
             var wrapAdjustedLogicalAddress: number = this.getWrapAdjustedLogicalAddress();
 
+            /// This would be too long of a one liner to do
+            var formattedHex = this.formatToHexWithPadding(parseInt(this.Acc, 16));
+
             /// Actually read from memory using the wrapped logical address that is also adjusted for inversion
-            _MemoryAccessor.write(_MemoryManager.simpleVolumes[this.localPCB.volumeIndex], wrapAdjustedLogicalAddress, this.Acc);
+            _MemoryAccessor.write(_MemoryManager.simpleVolumes[this.localPCB.volumeIndex], wrapAdjustedLogicalAddress, formattedHex);
 
             /// Increment program counter as usual
             this.PC++;
@@ -307,7 +309,8 @@ module TSOS {
             /// Conert answer back to hex string
 
             /// Apply to the calculator
-            this.Acc = ans.toString(16);
+            /// Remeber to formatt though
+            this.Acc = this.formatToHexWithPadding(ans);
 
             /// Increment program counter as usual
             this.PC++;
@@ -354,7 +357,7 @@ module TSOS {
             /// Increment the program counter by one to read argument
             this.PC++;
 
-            /// Get n 
+            /// Get n units to branch by
             var nUnits: number = parseInt(_MemoryAccessor.read(_MemoryManager.simpleVolumes[this.localPCB.volumeIndex], this.PC), 16);
 
             /// Check if Z-flag is zero
@@ -377,11 +380,15 @@ module TSOS {
             /// Adjust for inversion and wrapping
             var wrapAdjustedLogicalAddress: number = this.getWrapAdjustedLogicalAddress();
 
-            /// Actually increment the data by one then convert back to a hex string
-            var incrementedNumber: string = (parseInt(_MemoryAccessor.read(_MemoryManager.simpleVolumes[this.localPCB.volumeIndex], wrapAdjustedLogicalAddress), 16) + 1).toString(16);
+            /// Actually increment the data by one
+            var incrementedNumber: number = parseInt(_MemoryAccessor.read(_MemoryManager.simpleVolumes[this.localPCB.volumeIndex], wrapAdjustedLogicalAddress), 16) + 1;
+
+            /// Reformat to Hex
+            var paddedFormattedIncrementedNumber: string = this.formatToHexWithPadding(incrementedNumber);
 
             /// Write to memory the data plus 1.
-            _MemoryAccessor.write(_MemoryManager.simpleVolumes[this.localPCB.volumeIndex], wrapAdjustedLogicalAddress, incrementedNumber);
+            _MemoryAccessor.write(_MemoryManager.simpleVolumes[this.localPCB.volumeIndex], wrapAdjustedLogicalAddress, paddedFormattedIncrementedNumber);
+            
             this.PC++;
         }//incrementByte
 
@@ -421,6 +428,16 @@ module TSOS {
         //////////////////////////////////////////////////////////////////////////////////////////////
         //////////////////////////// TODO: Move UI methods to Control.ts /////////////////////////////
         //////////////////////////////////////////////////////////////////////////////////////////////
+
+        public formatToHexWithPadding(decimalNum: number) {
+            var hexNumber: string = decimalNum.toString(16);
+
+            /// Add left 0 padding
+            var paddedhexNumber: string = "00" + hexNumber;
+            paddedhexNumber = paddedhexNumber.substr(paddedhexNumber.length - 2).toUpperCase();
+
+            return paddedhexNumber;
+        }/// formatToHexWithPadding
 
         public updateVisualCpu() {
             _visualCpu.rows[1].cells[0].innerHTML = this.PC;

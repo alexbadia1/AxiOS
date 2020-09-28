@@ -53,7 +53,9 @@ module TSOS {
             if (event.target.id === "display") {
                 event.preventDefault();
                 // Note the pressed key code in the params (Mozilla-specific).
-                var params = new Array(event.which, event.shiftKey, event.ctrlKey);
+                ///
+                /// TODO: Check to see if this will work: event.getModifierState("CapsLock")
+                var params = new Array(event.which, event.shiftKey, event.ctrlKey, event.altKey);
                 // Enqueue this interrupt on the kernel interrupt queue so that it gets to the Interrupt handler.
                 _KernelInterruptQueue.enqueue(new Interrupt(KEYBOARD_IRQ, params));
             }

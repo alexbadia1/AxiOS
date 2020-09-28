@@ -3,7 +3,9 @@
 
 <head>
    <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+   <!-- Can I change this? -->
    <meta name="author" content="Alan G. Labouseur" />
+
    <link rel="stylesheet" href="TSOS.css" type="text/css" media="screen" />
    <title>
       AxiOS - a browser-based virtual Operating System in TypeScript
@@ -38,7 +40,7 @@
    <!-- Other Routines -->
    <script type="text/javascript" src="distrib/utils.js"></script>
    <!-- Uncomment the line below to enable GLaDOS testing. -->
-   <script type="text/javascript" src="http://alanclasses.github.io/TSOS/test/glados-ip2.js"></script>
+   <!-- <script type="text/javascript" src="http://alanclasses.github.io/TSOS/test/glados-ip2.js"></script> -->
 </head>
 
 <body onload="onDocumentLoad()">
@@ -66,9 +68,14 @@
                onclick="TSOS.Control.hostBtnReset_click(this); document.getElementById('divLog--status').innerText = 'Resetting';">
 
             <!-- TODO: Single Step -->
-            <input type="button" id="btnSingleStep" name="btnSingleStep" class="normal_button" disabled="disabled"
-               value="Step" tabindex="3"
-               onclick="TSOS.Control.hostBtnReset_click(this); document.getElementById('divLog--status').innerText = 'Single Step Mode';">
+            <input type="button" id="btnSingleStepMode" name="btnSingleStep" class="single_step_button" disabled="disabled"
+               value="Single Step ON" tabindex="3"
+               onclick="TSOS.Control.hostBtnSingleStep_click(this); document.getElementById('divLog--status').innerText = 'Single Step Off';">
+
+            <!-- TODO: Single Step -->
+            <input type="button" id="btnNextStep" name="btnNextStep" class="single_step_button" disabled="disabled"
+               value="Next Step" tabindex="4"
+               onclick="TSOS.Control.hostBtnNextStep_click(this); document.getElementById('divLog--status').innerText = 'Single Step Mode: Next Step';">
          </div>
 
          CPU
