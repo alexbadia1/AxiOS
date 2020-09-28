@@ -104,7 +104,8 @@ module TSOS {
                         'whereami',
                         'eightball',
                         'status',
-                        'load'
+                        'load', 
+                        'run'
                     ];
 
                     var matches: string[] = [];
@@ -126,7 +127,7 @@ module TSOS {
                     else {
                         this.eraseText();
                         this.advanceLine();
-                        this.putText("Multiple commands wer found:");
+                        this.putText("The most similar command is:");
                         this.advanceLine();
                         for (var num: number = 0; num < matches.length; ++num) {
                             this.putText(`  ${matches[num]}`);
