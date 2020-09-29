@@ -174,9 +174,6 @@ module TSOS {
         }/// krnInterruptHandler
 
         public singleStepISR() {
-            /// Enter Single step mode...
-            /// Or out of single step mode
-            _SingleStepMode = !_SingleStepMode;
 
             if (_SingleStepMode) {
                 /// Stop the CPU from executing
@@ -211,8 +208,7 @@ module TSOS {
 
             /// Reset visuals for Single Step
             (<HTMLButtonElement>document.getElementById("btnNextStep")).disabled = true;
-            (<HTMLButtonElement>document.getElementById("btnSingleStepMode")).value = "Single Step OFF";
-            (<HTMLButtonElement>document.getElementById("btnSingleStepMode")).innerHTML = "Single Step ON";
+            (<HTMLButtonElement>document.getElementById("btnSingleStepMode")).value = "Single Step ON"; 
 
             /// TODO: Prompt for more input
             _StdOut.advanceLine();

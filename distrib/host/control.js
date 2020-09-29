@@ -113,8 +113,20 @@ var TSOS;
         }
         static hostBtnSingleStep_click(btn) {
             /// Enable Next Step Button
-            document.getElementById("btnNextStep").disabled = false;
-            document.getElementById("btnSingleStepMode").value = "Single Step OFF";
+            ///
+            ///Enter Single step mode...
+            /// Or out of single step mode..
+            ///
+            /// Must do this first so the text label updates properly
+            _SingleStepMode = !_SingleStepMode;
+            if (_SingleStepMode) {
+                document.getElementById("btnNextStep").disabled = false;
+                document.getElementById("btnSingleStepMode").value = "Single Step OFF";
+            }
+            else {
+                document.getElementById("btnNextStep").disabled = true;
+                document.getElementById("btnSingleStepMode").value = "Single Step ON";
+            }
             _KernelInterruptQueue.enqueue(new TSOS.Interrupt(SINGLE_STEP, []));
         }
         static hostBtnNextStep_click(btn) {

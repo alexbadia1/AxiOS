@@ -13,10 +13,7 @@
 var TSOS;
 (function (TSOS) {
     class Cpu {
-        constructor(PC = 0, IR = "00", Acc = "00", Xreg = "00", Yreg = "00", Zflag = 0, isExecuting = false, 
-        /// So far it's either make a global reference
-        /// or pass the reference for now
-        localPCB = null) {
+        constructor(PC = 0, IR = "00", Acc = "00", Xreg = "00", Yreg = "00", Zflag = 0, isExecuting = false, localPCB = null) {
             this.PC = PC;
             this.IR = IR;
             this.Acc = Acc;
@@ -41,12 +38,14 @@ var TSOS;
             // TODO: Accumulate CPU usage and profiling statistics here.
             // Do the real work here. Be sure to set this.isExecuting appropriately.
             ///
+            /// For Now just wrap the program counter
             this.PC = this.PC % MAX_SIMPLE_VOLUME_CAPACITY;
-            /// Classic fetch(), decode(), execute()...
-            var addressData = this.fetch();
-            /// Decode and Execute using a giant switch case
-            this.decode(addressData);
+            /// Classic LMC
+            var addressData = this.fetch(); /// Fetch()
+            this.decode(addressData); ///Decode() and Execute()
         } /// cycle
+        /// So far it's either make a global reference
+        /// or pass the reference for now
         setLocalProcessControlBlock(newProcessControlBlock) {
             this.localPCB = newProcessControlBlock;
         } /// setLocalProcessControlBlock
@@ -59,12 +58,12 @@ var TSOS;
             /// Obviously b/c of the shared stored program concept we won't know that this is necessarily
             /// an instruction or not until it's decoded... 
             ///
-            /// Hopefully i rememebr to move this
+            /// Hopefully I rememebr to do this cleaner...
             this.IR = data;
             this.localPCB.instructionRegister = data;
             return data;
         } ///fetch
-        /// Decode the instruction...
+        /// Decode the instruction... and then execute
         decode(newAddressData) {
             switch (newAddressData) {
                 /// Load Accumulator with a constant
@@ -109,7 +108,7 @@ var TSOS;
                     break;
                 /// Compare a byte in memory to the X register
                 ///
-                /// Sets the Z(zero) flag if equal
+                /// Sets the Z(One) flag if equal
                 case 'EC':
                     this.cpx();
                     break;
@@ -127,6 +126,7 @@ var TSOS;
                     break;
                 default:
                     /// Throw error
+                    // Should I crash the OS instead?
                     _StdOut.putText(`Data: ${newAddressData} could not be decoded into an instruction!`);
                     _StdOut.advanceLine();
                     _OsShell.putPrompt();
@@ -135,11 +135,12 @@ var TSOS;
             } /// switch
             TSOS.Control.visualizeInstructionRegister(newAddressData);
         } ///decode
+        /// My Strategy:
+        ///     Go literal line-by-line in a procedural fashion, this
+        ///     way no fancy one-liners, it's self documenting
+        ///     and hopefully this makes it impossible to mess up...
         ///
-        /// Sorry, no fancy "one-liners"
-        /// Going Line By Line makes this literally impossible to mess up
-        /// Or so I thought...
-        ///
+        ///     Or so I thought...
         /// Load the accumulator with a constant.
         ldaAccConstant() {
             /// Increase the accumulator to read data argument of the constructor

@@ -92,7 +92,8 @@ var TSOS;
                         'whereami',
                         'eightball',
                         'status',
-                        'load'
+                        'load',
+                        'run'
                     ];
                     var matches = [];
                     for (var pos = 0; pos < cmds.length; ++pos) {
@@ -111,7 +112,7 @@ var TSOS;
                     else {
                         this.eraseText();
                         this.advanceLine();
-                        this.putText("Multiple commands wer found:");
+                        this.putText("The most similar command is:");
                         this.advanceLine();
                         for (var num = 0; num < matches.length; ++num) {
                             this.putText(`  ${matches[num]}`);

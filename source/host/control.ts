@@ -144,8 +144,20 @@ module TSOS {
 
         public static hostBtnSingleStep_click(btn): void {
             /// Enable Next Step Button
-            (<HTMLButtonElement>document.getElementById("btnNextStep")).disabled = false;
-            (<HTMLButtonElement>document.getElementById("btnSingleStepMode")).value = "Single Step OFF";
+            ///
+            ///Enter Single step mode...
+            /// Or out of single step mode..
+            ///
+            /// Must do this first so the text label updates properly
+            _SingleStepMode = !_SingleStepMode;
+            if (_SingleStepMode) {
+                (<HTMLButtonElement>document.getElementById("btnNextStep")).disabled = false;
+                (<HTMLButtonElement>document.getElementById("btnSingleStepMode")).value = "Single Step OFF";
+            } 
+            else {
+                (<HTMLButtonElement>document.getElementById("btnNextStep")).disabled = true;
+                (<HTMLButtonElement>document.getElementById("btnSingleStepMode")).value = "Single Step ON"; 
+            }
             _KernelInterruptQueue.enqueue(new TSOS.Interrupt(SINGLE_STEP, []));
         }
 

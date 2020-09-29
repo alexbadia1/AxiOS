@@ -23,9 +23,6 @@ module TSOS {
             public Yreg: string = "00",
             public Zflag: number = 0,
             public isExecuting: boolean = false,
-
-            /// So far it's either make a global reference
-            /// or pass the reference for now
             public localPCB: ProcessControlBlock = null) {
         }
 
@@ -45,14 +42,17 @@ module TSOS {
             // TODO: Accumulate CPU usage and profiling statistics here.
             // Do the real work here. Be sure to set this.isExecuting appropriately.
             ///
+            /// For Now just wrap the program counter
             this.PC = this.PC % MAX_SIMPLE_VOLUME_CAPACITY;
-            /// Classic fetch(), decode(), execute()...
-            var addressData: string = this.fetch();
 
-            /// Decode and Execute using a giant switch case
-            this.decode(addressData);
+            /// Classic LMC
+            var addressData: string = this.fetch(); /// Fetch()
+
+            this.decode(addressData);///Decode() and Execute()
         }/// cycle
 
+        /// So far it's either make a global reference
+        /// or pass the reference for now
         public setLocalProcessControlBlock(newProcessControlBlock: ProcessControlBlock) {
             this.localPCB = newProcessControlBlock;
         }/// setLocalProcessControlBlock
@@ -67,14 +67,14 @@ module TSOS {
             /// Obviously b/c of the shared stored program concept we won't know that this is necessarily
             /// an instruction or not until it's decoded... 
             ///
-            /// Hopefully i rememebr to move this
+            /// Hopefully I rememebr to do this cleaner...
             this.IR = data;
             this.localPCB.instructionRegister = data;
 
             return data;
         }///fetch
 
-        /// Decode the instruction...
+        /// Decode the instruction... and then execute
         public decode(newAddressData: string) {
             switch (newAddressData) {
                 /// Load Accumulator with a constant
@@ -129,7 +129,7 @@ module TSOS {
 
                 /// Compare a byte in memory to the X register
                 ///
-                /// Sets the Z(zero) flag if equal
+                /// Sets the Z(One) flag if equal
                 case 'EC':
                     this.cpx();
                     break;
@@ -151,6 +151,7 @@ module TSOS {
 
                 default:
                     /// Throw error
+                    // Should I crash the OS instead?
                     _StdOut.putText(`Data: ${newAddressData} could not be decoded into an instruction!`);
                     _StdOut.advanceLine();
                     _OsShell.putPrompt();
@@ -160,11 +161,12 @@ module TSOS {
             TSOS.Control.visualizeInstructionRegister(newAddressData);
         }///decode
 
+        /// My Strategy:
+        ///     Go literal line-by-line in a procedural fashion, this
+        ///     way no fancy one-liners, it's self documenting
+        ///     and hopefully this makes it impossible to mess up...
         ///
-        /// Sorry, no fancy "one-liners"
-        /// Going Line By Line makes this literally impossible to mess up
-        /// Or so I thought...
-        ///
+        ///     Or so I thought...
 
         /// Load the accumulator with a constant.
         public ldaAccConstant() {

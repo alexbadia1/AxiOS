@@ -156,9 +156,6 @@ var TSOS;
             } /// switch
         } /// krnInterruptHandler
         singleStepISR() {
-            /// Enter Single step mode...
-            /// Or out of single step mode
-            _SingleStepMode = !_SingleStepMode;
             if (_SingleStepMode) {
                 /// Stop the CPU from executing
                 _CPU.isExecuting = false;
@@ -187,8 +184,7 @@ var TSOS;
             _NextStep = false;
             /// Reset visuals for Single Step
             document.getElementById("btnNextStep").disabled = true;
-            document.getElementById("btnSingleStepMode").value = "Single Step OFF";
-            document.getElementById("btnSingleStepMode").innerHTML = "Single Step ON";
+            document.getElementById("btnSingleStepMode").value = "Single Step ON";
             /// TODO: Prompt for more input
             _StdOut.advanceLine();
             _OsShell.putPrompt();
