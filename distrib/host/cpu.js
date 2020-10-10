@@ -39,13 +39,14 @@ var TSOS;
             // Do the real work here. Be sure to set this.isExecuting appropriately.
             ///
             /// For Now just wrap the program counter
-            this.PC = this.PC % MAX_SIMPLE_VOLUME_CAPACITY;
+            /// this.PC = this.PC % MAX_SIMPLE_VOLUME_CAPACITY;
+            ///
+            /// Only wrap the program counter in the branch
             /// Classic LMC
             var addressData = this.fetch(); /// Fetch()
             this.decode(addressData); ///Decode() and Execute()
         } /// cycle
-        /// So far it's either make a global reference
-        /// or pass the reference for now
+        /// So far it's either make a global reference or pass the reference for now...
         setLocalProcessControlBlock(newProcessControlBlock) {
             this.localPCB = newProcessControlBlock;
         } /// setLocalProcessControlBlock
@@ -126,7 +127,7 @@ var TSOS;
                     break;
                 default:
                     /// Throw error
-                    // Should I crash the OS instead?
+                    /// Should I crash the OS instead with FATAL Error?
                     _StdOut.putText(`Data: ${newAddressData} could not be decoded into an instruction!`);
                     _StdOut.advanceLine();
                     _OsShell.putPrompt();
@@ -139,8 +140,6 @@ var TSOS;
         ///     Go literal line-by-line in a procedural fashion, this
         ///     way no fancy one-liners, it's self documenting
         ///     and hopefully this makes it impossible to mess up...
-        ///
-        ///     Or so I thought...
         /// Load the accumulator with a constant.
         ldaAccConstant() {
             /// Increase the accumulator to read data argument of the constructor
@@ -238,6 +237,10 @@ var TSOS;
         break() {
             /// Process break as an interrupt as well.
             _KernelInterruptQueue.enqueue(new TSOS.Interrupt(TERMINATE_PROCESS_IRQ, []));
+            /// Update the local process state that each
+            /// 
+            /// The local PCB really just refernces the global PCB in the global PCB queue
+            /// So updating the local PCB state is sufficent
             _CPU.localPCB.processState = "Terminated";
         } /// break
         /// Compare a byte in memory to the X reg EC CPX EC $0010 EC 10 00
@@ -250,34 +253,50 @@ var TSOS;
             var xRegNum = parseInt(this.Xreg, 16);
             /// Set z flag... don't have to worry about the -stupid- conversion
             this.Zflag = xRegNum === memoryNum ? 1 : 0;
+            /// OP code was exected, increment program counter as usual
+            ///
+            /// Again this COULD be done after the switch case in cpu.fetch()
+            /// but would rather have each OP Code be self contained.
             this.PC++;
         } ///cpx
         /// Branch n bytes if Z flag = 0
         branchZero() {
             /// Increment the program counter by one to read argument
             this.PC++;
-            /// Get n units to branch by
+            /// Get n address units to branch by
+            ///
+            /// Must parse from hex to decimal since everything is stored as hexidecimal strings in memory.
             var nUnits = parseInt(_MemoryAccessor.read(_MemoryManager.simpleVolumes[this.localPCB.volumeIndex], this.PC), 16);
             /// Check if Z-flag is zero
             if (this.Zflag === 0) {
-                /// No fancy stuff...
-                /// I'm really trying to make this hard to mess up
+                /// Branch "n" specified addresses units (logical is assumed) in memory.
                 this.PC = this.PC + nUnits;
+                /// Wrap around memory instead of overflowing for branches
                 this.PC = this.PC % MAX_SIMPLE_VOLUME_CAPACITY;
             } /// if
-            /// Regardless of a succesful branch or not, just advance the program counter as usual to next instruction
+            /// OP code was exected, increment program counter as usual
+            /// Regardless of a succesful branch or not,
+            ///
+            /// Again this COULD be done after the switch case in cpu.fetch()
+            /// but would rather have each OP Code be self contained.
             this.PC++;
         } ///branchZero
         /// Increment the value of a byte
         incrementByte() {
-            /// Adjust for inversion and wrapping
+            /// Adjust for inversion and wrapping by using getWrapAhjustedLogicalAddress() helper method
             var wrapAdjustedLogicalAddress = this.getWrapAdjustedLogicalAddress();
             /// Actually increment the data by one
             var incrementedNumber = parseInt(_MemoryAccessor.read(_MemoryManager.simpleVolumes[this.localPCB.volumeIndex], wrapAdjustedLogicalAddress), 16) + 1;
             /// Reformat to Hex
             var paddedFormattedIncrementedNumber = TSOS.Control.formatToHexWithPadding(incrementedNumber);
-            /// Write to memory the data plus 1.
+            /// Take the incremented by one data and write to memory.
+            ///
+            /// Check [_MemoryAcessor.write()] method for memory boundary protection...
             _MemoryAccessor.write(_MemoryManager.simpleVolumes[this.localPCB.volumeIndex], wrapAdjustedLogicalAddress, paddedFormattedIncrementedNumber);
+            /// OP code was exected, increment program counter as usual
+            ///
+            /// Again this COULD be done after the switch case in cpu.fetch()
+            /// but would rather have each OP Code be self contained.
             this.PC++;
         } //incrementByte
         sysCall() {
@@ -300,9 +319,6 @@ var TSOS;
             /// Deal with the inversion
             var reversedArgs = parseInt(firstArg + secondArg, 16);
             /// I'm assuming these are logical addresses being passed in...
-            ///
-            /// If I remember you want a wrap around effect so use modulo then...
-            /// I'll do this in the cycle() method for through protection...
             return reversedArgs;
         } /// getWrapAdjustedLogicalAddress
     } /// Class
