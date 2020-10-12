@@ -85,8 +85,10 @@ var TSOS;
             /// ... Create and initialize Memory Accessor
             _MemoryAccessor = new TSOS.MemoryAccessor();
             /// ...Create a PCB queue to keep track of currently running pcb's
-            _ProcessControlBlockQueue = new TSOS.ProcessControlBlockQueue();
+            _ResidentList = new TSOS.ResidentList();
             _ProcessControlBlockQueue.init();
+            /// ... Create and initialize Dispatcher
+            _Dispatcher = new TSOS.Dispatcher();
             // ... then set the host clock pulse ...
             _hardwareClockID = setInterval(TSOS.Devices.hostClockPulse, CPU_CLOCK_INTERVAL);
             // .. and call the OS Kernel Bootstrap routine.
@@ -185,20 +187,22 @@ var TSOS;
         static updateVisualPcb() {
             /// Process Control Block should be updated but not wiped.
             /// Should be able to see the last state of the PCB
-            _CPU.localPCB.programCounter = _CPU.PC;
-            _CPU.localPCB.accumulator = _CPU.Acc;
-            _CPU.localPCB.xRegister = _CPU.Xreg;
-            _CPU.localPCB.yRegister = _CPU.Yreg;
-            _CPU.localPCB.zFlag = _CPU.Zflag;
+            ///
+            /// This is technically context switching so move to dispatcher
+            ///
+            // _CPU.localPCB.programCounter = _CPU.PC;
+            // _CPU.localPCB.accumulator = _CPU.Acc;
+            // _CPU.localPCB.xRegister = _CPU.Xreg;
+            // _CPU.localPCB.yRegister = _CPU.Yreg;
+            // _CPU.localPCB.zFlag = _CPU.Zflag;
             /// Visual Updates
-            /// TODO: Move to Control.ts or Util.ts... It Doesn't Belong Here!!!
             _visualPcb.rows[1].cells[0].innerHTML = _CPU.localPCB.processID;
-            _visualPcb.rows[1].cells[1].innerHTML = this.formatToHexWithPadding(_CPU.localPCB.programCounter);
-            _visualPcb.rows[1].cells[2].innerHTML = _CPU.localPCB.instructionRegister;
-            _visualPcb.rows[1].cells[3].innerHTML = _CPU.localPCB.accumulator;
-            _visualPcb.rows[1].cells[4].innerHTML = _CPU.localPCB.xRegister;
-            _visualPcb.rows[1].cells[5].innerHTML = _CPU.localPCB.yRegister;
-            _visualPcb.rows[1].cells[6].innerHTML = _CPU.localPCB.zFlag;
+            _visualPcb.rows[1].cells[1].innerHTML = this.formatToHexWithPadding(_CPU.PC);
+            _visualPcb.rows[1].cells[2].innerHTML = _CPU.IR;
+            _visualPcb.rows[1].cells[3].innerHTML = _CPU.Acc;
+            _visualPcb.rows[1].cells[4].innerHTML = _CPU.Xreg;
+            _visualPcb.rows[1].cells[5].innerHTML = _CPU.Yreg;
+            _visualPcb.rows[1].cells[6].innerHTML = _CPU.Zflag;
             _visualPcb.rows[1].cells[7].innerHTML = _CPU.localPCB.priority;
             _visualPcb.rows[1].cells[8].innerHTML = _CPU.localPCB.processState;
             _visualPcb.rows[1].cells[9].innerHTML = `Vol ${_CPU.localPCB.volumeIndex + 1}`;

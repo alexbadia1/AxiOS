@@ -54,9 +54,9 @@ module TSOS {
         }/// cycle
 
         /// So far it's either make a global reference or pass the reference for now...
-        public setLocalProcessControlBlock(newProcessControlBlock: ProcessControlBlock) {
-            this.localPCB = newProcessControlBlock;
-        }/// setLocalProcessControlBlock
+        // public setLocalProcessControlBlock(newProcessControlBlock: ProcessControlBlock) {
+        //     this.localPCB = newProcessControlBlock;
+        // }/// setLocalProcessControlBlock
 
         /// Fetch data from memory using the program counter
         public fetch() {

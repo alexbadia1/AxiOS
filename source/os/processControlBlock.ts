@@ -1,7 +1,7 @@
 /*
 processControlBlock.ts
 
-zmight include:
+Might include:
     - Process ID
     - Process State
     - Program Counter
@@ -17,26 +17,25 @@ module TSOS {
     export class ProcessControlBlock {
         constructor(
             public processID: number = 0,
-            public programCounter = _CPU.PC,
-            public instructionRegister = _CPU.IR,
-            public accumulator = _CPU.Acc,
-            public xRegister = _CPU.Xreg,
-            public yRegister = _CPU.Yreg,
-            public zFlag = _CPU.Zflag,
+            public programCounter: number = 0,
+            public instructionRegister: string = "00",
+            public accumulator: string = "00",
+            public xRegister: string = "00",
+            public yRegister: string = "00",
+            public zFlag: number = 0,
             public priority: number = 0,
-            public processState: string = 'NEW',
+            public processState: string = 'New',
             public volumeIndex: number = -1,
         ) { }
 
-        public init(): void {
-        } /// init
+        public init(): void {} /// init
 
-        public getLocation() {
-            if (this.volumeIndex !== -1){
-                var locations: string[] = ["Simple Volume 1", "Simple Volume 2", "Simple Volume 3"];
-                return locations[this.volumeIndex];
-            }
-            else return "ERR: Vol Index: -1";
-        }
+        // public getVolumeLocation() {
+        //     if (this.volumeIndex !== -1){
+        //         var locations: string[] = ["Simple Volume 1", "Simple Volume 2", "Simple Volume 3"];
+        //         return locations[this.volumeIndex];
+        //     }/// if
+        //     else return "ERR: Vol Index: -1";
+        // }///getVolumeLocation
     }/// ProcessControlBlock
-}
+}/// TSOS

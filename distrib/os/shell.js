@@ -9,23 +9,12 @@
 /// TODO: Write a base class / prototype for system services and let Shell inherit from it.
 /*
  *
- * I've been doing side "App Development" (usually over the breaks, self taught, though i plan to move towards real native development) with the Flutter framework
- * and Dart programming language and SQLite and Firebase
+ * Would you believe that comming to Marist I didn't know a single thing about programming? Everything I've learned has been from Marist and independent research
+ * in between semesters (I feel like everyone else is light years ahead of me and I am playing catch up game).
  *
- * I've come accross a lot of issues like the fundemental issue of "state management" is where I left off. I dabbled in BloC, redux, and Provider
- * state managements while avoiding inheritance architectures (b/c drilling) for the most part and blah blah blah...
+ * I assume everyone is getting >= 100% on these projects. And I messed up the easiest part on the Midterm
+ * which at least now I will never forget. (I learn best through negative reinforcement)
  *
- * Point is COMMENTS are EVERYTHING, especially when using 3rd party packages. A highly rated plugin usually is well documented and commented
- * and thus easy to understand and modify (without breaking it).
- *
- * A lowly rated package is missing comments, unstable, etc.
- * I've even seen TODO's in the Flutter default packages, to add a progress indication for a function getDataBytes() when working with the "official"
- * and dubiously incomplete Firebase plugin.
- *
- * (if you actually read this... this is why I tend to use "///" for block comments by force of habit)
- *
- * p.s. Would you believe that comming to Marist I didn't know a single thing about programming? Everything I've learned has been from Marist and independent research
- * in between semesters (I feel like everyone else is ahead and I am playing catch up game).
  *
 */
 var TSOS;
@@ -48,6 +37,7 @@ var TSOS;
                 trace <on | off> - Enables/disables the AxiOS trace
                 rot13 <string> - Does rot13 encryption of <string>
                 prompt <string> - sets the prompt
+                ...
                 ver - Displays the current version data
                 date - Displays the current date and time
                 whereami - displays the users current location (use your imagination)
@@ -55,13 +45,16 @@ var TSOS;
                 bsod - Enables the blue screen of death
                 load [<priority>] - Loads the specified user program
                 eightball <string> - Eightball will answer all of your questions
+                ...
                 run <int> - Executes a program in memory
+                ...
                 clearmem - clear all memory partitions
                 runall - execute all programs at once
                 ps - display the PID and state of all processes
                 kill <pid> - kill one process
                 killall - kill all processes
                 quantum <int> - let the user set the Round Robin Quantum (measured in CPU cycles)
+                ...
             ***************************************************************************************/
             var sc;
             /*************************************************************************************
@@ -160,6 +153,10 @@ var TSOS;
             /// quantum <int> - Let the user set the Round Robin Quantum (measured in CPU cycles)
             sc = new TSOS.ShellCommand(this.shellQuantum, 'quantum', 'Let the user set the Round Robin Quantum (measured in CPU cycles).');
             this.commandList[this.commandList.length] = sc;
+            /*************************************************************************************
+            TODO: Implement iProject 4 Commands:
+                ...
+            ***************************************************************************************/
             /// Display the initial prompt.
             ///
             /// If I somehow make it into the "Hall of Fame" I may as well do something memorable. Cause, you know...
@@ -260,28 +257,28 @@ var TSOS;
                 _StdOut.putText("Unbelievable. You, [subject name here],");
                 _StdOut.advanceLine();
                 _StdOut.putText("must be the pride of [subject hometown here].");
-            }
+            } /// if 
             else {
                 _StdOut.putText("Type 'help' for, well... help.");
-            }
-        }
+            } /// else
+        } /// shellInvalidCommand
         shellCurse() {
             _StdOut.putText("Oh, so that's how it's going to be, eh? Fine.");
             _StdOut.advanceLine();
             _StdOut.putText("Bitch.");
             _SarcasticMode = true;
-        }
+        } /// shellCurse
         shellApology() {
             if (_SarcasticMode) {
                 _StdOut.putText("I think we can put our differences behind us.");
                 _StdOut.advanceLine();
                 _StdOut.putText("For science . . . You monster.");
                 _SarcasticMode = false;
-            }
+            } /// if 
             else {
                 _StdOut.putText("For what?");
-            }
-        }
+            } /// else
+        } /// shellApology
         /*************************************************************************************
         Alan's Base Commands:
             help - Lists all available commands
@@ -381,6 +378,8 @@ var TSOS;
             kill <pid> - kill one process
             killall - kill all processes
             quantum <int> - let the user set the Round Robin Quantum (measured in CPU cycles)
+        
+        TODO: Implement iProject 4 Commands:
         ***************************************************************************************/
         shellMan(args) {
             if (args.length > 0) {
@@ -516,9 +515,9 @@ var TSOS;
                         /// Set location of the new process in memory segment
                         newProcessControlBlock.volumeIndex = freeSpot;
                         /// Assign continuosly growing list of process id's
-                        newProcessControlBlock.processID = _ProcessControlBlockQueue.pcbsQueue.length;
+                        newProcessControlBlock.processID = _ResidentList.residentList.length;
                         /// Add to list of processes
-                        _ProcessControlBlockQueue.pcbsQueue.push(newProcessControlBlock);
+                        _ResidentList.residentList.push(newProcessControlBlock);
                         /// Show user said process id...
                         ///
                         /// What's this?! Temperate Literals? fancy... eh?
@@ -623,8 +622,8 @@ var TSOS;
                 /// Check if the process exists with basic linear search
                 var curr = 0;
                 var found = false;
-                while (curr < _ProcessControlBlockQueue.pcbsQueue.length && !found) {
-                    if (_ProcessControlBlockQueue.pcbsQueue[curr].processID == parseInt(args[0])) {
+                while (curr < _ResidentList.residentList.length && !found) {
+                    if (_ResidentList.residentList[curr].processID == parseInt(args[0])) {
                         found = true;
                     } /// if
                     else {
@@ -638,9 +637,9 @@ var TSOS;
                     /// Run the process
                     ///
                     /// Update the proces state
-                    _ProcessControlBlockQueue.pcbsQueue[curr].processState = "Running";
+                    _ResidentList.residentList[curr].processState = "Running";
                     /// Set the local pcb in the cpu
-                    _CPU.setLocalProcessControlBlock(_ProcessControlBlockQueue.pcbsQueue[curr]);
+                    _Dispatcher.attachPcbToCPU(_ResidentList.residentList[curr]);
                     /// "Turn on" the cpu
                     /// WAIT, but Single step mode
                     _CPU.isExecuting = true;
@@ -671,6 +670,10 @@ var TSOS;
         shellKillAll() { } /// kill all processes
         /// quantum <int> - let the user set the Round Robin Quantum (measured in CPU cycles)
         shellQuantum() { } ///quantum
+        /*************************************************************************************
+        TODO Implement iProject4 Commands:
+            ...
+        ***************************************************************************************/
         /********************
          * ASCII art for BLM
          ********************/
@@ -932,7 +935,7 @@ var TSOS;
             /// OKAY, so now to the ACTUAL porgram
             _StdOut.advanceLine();
             _StdOut.advanceLine();
-            /// Onwards to putPrompt();
+            /// Onwards to putPrompt();!
         } /// blackLivesMatter
     } /// class
     TSOS.Shell = Shell;

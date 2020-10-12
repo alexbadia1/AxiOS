@@ -47,9 +47,9 @@ var TSOS;
             this.decode(addressData); ///Decode() and Execute()
         } /// cycle
         /// So far it's either make a global reference or pass the reference for now...
-        setLocalProcessControlBlock(newProcessControlBlock) {
-            this.localPCB = newProcessControlBlock;
-        } /// setLocalProcessControlBlock
+        // public setLocalProcessControlBlock(newProcessControlBlock: ProcessControlBlock) {
+        //     this.localPCB = newProcessControlBlock;
+        // }/// setLocalProcessControlBlock
         /// Fetch data from memory using the program counter
         fetch() {
             /// Get Data which is already in a hex string...

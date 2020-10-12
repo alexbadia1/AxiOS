@@ -1,7 +1,7 @@
 /*
 processControlBlock.ts
 
-zmight include:
+Might include:
     - Process ID
     - Process State
     - Program Counter
@@ -15,7 +15,7 @@ zmight include:
 var TSOS;
 (function (TSOS) {
     class ProcessControlBlock {
-        constructor(processID = 0, programCounter = _CPU.PC, instructionRegister = _CPU.IR, accumulator = _CPU.Acc, xRegister = _CPU.Xreg, yRegister = _CPU.Yreg, zFlag = _CPU.Zflag, priority = 0, processState = 'NEW', volumeIndex = -1) {
+        constructor(processID = 0, programCounter = 0, instructionRegister = "00", accumulator = "00", xRegister = "00", yRegister = "00", zFlag = 0, priority = 0, processState = 'New', volumeIndex = -1) {
             this.processID = processID;
             this.programCounter = programCounter;
             this.instructionRegister = instructionRegister;
@@ -27,17 +27,8 @@ var TSOS;
             this.processState = processState;
             this.volumeIndex = volumeIndex;
         }
-        init() {
-        } /// init
-        getLocation() {
-            if (this.volumeIndex !== -1) {
-                var locations = ["Simple Volume 1", "Simple Volume 2", "Simple Volume 3"];
-                return locations[this.volumeIndex];
-            }
-            else
-                return "ERR: Vol Index: -1";
-        }
+        init() { } /// init
     } /// ProcessControlBlock
     TSOS.ProcessControlBlock = ProcessControlBlock;
-})(TSOS || (TSOS = {}));
+})(TSOS || (TSOS = {})); /// TSOS
 //# sourceMappingURL=processControlBlock.js.map
