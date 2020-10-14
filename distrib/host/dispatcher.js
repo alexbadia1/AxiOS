@@ -24,63 +24,53 @@
 var TSOS;
 (function (TSOS) {
     class Dispatcher {
-        constructor() { } /// constructor
-        attachPcbToCPU(newPcb) {
-            /// Take running process and put back into the Ready Queue, if there is one
-            if (_CPU.localPCB !== null) {
-                /// Release the pcb from the CPU
-                this.releasePcbFromCPU();
-                if (_CPU.localPCB.processState === "Terminated") {
-                    /// There is a TERMINATED process in the CPU, Hmmm...
-                    ///
-                    /// TODO: DO NOT put the PCB into the Ready Queue!
-                } /// if
-                else {
-                    /// There is a RUNNING process in the CPU.
-                    ///
-                    /// TODO: Put PCB at the end of the ready queue
-                    _CPU.localPCB.processState = "Ready";
-                } /// else
-            } /// if
-            /// Load CPU context with PCB context
-            this.loadNewContextToCPU(newPcb);
-            /// Only if the context switch was successful
-            /// Begin CPU execution
+        constructor(releasedProcess = null) {
+            this.releasedProcess = releasedProcess;
+        } /// constructor
+        attachNewPcbToCPU() {
+            /// Grab the released process from the CPU
             ///
-            /// Changing Mode is pointless...
-            /// _Mode = 1;
-            newPcb.processState = "Running";
-            _CPU.isExecuting = true;
+            /// Will be "NULL" if there wasn't a process already in the CPU
+            this.releasedProcess = this.releasePcbFromCPU();
+            /// Load CPU context with new PCB context
+            this.loadNewContextToCPU();
+            /// Handle the released process, if there was one
+            if (this.releasedProcess !== null) {
+                if (this.releasedProcess.processState !== "Terminated") {
+                    /// Put released process back into end of the Ready Queue ONLY IF it is NOT TERMINATED.
+                    _Scheduler.readyQueue.push(this.releasedProcess);
+                } /// if
+            } /// if
+            // else {
+            //     if (_Scheduler.currentProcessControlBlock !== null){
+            //         if(_Scheduler.currentProcessControlBlock.processState !== "Terminated"){
+            //             /// Take currently running process and put it back into the end of the Ready Queue
+            //             _Scheduler.currentProcessControlBlock.processState = "Ready";
+            //             _Scheduler.readyQueue.push(_Scheduler.currentProcessControlBlock);
+            //         }/// if
+            //     }/// if
+            // }
         } /// attachPcbToCPU
         releasePcbFromCPU() {
             if (_CPU.localPCB !== null) {
-                _CPU.isExecuting = false;
                 this.saveOldContextFromCPU();
-                if (_CPU.localPCB.processState === "Terminated") {
-                    /// There is a TERMINATED process in the CPU
-                    ///
-                    /// DO NOT put back into Ready Queue!
-                } /// if
-                else {
-                    /// There is a RUNNING process in the CPU.
-                    _CPU.localPCB.processState = "Ready";
-                } /// else
             } /// if
+            return _CPU.localPCB;
         } /// releasePcbFromCPU
-        loadNewContextToCPU(newPcb) {
-            _CPU.PC = newPcb.programCounter;
-            _CPU.IR = newPcb.instructionRegister;
-            _CPU.Acc = newPcb.accumulator;
-            _CPU.Xreg = newPcb.xRegister;
-            _CPU.Yreg = newPcb.yRegister;
-            _CPU.Zflag = newPcb.zFlag;
+        loadNewContextToCPU() {
+            _CPU.PC = _Scheduler.currentProcessControlBlock.programCounter;
+            _CPU.IR = _Scheduler.currentProcessControlBlock.instructionRegister;
+            _CPU.Acc = _Scheduler.currentProcessControlBlock.accumulator;
+            _CPU.Xreg = _Scheduler.currentProcessControlBlock.xRegister;
+            _CPU.Yreg = _Scheduler.currentProcessControlBlock.yRegister;
+            _CPU.Zflag = _Scheduler.currentProcessControlBlock.zFlag;
             /// Since the PCB is passed by reference, the local PCB
             /// and it's contents are still located somewhere..
             ///
             /// Perhaps in the Ready Queue or Process Queue...
             ///
             /// TODO: Hunt It Down. Dead OR Alive....
-            _CPU.localPCB = newPcb;
+            _CPU.localPCB = _Scheduler.currentProcessControlBlock;
         } /// contextSwitch
         saveOldContextFromCPU() {
             _CPU.localPCB.programCounter = _CPU.PC;

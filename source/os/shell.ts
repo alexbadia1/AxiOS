@@ -758,20 +758,59 @@ module TSOS {
                     _StdOut.putText(`No process control blocks found with pid: ${parseInt(args[0])}.`);
                 }/// if
                 else {
+                    /// Schedule the process
+
+                    /// Check if the specified process is already running
+                    if (_ResidentList.residentList[curr].processState === "Running") {
+                        _StdOut.putText(`Process with pid: ${parseInt(args[0])} is already running!`);
+                    }/// if
+
+                    /// Specified process is not already running, so schedule it to run
+                    else {
+                        /// First check the process queue before schedule anything so we don't accidently
+                        /// count the algorithm we are scheduling
+                        var thereAreRunningProcesses: boolean = false;
+
+                        /// There are already process running:
+                        ///     1. There are any process in the ready queue (that isn't the one already scheduled)
+                        ///     2. There is a current process for _Scheduler
+                        thereAreRunningProcesses = (_Scheduler.readyQueue.length > 0 || _Scheduler.currentProcessControlBlock !== null)? true : false;
+
+                        /// The Scheduler will handle this depending on the algorithm used...
+                        _Scheduler.scheduleProcess(_ResidentList.residentList[curr]);
+
+                        /// Now we run it...
+                        if (thereAreRunningProcesses) {
+                            _StdOut.advanceLine();
+                            _StdOut.putText(`The process with pid: ${curr} has been scheduled and will execute based on the current scheduling algorithm!`);
+                            _StdOut.advanceLine();
+                        }/// if 
+                        else {
+                            /// Run this as the first process
+                            _Scheduler.quantumCheck(true);
+                        }/// else
+                    }/// else
+
+
                     /// Run the process
                     ///
                     /// Update the proces state
-                    _ResidentList.residentList[curr].processState = "Running";
+                    ///_ResidentList.residentList[curr].processState = "Running";
+
+                    /// Schedule the process
+                    /// Maybe do this... _Scheduler.readyQueue.push(_ResidentList.residentList[curr]);
+                    /// _Scheduler.currentProcessControlBlock = _ResidentList.residentList[curr];
 
                     /// Set the local pcb in the cpu
-                    _Dispatcher.attachPcbToCPU(_ResidentList.residentList[curr]);
+                    ///_Dispatcher.attachNewPcbToCPU();
 
                     /// "Turn on" the cpu
                     /// WAIT, but Single step mode
-                    _CPU.isExecuting = true;
+                    /// _CPU.isExecuting = true;
                 }/// else
             }/// try
             catch (e) {
+                _StdOut.putText(`${e}`);
                 _StdOut.putText(`Usage: run <int> please supply a process id.`);
             }/// catch
         }/// run
@@ -791,7 +830,35 @@ module TSOS {
         public shellClearMem() { }/// clearmem
 
         /// runall - execute all programs at once
-        public shellRunAll() { }/// runall
+        public shellRunAll() { 
+            /// Apparently Javascripts tolerance of NaN completly defeats the purpose of using this 
+            /// try catch... nice!
+            try {
+                /// Check if the resident queue is full or not...
+                if (_ResidentList.residentList.length === 0) {
+                    _StdOut.putText(`No process control blocks found.`);
+                }/// if
+                else {
+                    /// Load the Ready Queue with ALL Loaded Processes so...
+                    /// Enqueue all NON-TERMINATED Processes from the Resident List
+                    for (var processID: number = 0; processID < _ResidentList.residentList.length; ++processID) {
+                        /// Only get Non-Terminated Processes
+                        if (_ResidentList.residentList[processID].processState !== "Terminated") {
+                            _Scheduler.scheduleProcess(_ResidentList.residentList[processID]);
+                        }/// if 
+                    }/// for
+
+                     /// Attach the first process in the Ready Queue to the CPU...
+                     ///
+                     /// "True" signifies that this is the FIRST quantum check of the Schedule...
+                     /// Note: quantumCheck(); argument is "false" by default
+                     _Scheduler.quantumCheck(true);
+                }/// else
+            }/// try
+            catch (e) {
+                _StdOut.putText(`Usage: run <int> please supply a process id.`);
+            }/// catch
+        }/// runall
 
         /// ps - display the PID and state of all processes
         public shellPs() { }///ps

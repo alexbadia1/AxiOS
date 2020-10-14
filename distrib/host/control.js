@@ -79,6 +79,7 @@ var TSOS;
             // ... Create and initialize the CPU (because it's part of the hardware)  ...
             _CPU = new TSOS.Cpu(); // Note: We could simulate multi-core systems by instantiating more than one instance of the CPU here.
             _CPU.init(); //       There's more to do, like dealing with scheduling and such, but this would be a start. Pretty cool.
+            _CPU_BURST = 1; /// Starts on CPU burst 1 have been performed.
             /// ... Create and initialize the Memory
             _Memory = new TSOS.Memory();
             _Memory.init();
@@ -86,9 +87,11 @@ var TSOS;
             _MemoryAccessor = new TSOS.MemoryAccessor();
             /// ...Create a PCB queue to keep track of currently running pcb's
             _ResidentList = new TSOS.ResidentList();
-            _ProcessControlBlockQueue.init();
+            _ResidentList.init();
             /// ... Create and initialize Dispatcher
             _Dispatcher = new TSOS.Dispatcher();
+            /// ... Create and initialize Scheduler
+            _Scheduler = new TSOS.Scheduler();
             // ... then set the host clock pulse ...
             _hardwareClockID = setInterval(TSOS.Devices.hostClockPulse, CPU_CLOCK_INTERVAL);
             // .. and call the OS Kernel Bootstrap routine.

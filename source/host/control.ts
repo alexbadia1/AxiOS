@@ -101,6 +101,7 @@ module TSOS {
             // ... Create and initialize the CPU (because it's part of the hardware)  ...
             _CPU = new Cpu();  // Note: We could simulate multi-core systems by instantiating more than one instance of the CPU here.
             _CPU.init();       //       There's more to do, like dealing with scheduling and such, but this would be a start. Pretty cool.
+            _CPU_BURST = 1; /// Starts on CPU burst 1 have been performed.
 
             /// ... Create and initialize the Memory
             _Memory = new Memory();
@@ -111,10 +112,13 @@ module TSOS {
 
             /// ...Create a PCB queue to keep track of currently running pcb's
             _ResidentList = new ResidentList();
-            _ProcessControlBlockQueue.init();
+            _ResidentList.init();
             
             /// ... Create and initialize Dispatcher
             _Dispatcher = new Dispatcher();
+
+            /// ... Create and initialize Scheduler
+            _Scheduler = new Scheduler();
 
             // ... then set the host clock pulse ...
             _hardwareClockID = setInterval(Devices.hostClockPulse, CPU_CLOCK_INTERVAL);

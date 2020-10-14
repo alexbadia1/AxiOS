@@ -77,6 +77,8 @@ var TSOS;
                 if (_SingleStepMode) {
                     if (_NextStep) {
                         _CPU.cycle();
+                        _CPU_BURST++;
+                        _Scheduler.quantumCheck(false);
                         TSOS.Control.updateVisualMemory();
                         TSOS.Control.updateVisualCpu();
                         TSOS.Control.updateVisualPcb();
@@ -86,6 +88,8 @@ var TSOS;
                 else {
                     /// Run normally
                     _CPU.cycle();
+                    _CPU_BURST++;
+                    _Scheduler.quantumCheck(false);
                     TSOS.Control.updateVisualMemory();
                     TSOS.Control.updateVisualCpu();
                     TSOS.Control.updateVisualPcb();
@@ -174,18 +178,18 @@ var TSOS;
             } /// if
         } /// singleStepISR
         terminateProcessISR() {
-            /// TDOO: "Turn off" cpu
+            /// "Turn off" cpu
             _CPU.isExecuting = false;
-            /// TODO: Update PCB State
+            /// Update PCB State
             _CPU.localPCB.processState = "Terminated";
             TSOS.Control.updateVisualPcb();
-            /// TODO: Turn "off Single Step"
+            /// Turn "off Single Step"
             _SingleStepMode = false;
             _NextStep = false;
             /// Reset visuals for Single Step
             document.getElementById("btnNextStep").disabled = true;
             document.getElementById("btnSingleStepMode").value = "Single Step ON";
-            /// TODO: Prompt for more input
+            /// Prompt for more input
             _StdOut.advanceLine();
             _OsShell.putPrompt();
         } /// terminateProcessISR

@@ -16,7 +16,7 @@ module TSOS {
             public simpleVolumes: SimpleVolume[] = [],
         ) {
             this.init();
-        }
+        }///contsructor
 
         public init(): void {
             /// Generate Memory Volumes

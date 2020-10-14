@@ -25,12 +25,14 @@ const NEXT_STEP = 5;
 // TODO: Make a global object and use that instead of the "_" naming convention in the global namespace.
 //
 var _CPU; // Utilize TypeScript's type annotation system to ensure that _CPU is an instance of the Cpu class.
+var _CPU_BURST; /// Keep track of the number of bursts the CPU has performed
 /// Step -1: Learn from past mistakes and READ the fudgin' HINTS...
 ///
 /// Hardware (host)
 var _Memory;
 var _MemoryAccessor;
 var _Dispatcher;
+var _Scheduler;
 /// Software (OS)
 var _MemoryManager = null;
 var _ResidentList;

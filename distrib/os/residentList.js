@@ -1,7 +1,7 @@
 /*
-processControlBlock.ts
+residentList.ts
 
-Keeps track of queued ProcessControlBlocks
+Keeps track of all loaded Process Control Blocks
 
 */
 var TSOS;
@@ -9,7 +9,7 @@ var TSOS;
     class ResidentList {
         constructor(residentList = []) {
             this.residentList = residentList;
-        }
+        } /// constructor
         init() {
             this.residentList = [];
         } /// init
