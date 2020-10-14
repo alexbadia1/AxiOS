@@ -29,51 +29,53 @@
 var TSOS;
 (function (TSOS) {
     class Scheduler {
-        constructor(quantum = 1, currentProcessControlBlock = null, relativeStartingBurst = 0, readyQueue = []) {
-            this.quantum = quantum;
-            this.currentProcessControlBlock = currentProcessControlBlock;
-            this.relativeStartingBurst = relativeStartingBurst;
+        constructor(quanta = 6, currentProcess = null, startBurst = 0, readyQueue = []) {
+            this.quanta = quanta;
+            this.currentProcess = currentProcess;
+            this.startBurst = startBurst;
             this.readyQueue = readyQueue;
         } /// constructor
-        scheduleProcess(newPcb) {
+        scheduleProcess(newProcess) {
             /// Round Robin Scheduling allows us to just keep enqueing processes
-            newPcb.processState = "Ready";
-            this.readyQueue.push(newPcb);
-            /// More...?
-        } /// loadReadyQueue
-        quantumCheck(baseCase = false) {
-            /// Stop CPU for Context Switch
-            _CPU.isExecuting = false;
-            // _StdOut.putText("Quantum Check!");
-            /// This IS the FIRST quantum check initialize the relative starting burst
-            /// and attach the very first process from the Ready Queue to the CPU.
-            if (baseCase === true) {
-                /// Set relative starting burst to count from
-                this.relativeStartingBurst = _CPU_BURST;
-                /// Grab the process from the Ready Queue
-                this.currentProcessControlBlock = _Scheduler.readyQueue.shift();
-                /// Attach the process to the CPU
-                _Dispatcher.attachNewPcbToCPU();
-            } ///if
-            /// This is NOT the FIRST quantum check, meaning there is already a relative base
-            /// or "first" burst count to reference our counting from.
-            ///
-            /// Quantum expires when the CPU Burst is the: (Starting CPU Burst + Quantum)
-            else if ((this.relativeStartingBurst + this.quantum) === _CPU_BURST) {
-                /// Check if there is another process to grab from the Ready Queue
-                if (this.readyQueue.length > 0) {
-                    /// Grab the another process from the Ready Queue
-                    this.currentProcessControlBlock = _Scheduler.readyQueue.shift();
-                    /// Attach the process to the CPU
-                    _Dispatcher.attachNewPcbToCPU();
-                    /// Before we begin CPU execution, Update Relative Starting Burst
-                    this.relativeStartingBurst = _CPU_BURST;
-                } /// if
+            newProcess.processState = "Ready";
+            if (this.currentProcess === null) {
+                this.currentProcess = newProcess;
+                _Dispatcher.setNewProcessToCPU(this.currentProcess);
             } /// if
-            /// Context Swich Complete Continue CPU Execution
-            this.currentProcessControlBlock.processState = "Running";
-            _CPU.isExecuting = true;
-        } /// roundRobin
+            else {
+                this.readyQueue.push(newProcess);
+            } /// else
+            /// More...?
+        } /// scheduleProcess
+        roundRobinCheck() {
+            /// Process ran out of turns so shift things around
+            /// Else let the clock keep cycling...
+            /// Current Process has terminated before quanta limit:
+            if (this.currentProcess.processState === "Terminated") {
+                /// Context Switch but don't put current process back in process queue
+                if (this.readyQueue.length > 0) {
+                    _KernelInterruptQueue.enqueue(new TSOS.Interrupt(CONTEXT_SWITCH, []));
+                    this.startBurst = _CPU_BURST;
+                } /// if
+                else {
+                    /// End Scheduled Session With Interrupt
+                    _CPU.isExecuting = false;
+                } /// else
+            } /// if
+            if ((_CPU_BURST - this.startBurst) === this.quanta) {
+                /// Context Switch but put process back in process queue
+                if (this.readyQueue.length > 0) {
+                    _KernelInterruptQueue.enqueue(new TSOS.Interrupt(CONTEXT_SWITCH, []));
+                    this.startBurst = _CPU_BURST;
+                } /// if
+                else {
+                    this.startBurst = _CPU_BURST;
+                } ///else
+            } /// if
+            // if (this.currentProcess.processState === "Terminated" && this.readyQueue.length === 0) {
+            //     _CPU.isExecuting = false;
+            // }/// if
+        } /// roundRobinCheck
     } /// class
     TSOS.Scheduler = Scheduler;
 })(TSOS || (TSOS = {})); /// module

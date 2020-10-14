@@ -76,9 +76,8 @@ var TSOS;
                 /// Perform One Single Step
                 if (_SingleStepMode) {
                     if (_NextStep) {
-                        _CPU.cycle();
                         _CPU_BURST++;
-                        _Scheduler.quantumCheck(false);
+                        _CPU.cycle();
                         TSOS.Control.updateVisualMemory();
                         TSOS.Control.updateVisualCpu();
                         TSOS.Control.updateVisualPcb();
@@ -87,9 +86,8 @@ var TSOS;
                 } /// if
                 else {
                     /// Run normally
-                    _CPU.cycle();
                     _CPU_BURST++;
-                    _Scheduler.quantumCheck(false);
+                    _CPU.cycle();
                     TSOS.Control.updateVisualMemory();
                     TSOS.Control.updateVisualCpu();
                     TSOS.Control.updateVisualPcb();
@@ -101,6 +99,7 @@ var TSOS;
                 this.getCurrentDateTime();
                 this.krnTrace("Idle");
             }
+            _Scheduler.roundRobinCheck();
         }
         /// Hopefully Updates the Date and Time
         getCurrentDateTime() {
@@ -155,10 +154,16 @@ var TSOS;
                 case NEXT_STEP:
                     this.nextStepISR();
                     break;
+                case CONTEXT_SWITCH:
+                    this.contextSwitch();
+                    break;
                 default:
                     this.krnTrapError("Invalid Interrupt Request. irq=" + irq + " params=[" + params + "]");
             } /// switch
         } /// krnInterruptHandler
+        contextSwitch() {
+            _Dispatcher.contextSwitch();
+        } /// contextSwitch
         singleStepISR() {
             if (_SingleStepMode) {
                 /// Stop the CPU from executing
@@ -178,20 +183,29 @@ var TSOS;
             } /// if
         } /// singleStepISR
         terminateProcessISR() {
-            /// "Turn off" cpu
-            _CPU.isExecuting = false;
-            /// Update PCB State
-            _CPU.localPCB.processState = "Terminated";
-            TSOS.Control.updateVisualPcb();
-            /// Turn "off Single Step"
-            _SingleStepMode = false;
-            _NextStep = false;
-            /// Reset visuals for Single Step
-            document.getElementById("btnNextStep").disabled = true;
-            document.getElementById("btnSingleStepMode").value = "Single Step ON";
-            /// Prompt for more input
-            _StdOut.advanceLine();
-            _OsShell.putPrompt();
+            /// Remove process from current process
+            _Scheduler.currentProcess.processState === "Terminated";
+            /// Replace with a new process from the ready queue, if there exists one
+            if (_Scheduler.readyQueue.length > 0) {
+                _KernelInterruptQueue.enqueue(new TSOS.Interrupt(CONTEXT_SWITCH, []));
+                _Scheduler.startBurst = _CPU_BURST;
+            } /// if
+            if (_Scheduler.currentProcess.processState === "Terminated" && _Scheduler.readyQueue.length === 0) {
+                /// Remove the last process from the Ready Queue
+                _Scheduler.currentProcess === null;
+                /// "Turn Off" CPU
+                _CPU.isExecuting = false;
+                /// Turn "off Single Step"
+                _SingleStepMode = false;
+                _NextStep = false;
+                /// Reset visuals for Single Step
+                document.getElementById("btnNextStep").disabled = true;
+                document.getElementById("btnSingleStepMode").value = "Single Step ON";
+                /// Prompt for more input
+                _StdOut.advanceLine();
+                _OsShell.putPrompt();
+                TSOS.Control.updateVisualPcb();
+            } /// if
         } /// terminateProcessISR
         sysCallISR() {
             /// Print out the Y-reg if X-reg has 01

@@ -12,7 +12,7 @@
 //
 const APP_NAME = "TSOS"; // 'cause Bob and I were at a loss for a better name.
 const APP_VERSION = "0.07"; // What did you expect?
-const CPU_CLOCK_INTERVAL = 100; // This is in ms (milliseconds) so 1000 = 1 second.
+const CPU_CLOCK_INTERVAL = 10; // This is in ms (milliseconds) so 1000 = 1 second.
 const TIMER_IRQ = 0; // Pages 23 (timer), 9 (interrupts), and 561 (interrupt priority).
 // NOTE: The timer is different from hardware/host clock pulses. Don't confuse these.
 const KEYBOARD_IRQ = 1;
@@ -20,6 +20,7 @@ const TERMINATE_PROCESS_IRQ = 2;
 const SYS_CALL_IRQ = 3;
 const SINGLE_STEP = 4;
 const NEXT_STEP = 5;
+const CONTEXT_SWITCH = 6;
 //
 // Global Variables
 // TODO: Make a global object and use that instead of the "_" naming convention in the global namespace.

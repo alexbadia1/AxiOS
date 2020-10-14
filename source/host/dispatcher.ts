@@ -27,67 +27,45 @@ module TSOS {
     export class Dispatcher {
 
         constructor(
-            public releasedProcess: ProcessControlBlock = null
+            public oldProcess: ProcessControlBlock = null
         ) {}/// constructor
 
-        public attachNewPcbToCPU() {
-            /// Grab the released process from the CPU
-            ///
-            /// Will be "NULL" if there wasn't a process already in the CPU
-            this.releasedProcess = this.releasePcbFromCPU();
-    
-            /// Load CPU context with new PCB context
-            this.loadNewContextToCPU();
-
-            /// Handle the released process, if there was one
-            if (this.releasedProcess !== null) {
-                if (this.releasedProcess.processState !== "Terminated") {
-                    /// Put released process back into end of the Ready Queue ONLY IF it is NOT TERMINATED.
-                    _Scheduler.readyQueue.push(this.releasedProcess);
-                }/// if
+        public contextSwitch() {
+            /// Move current process to end of ready queue
+            if (_Scheduler.currentProcess.processState !== "Terminated") {
+                /// Put the current process in the end
+                this.saveOldContextFromCPU(_Scheduler.currentProcess);
+                _Scheduler.currentProcess.processState = "Ready";
+                _Scheduler.readyQueue.push(_Scheduler.currentProcess);
             }/// if
-            // else {
-            //     if (_Scheduler.currentProcessControlBlock !== null){
-            //         if(_Scheduler.currentProcessControlBlock.processState !== "Terminated"){
-            //             /// Take currently running process and put it back into the end of the Ready Queue
-            //             _Scheduler.currentProcessControlBlock.processState = "Ready";
-            //             _Scheduler.readyQueue.push(_Scheduler.currentProcessControlBlock);
-            //         }/// if
-            //     }/// if
-            // }
-        }/// attachPcbToCPU
 
-        public releasePcbFromCPU() {
-            if (_CPU.localPCB !== null) {
-                this.saveOldContextFromCPU();
+            if (_Scheduler.readyQueue.length > 0) {
+                /// Grab the process at the front of the queue
+                _Scheduler.currentProcess = _Scheduler.readyQueue.shift();
+
+                /// Load CPU context with new process context
+                _Scheduler.currentProcess.processState = "Running";
+                this.setNewProcessToCPU(_Scheduler.currentProcess);
             }/// if
-            return _CPU.localPCB;
-        }/// releasePcbFromCPU
-
-        public loadNewContextToCPU() {
-            _CPU.PC = _Scheduler.currentProcessControlBlock.programCounter;
-            _CPU.IR = _Scheduler.currentProcessControlBlock.instructionRegister;
-            _CPU.Acc = _Scheduler.currentProcessControlBlock.accumulator;
-            _CPU.Xreg = _Scheduler.currentProcessControlBlock.xRegister;
-            _CPU.Yreg = _Scheduler.currentProcessControlBlock.yRegister;
-            _CPU.Zflag = _Scheduler.currentProcessControlBlock.zFlag;
-
-            /// Since the PCB is passed by reference, the local PCB
-            /// and it's contents are still located somewhere..
-            ///
-            /// Perhaps in the Ready Queue or Process Queue...
-            ///
-            /// TODO: Hunt It Down. Dead OR Alive....
-            _CPU.localPCB = _Scheduler.currentProcessControlBlock;
         }/// contextSwitch
 
-        public saveOldContextFromCPU() {
-            _CPU.localPCB.programCounter = _CPU.PC;
-            _CPU.localPCB.instructionRegister = _CPU.IR;
-            _CPU.localPCB.accumulator = _CPU.Acc;
-            _CPU.localPCB.xRegister = _CPU.Xreg;
-            _CPU.localPCB.yRegister = _CPU.Yreg;
-            _CPU.localPCB.zFlag = _CPU.Zflag;
+        public setNewProcessToCPU(newPcb) {
+            _CPU.PC = newPcb.programCounter;
+            _CPU.IR = newPcb.instructionRegister;
+            _CPU.Acc = newPcb.accumulator;
+            _CPU.Xreg = newPcb.xRegister;
+            _CPU.Yreg = newPcb.yRegister;
+            _CPU.Zflag = newPcb.zFlag;
+            _CPU.localPCB = _Scheduler.currentProcess;
+        }/// contextSwitch
+
+        public saveOldContextFromCPU(pcb) {
+            pcb.programCounter = _CPU.PC;
+            pcb.instructionRegister = _CPU.IR;
+            pcb.accumulator = _CPU.Acc;
+            pcb.xRegister = _CPU.Xreg;
+            pcb.yRegister = _CPU.Yreg;
+            pcb.zFlag = _CPU.Zflag;
         }/// saveContextFromCPU
     }/// class
 }/// module

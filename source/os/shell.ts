@@ -774,7 +774,7 @@ module TSOS {
                         /// There are already process running:
                         ///     1. There are any process in the ready queue (that isn't the one already scheduled)
                         ///     2. There is a current process for _Scheduler
-                        thereAreRunningProcesses = (_Scheduler.readyQueue.length > 0 || _Scheduler.currentProcessControlBlock !== null)? true : false;
+                        thereAreRunningProcesses = (_Scheduler.readyQueue.length > 0 || _Scheduler.currentProcess !== null)? true : false;
 
                         /// The Scheduler will handle this depending on the algorithm used...
                         _Scheduler.scheduleProcess(_ResidentList.residentList[curr]);
@@ -787,7 +787,8 @@ module TSOS {
                         }/// if 
                         else {
                             /// Run this as the first process
-                            _Scheduler.quantumCheck(true);
+                            _Scheduler.roundRobinCheck();
+                            _CPU.isExecuting = true;
                         }/// else
                     }/// else
 
@@ -848,11 +849,7 @@ module TSOS {
                         }/// if 
                     }/// for
 
-                     /// Attach the first process in the Ready Queue to the CPU...
-                     ///
-                     /// "True" signifies that this is the FIRST quantum check of the Schedule...
-                     /// Note: quantumCheck(); argument is "false" by default
-                     _Scheduler.quantumCheck(true);
+                    _CPU.isExecuting = true;
                 }/// else
             }/// try
             catch (e) {
