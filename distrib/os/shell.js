@@ -647,7 +647,7 @@ var TSOS;
                         /// There are already process running:
                         ///     1. There are any process in the ready queue (that isn't the one already scheduled)
                         ///     2. There is a current process for _Scheduler
-                        thereAreRunningProcesses = (_Scheduler.readyQueue.length > 0 || _Scheduler.currentProcess !== null) ? true : false;
+                        thereAreRunningProcesses = (_Scheduler.readyQueueLength() > 0 || _Scheduler.hasCurrentProcess()) ? true : false;
                         /// The Scheduler will handle this depending on the algorithm used...
                         _Scheduler.scheduleProcess(_ResidentList.residentList[curr]);
                         /// Now we run it...
@@ -724,7 +724,34 @@ var TSOS;
         /// killall - kill all processes
         shellKillAll() { } /// kill all processes
         /// quantum <int> - let the user set the Round Robin Quantum (measured in CPU cycles)
-        shellQuantum() { } ///quantum
+        shellQuantum(args) {
+            /// Check for one argmument
+            if (args.length === 1) {
+                /// Getting and cleansing input
+                var trimmedStringQuanta = args[0].trim();
+                trimmedStringQuanta = trimmedStringQuanta.toUpperCase().replace(/\s/g, '');
+                /// Make sure quantum is in positive decimal
+                if (/^[0-9]+$/i.test(trimmedStringQuanta)) {
+                    /// Save old quanta
+                    var oldDecimalQuanta = _Scheduler.getQuantum();
+                    /// Set new quanta...
+                    ///     _Scheduler.setQuantum() method Returns:
+                    ///         "True" if quantum > 0
+                    ///         "False" if quantum <= 0
+                    _Scheduler.setQuantum(parseInt(trimmedStringQuanta, 10)) ?
+                        _StdOut.putText(`Quatum was: ${oldDecimalQuanta}, Quantum now: ${_Scheduler.getQuantum()}`)
+                        : _StdOut.putText(`Usage: quantum <int>  Please supply a positive, non-zero, decimal integer only.`);
+                } /// if
+                /// Error, a character other than [0-9] was detected
+                else {
+                    _StdOut.putText("Usage: quantum <int>  Please supply a positive decimal number only.");
+                } /// else
+            } /// if 
+            /// ERROR, More than one argument given
+            else {
+                _StdOut.putText("Usage: quantum <int> Expected 1 Argument.");
+            } /// else
+        } /// shellQuantum
         /*************************************************************************************
         TODO Implement iProject4 Commands:
             ...

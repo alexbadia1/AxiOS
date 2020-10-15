@@ -242,7 +242,7 @@ var TSOS;
             /// The local PCB really just refernces the global PCB in the global PCB queue
             /// So updating the local PCB state is sufficent
             _CPU.localPCB.processState = "Terminated";
-            _Scheduler.currentProcess.processState = "Terminated";
+            _Scheduler.setCurrentProcessState("Terminated");
         } /// break
         /// Compare a byte in memory to the X reg EC CPX EC $0010 EC 10 00
         /// Sets the Z (zero) flag if equal...
@@ -303,10 +303,10 @@ var TSOS;
         sysCall() {
             /// Process handling Y register as an interrupt
             if (parseInt(this.Xreg, 16) === 1) {
-                _KernelInterruptQueue.enqueue(new TSOS.Interrupt(SYS_CALL_IRQ, [1]));
+                _KernelInterruptQueue.enqueue(new TSOS.Interrupt(SYS_CALL_IRQ, [this.localPCB]));
             } /// if
             else if (parseInt(this.Xreg, 16) === 2) {
-                _KernelInterruptQueue.enqueue(new TSOS.Interrupt(SYS_CALL_IRQ, [2]));
+                _KernelInterruptQueue.enqueue(new TSOS.Interrupt(SYS_CALL_IRQ, [this.localPCB]));
             } /// else if
             this.PC++;
         } /// sysCall

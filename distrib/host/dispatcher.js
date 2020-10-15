@@ -24,23 +24,21 @@
 var TSOS;
 (function (TSOS) {
     class Dispatcher {
-        constructor(oldProcess = null) {
-            this.oldProcess = oldProcess;
-        } /// constructor
+        constructor() { } /// constructor
         contextSwitch() {
             /// Move current process to end of ready queue
-            if (_Scheduler.currentProcess.processState !== "Terminated") {
+            if (_Scheduler.getCurrentProcessState() !== "Terminated") {
                 /// Put the current process in the end
-                this.saveOldContextFromCPU(_Scheduler.currentProcess);
-                _Scheduler.currentProcess.processState = "Ready";
-                _Scheduler.readyQueue.push(_Scheduler.currentProcess);
+                this.saveOldContextFromCPU(_Scheduler.getCurrentProcess());
+                _Scheduler.setCurrentProcessState("Ready");
+                _Scheduler.readyQueueEnqueue(_Scheduler.getCurrentProcess());
             } /// if
-            if (_Scheduler.readyQueue.length > 0) {
+            if (_Scheduler.readyQueueLength() > 0) {
                 /// Grab the process at the front of the queue
-                _Scheduler.currentProcess = _Scheduler.readyQueue.shift();
+                _Scheduler.setCurrentProcess(_Scheduler.readyQueueDequeue());
                 /// Load CPU context with new process context
-                _Scheduler.currentProcess.processState = "Running";
-                this.setNewProcessToCPU(_Scheduler.currentProcess);
+                _Scheduler.setCurrentProcessState("Running");
+                this.setNewProcessToCPU(_Scheduler.getCurrentProcess());
             } /// if
         } /// contextSwitch
         setNewProcessToCPU(newPcb) {
@@ -50,7 +48,7 @@ var TSOS;
             _CPU.Xreg = newPcb.xRegister;
             _CPU.Yreg = newPcb.yRegister;
             _CPU.Zflag = newPcb.zFlag;
-            _CPU.localPCB = _Scheduler.currentProcess;
+            _CPU.localPCB = _Scheduler.getCurrentProcess();
         } /// contextSwitch
         saveOldContextFromCPU(pcb) {
             pcb.programCounter = _CPU.PC;

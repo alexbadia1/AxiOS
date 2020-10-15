@@ -26,6 +26,9 @@ module TSOS {
             public priority: number = 0,
             public processState: string = 'New',
             public volumeIndex: number = -1,
+            public outputBuffer: string = "",
+            public timeSpentExecuting: number = 0,
+            public waitTime: number = 0,
         ) { }
 
         public init(): void {} /// init

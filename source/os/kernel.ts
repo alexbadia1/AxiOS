@@ -89,8 +89,9 @@ module TSOS {
                 /// Perform One Single Step
                 if (_SingleStepMode) {
                     if (_NextStep) {
-                        _CPU_BURST++;
+                        this.countCpuBurst();
                         _CPU.cycle();
+                        _Scheduler.roundRobinCheck();
                         TSOS.Control.updateVisualMemory();
                         TSOS.Control.updateVisualCpu();
                         TSOS.Control.updateVisualPcb();
@@ -99,8 +100,9 @@ module TSOS {
                 }/// if
                 else {
                     /// Run normally
-                    _CPU_BURST++;
+                    this.countCpuBurst();
                     _CPU.cycle();
+                    _Scheduler.roundRobinCheck();
                     TSOS.Control.updateVisualMemory();
                     TSOS.Control.updateVisualCpu();
                     TSOS.Control.updateVisualPcb();
@@ -111,8 +113,19 @@ module TSOS {
                 this.getCurrentDateTime();
                 this.krnTrace("Idle");
             }
-            _Scheduler.roundRobinCheck();
+            // _Scheduler.roundRobinCheck();
         }
+
+        public countCpuBurst(): void {
+            /// Increase cpu burst count
+            _CPU_BURST++;
+
+            /// Wait time is time spent in the ready queue soo...
+            _Scheduler.incrementWaitTime();
+
+            /// Turnaround Time is time running and in waiting queue...
+            _Scheduler.incrementTimeExecuting();
+        }/// countCpuBurst
 
         /// Hopefully Updates the Date and Time
         public getCurrentDateTime() {
@@ -163,7 +176,7 @@ module TSOS {
                     this.terminateProcessISR();
                     break;
                 case SYS_CALL_IRQ:
-                    this.sysCallISR();
+                    this.sysCallISR(params);
                     break;
                 case SINGLE_STEP:
                     this.singleStepISR();
@@ -206,17 +219,17 @@ module TSOS {
 
         public terminateProcessISR() {
             /// Remove process from current process
-            _Scheduler.currentProcess.processState === "Terminated";
+            _Scheduler.getCurrentProcessState() === "Terminated";
 
             /// Replace with a new process from the ready queue, if there exists one
-            if (_Scheduler.readyQueue.length > 0) {
-                _KernelInterruptQueue.enqueue(new TSOS.Interrupt(CONTEXT_SWITCH, []));
-                _Scheduler.startBurst = _CPU_BURST;
-            }/// if
+            // if (_Scheduler.readyQueue.length > 0) {
+            //     _KernelInterruptQueue.enqueue(new TSOS.Interrupt(CONTEXT_SWITCH, []));
+            //     _Scheduler.startBurst = _CPU_BURST;
+            // }/// if
 
-            if (_Scheduler.currentProcess.processState === "Terminated" && _Scheduler.readyQueue.length === 0) {
+            if (_Scheduler.getCurrentProcessState() === "Terminated" && _Scheduler.readyQueueLength() === 0) {
                 /// Remove the last process from the Ready Queue
-                _Scheduler.currentProcess === null;
+                _Scheduler.setCurrentProcess(null);
 
                 /// "Turn Off" CPU
                 _CPU.isExecuting = false;
@@ -237,10 +250,12 @@ module TSOS {
             }/// if
         }/// terminateProcessISR
 
-        public sysCallISR() {
+        public sysCallISR(params) {
+            var myPcb: ProcessControlBlock = params[0];
             /// Print out the Y-reg if X-reg has 01
             if (parseInt(_CPU.Xreg, 16) === 1) {
                 _StdOut.putText(` ${_CPU.Yreg} `);
+                myPcb.outputBuffer += ` ${_CPU.Yreg} `;
             }/// if
             
             /// Print from memeory starting at address
@@ -266,6 +281,7 @@ module TSOS {
                     decimalCharCode = parseInt(_MemoryAccessor.read(_MemoryManager.simpleVolumes[_CPU.localPCB.volumeIndex], logicalCurrAddress), 16);
                 }/// while
                 _StdOut.putText(ans);
+                myPcb.outputBuffer += ans;
             }/// if
         }/// sysCallISR
 
