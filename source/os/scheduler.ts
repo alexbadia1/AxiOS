@@ -32,34 +32,26 @@ module TSOS {
     export class Scheduler {
 
         constructor(
-            private quanta: number = 6,
+            public quanta: number = 6,
             private startBurst: number = 0,
             private unInterleavedOutput: string[] = [],
-            private processWaitTimes: number[] = [],
-            private processTimeSpentExecuting: number[] = [],
-            private processTurnaroundTime: number [] = [],
+            private processWaitTimes: any[] = [],
+            private processTimeSpentExecuting: any[] = [],
+            private processTurnaroundTime: number[] = [],
             private readyQueue: ProcessControlBlock[] = [],
             private currentProcess: ProcessControlBlock = null,
         ) { }/// constructor
 
-        /**************************
-         * Quantum Helper Methods *
-         *************************/
-        public getQuantum(): number {
-            return this.quanta;
-        }/// getQuantum
-
-        public setQuantum(newQuanta: number): boolean {
-            /// New quanta must be a Positive Integer
-            if (newQuanta > 0){
-                this.quanta = newQuanta;
-            }/// if
-            return newQuanta > 0;
-        }/// setQuantum
-
         /******************************
          * Ready Queue Helper Methods *
          ******************************/
+        public terminatedAllProcess() {
+            this.currentProcess.processState = "Terminated";
+            for (var i = 0; i < this.readyQueueLength(); ++i){
+                this.readyQueue[i].processState = "Terminated";
+            }/// for
+        }/// terminateAllProcess
+
         public incrementWaitTime() {
             /// Loop through Ready Queue and increment each pcb's
             /// wait time by 1
@@ -111,18 +103,41 @@ module TSOS {
         /*******************************
          *    Scheduling Algorithms    *
          ******************************/
-        public scheduleProcess(newProcess: ProcessControlBlock): void { 
+        public scheduleProcess(newProcess: ProcessControlBlock): boolean { 
+            var ans: boolean = false;
             /// Round Robin Scheduling allows us to just keep enqueing processes
             newProcess.processState = "Ready";
             if (this.currentProcess === null) {
                 this.currentProcess = newProcess;
                 _Dispatcher.setNewProcessToCPU( this.currentProcess);
+                ans = true;
             }/// if
             else {
                 this.readyQueue.push(newProcess);
+                ans = true;
             }/// else
             /// More...?
+            return ans;
         }/// scheduleProcess
+
+        public runSchedule(aNewProcessWasLoaded: boolean = true) {
+            /// Make sure there are process loaded in the ready queue or
+            /// in the current process slot
+            if (this.readyQueue.length === 0 && this.currentProcess === null) {
+                /// Don't stop the cpu from executing, as it may already be executing other process
+                _StdOut.putText("No process found either loaded or not already terminated, running, scheduled.");
+                _StdOut.advanceLine();
+                _OsShell.putPrompt();
+            }/// if
+            else if (!aNewProcessWasLoaded) {
+                _StdOut.putText("No new process found to run!");
+                _StdOut.advanceLine();
+                _OsShell.putPrompt();
+            }/// else 
+            else {
+                _CPU.isExecuting = true;
+            }/// else
+        }/// runSchedule
 
         public roundRobinCheck(): void {
             /// Current Process has terminated either Right On or Before quanta limit:
@@ -132,14 +147,10 @@ module TSOS {
                     /// Queue interrupt for context switch
                     _KernelInterruptQueue.enqueue(new TSOS.Interrupt(CONTEXT_SWITCH, []));
 
-                    /// Grab the procress' output
-                    this.unInterleavedOutput.push(`Pid ${this.currentProcess.processID}: ${this.currentProcess.outputBuffer}.`);
-
-                    /// Grab process' time spent executing 
-                    this.processTimeSpentExecuting.push(this.currentProcess.timeSpentExecuting);
-
-                    /// Grab process' time spent waiting
-                    this.processWaitTimes.push(this.currentProcess.waitTime);
+                    /// Grab the procress' output, time spent executing, time spent waiting
+                    this.unInterleavedOutput.push(`Pid ${this.currentProcess.processID}: ${this.currentProcess.outputBuffer}`); 
+                    this.processTimeSpentExecuting.push([this.currentProcess.timeSpentExecuting, this.currentProcess.processID]);
+                    this.processWaitTimes.push([this.currentProcess.waitTime, this.currentProcess.processID]);
 
                     /// Reset the starting burst for the next new process
                     this.startBurst = _CPU_BURST;
@@ -148,23 +159,18 @@ module TSOS {
                     /// TODO: Preferably End Scheduled Session With Interrupt
                     _CPU.isExecuting = false;
 
-                    /// Grab FINAl procress' output
-                    this.unInterleavedOutput.push(`Pid ${this.currentProcess.processID}: ${this.currentProcess.outputBuffer}.`);
-                    
-                    /// Grab FINAL process' time spent executing 
-                    this.processTimeSpentExecuting.push(this.currentProcess.timeSpentExecuting);
-
-                    /// Grab FINAL process' time spent waiting
-                    this.processWaitTimes.push(this.currentProcess.waitTime);
+                    /// Grab the final procress' output, time spent executing, time spent waiting
+                    this.unInterleavedOutput.push(`Pid ${this.currentProcess.processID}: ${this.currentProcess.outputBuffer}`);
+                    this.processTimeSpentExecuting.push([this.currentProcess.timeSpentExecuting, this.currentProcess.processID]);
+                    this.processWaitTimes.push([this.currentProcess.waitTime, this.currentProcess.processID]);
                     
                     /// Print each process order in a readable fashion
-                    _StdOut.advanceLine();
                     _StdOut.advanceLine();
                     _StdOut.putText("Schedule Terminated!");
                     _StdOut.advanceLine();
                     _StdOut.putText("...");
                     _StdOut.advanceLine();
-                    _StdOut.putText("Dumping Schedule Metadata:");
+                    _StdOut.putText("Schedule Metadata:");
                     _StdOut.advanceLine();
                     _StdOut.putText(`  Quantum used: ${this.quanta}, Total CPU Bursts: ${_CPU_BURST}`);
                     _StdOut.advanceLine();
@@ -176,6 +182,18 @@ module TSOS {
                     this.showTurnaroundTimes();
                     this.showWaitTimes();
                     this.showProcessesOutputs();
+                    _StdOut.advanceLine();
+                    _OsShell.putPrompt();
+
+                    /// Clear scheduling metadata
+                    _CPU_BURST = 0;
+                    this.startBurst = 0;
+                    this.unInterleavedOutput = [];
+                    this.processWaitTimes = [];
+                    this.processTimeSpentExecuting = [];
+                    this.processTurnaroundTime = [];
+                    this.readyQueue = [];
+                    this.currentProcess = null;
                 }/// else
             }/// if
 
@@ -199,17 +217,17 @@ module TSOS {
 
         
         private calculateAverageWaitTime(): number {
-            var ans: number = -1;
+            var ans: number = 0;
             for (var i:number = 0; i < this.processWaitTimes.length; ++i) {
-                ans += this.processWaitTimes[i];
+                ans += this.processWaitTimes[i][0];
             }///for
             return ans/this.processWaitTimes.length;
         }/// calculateAverageWaitTime
 
         private calculateAverageTurnaroundTime(): number {
-            var ans: number = -1;
+            var ans: number = 0;
             for (var i: number = 0; i < this.processWaitTimes.length; ++i) {
-                var turnaroundTime = this.processWaitTimes[i] + this.processTimeSpentExecuting[i];
+                var turnaroundTime = this.processWaitTimes[i][0] + this.processTimeSpentExecuting[i][0];
                 this.processTurnaroundTime.push(turnaroundTime);
             }/// for
 
@@ -224,8 +242,8 @@ module TSOS {
             _StdOut.advanceLine();
             for (var i:number = 0; i < this.processTimeSpentExecuting.length; ++i) {
                 i === 0?
-                _StdOut.putText(`  Pid ${i}: ${this.processTimeSpentExecuting[i]}`)
-                : _StdOut.putText(`Pid ${i}: ${this.processTimeSpentExecuting[i]}`)
+                _StdOut.putText(`  Pid ${this.processTimeSpentExecuting[i][1]}: ${this.processTimeSpentExecuting[i][0]}`)
+                : _StdOut.putText(`Pid ${this.processTimeSpentExecuting[i][1]}: ${this.processTimeSpentExecuting[i][0]}`)
                 if (i !== this.processTimeSpentExecuting.length - 1) {
                     _StdOut.putText(", ");
                 }/// if
@@ -240,7 +258,7 @@ module TSOS {
             _StdOut.advanceLine();
             _StdOut.putText(`  AWT: ${Math.ceil(this.calculateAverageWaitTime())}, `);
             for (var i:number = 0; i < this.processWaitTimes.length; ++i) {
-                _StdOut.putText(`Pid ${i}: ${this.processWaitTimes[i]}`);
+                _StdOut.putText(`Pid ${this.processWaitTimes[i][1]}: ${this.processWaitTimes[i][0]}`);
                 if (i !== this.processTimeSpentExecuting.length - 1) {
                     _StdOut.putText(", ");
                 }/// if
@@ -255,8 +273,8 @@ module TSOS {
             _StdOut.advanceLine();
             _StdOut.putText(`  ATT: ${Math.ceil(this.calculateAverageTurnaroundTime())}, `);
             for (var i:number = 0; i < this.processTurnaroundTime.length; ++i) {
-                var turnaroundTime = this.processWaitTimes[i] + this.processTimeSpentExecuting[i];
-                _StdOut.putText(`Pid ${i}: ${turnaroundTime}`);
+                var turnaroundTime = this.processWaitTimes[i][0] + this.processTimeSpentExecuting[i][0];
+                _StdOut.putText(`Pid ${this.processWaitTimes[i][1]}: ${turnaroundTime}`);
                 if (i !== this.processTimeSpentExecuting.length - 1) {
                     _StdOut.putText(", ");
                 }/// if
@@ -267,7 +285,7 @@ module TSOS {
         }/// showTurnaroundTimes
 
         private showProcessesOutputs() {
-            _StdOut.putText("Dumping Scheduled Processes Output(s):");
+            _StdOut.putText("Dumping Processes Output(s):");
             _StdOut.advanceLine();
             for (var i:number = 0; i < this.unInterleavedOutput.length; ++i) {
                 _StdOut.putText(`  ${this.unInterleavedOutput[i]}`);

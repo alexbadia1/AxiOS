@@ -86,5 +86,5 @@ module TSOS {
         public mainMemorySize() {
             return _Memory.size();
         }/// mainMemorySize
-    }
-}
+    }/// class
+}/// module

@@ -59,7 +59,7 @@ module TSOS {
                 else if (chr === '^C') {
                     if (_CPU.isExecuting){
                         /// Queue an interrupt for termination of the program
-                        _KernelInterruptQueue.enqueue(new TSOS.Interrupt(TERMINATE_PROCESS_IRQ, []));
+                        _KernelInterruptQueue.enqueue(new TSOS.Interrupt(KILL_ALL_PROCESSES, []));
                         this.eraseText();
                         this.putText("^c");
                     }/// if
@@ -86,8 +86,7 @@ module TSOS {
 
                 /// Handle Tab
                 else if (chr === String.fromCharCode(9)) {
-                    /// Use something advanced like a TRIE?
-                    /// ...
+                    /// Use something advanced like a trie...?
                     /// I'm just gonna loop through a list...
                     ///
                     /// Rather not include "bsod", yah know... the command that crashes the OS.
@@ -105,7 +104,13 @@ module TSOS {
                         'eightball',
                         'status',
                         'load', 
-                        'run'
+                        'run',
+                        'clearmem',
+                        'runall',
+                        'ps',
+                        'kill',
+                        'killall',
+                        'quantum',
                     ];
 
                     var matches: string[] = [];

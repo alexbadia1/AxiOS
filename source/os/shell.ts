@@ -616,13 +616,14 @@ module TSOS {
                         var newProcessControlBlock: ProcessControlBlock = new ProcessControlBlock();
 
                         /// Set state to new process as new until it is a resident
-                        newProcessControlBlock.processState = "NEW";
+                        newProcessControlBlock.processState = "New";
 
                         /// Set location of the new process in memory segment
                         newProcessControlBlock.volumeIndex = freeSpot;
 
                         /// Assign continuosly growing list of process id's
-                        newProcessControlBlock.processID = _ResidentList.residentList.length;
+                        newProcessControlBlock.processID = _ResidentList.size;
+                        _ResidentList.size++;
 
                         /// Add to list of processes
                         _ResidentList.residentList.push(newProcessControlBlock);
@@ -664,7 +665,7 @@ module TSOS {
                         ///
                         /// If the program is properly loaded into memory... 
                         /// Update the process control block state to show it is loaded in memory
-                        newProcessControlBlock.processState = "Residient";
+                        newProcessControlBlock.processState = "Resident";
                     } ///else
                 }/// if 
 
@@ -756,63 +757,26 @@ module TSOS {
 
                 if (!found) {
                     _StdOut.putText(`No process control blocks found with pid: ${parseInt(args[0])}.`);
+                    _StdOut.advanceLine();
                 }/// if
+
+                /// Process exists in the resident queue
                 else {
-                    /// Schedule the process
-
-                    /// Check if the specified process is already running
-                    if (_ResidentList.residentList[curr].processState === "Running") {
-                        _StdOut.putText(`Process with pid: ${parseInt(args[0])} is already running!`);
-                    }/// if
-
-                    /// Specified process is not already running, so schedule it to run
-                    else {
-                        /// First check the process queue before schedule anything so we don't accidently
-                        /// count the algorithm we are scheduling
-                        var thereAreRunningProcesses: boolean = false;
-
-                        /// There are already process running:
-                        ///     1. There are any process in the ready queue (that isn't the one already scheduled)
-                        ///     2. There is a current process for _Scheduler
-                        thereAreRunningProcesses = (_Scheduler.readyQueueLength() > 0 || _Scheduler.hasCurrentProcess()) ? true : false;
-
-                        /// The Scheduler will handle this depending on the algorithm used...
-                        _Scheduler.scheduleProcess(_ResidentList.residentList[curr]);
-
-                        /// Now we run it...
-                        if (thereAreRunningProcesses) {
-                            _StdOut.advanceLine();
-                            _StdOut.putText(`The process with pid: ${curr} has been scheduled and will execute based on the current scheduling algorithm!`);
-                            _StdOut.advanceLine();
-                        }/// if 
-                        else {
-                            /// Run this as the first process
-                            _Scheduler.roundRobinCheck();
-                            _CPU.isExecuting = true;
-                        }/// else
-                    }/// else
-
-
-                    /// Run the process
-                    ///
-                    /// Update the proces state
-                    ///_ResidentList.residentList[curr].processState = "Running";
-
-                    /// Schedule the process
-                    /// Maybe do this... _Scheduler.readyQueue.push(_ResidentList.residentList[curr]);
-                    /// _Scheduler.currentProcessControlBlock = _ResidentList.residentList[curr];
-
-                    /// Set the local pcb in the cpu
-                    ///_Dispatcher.attachNewPcbToCPU();
-
-                    /// "Turn on" the cpu
-                    /// WAIT, but Single step mode
-                    /// _CPU.isExecuting = true;
+                    /// Use interrupt to allow for seemless integration of scheduling
+                    /// For example:
+                    ///     > run 0
+                    ///     ...
+                    ///     > run 2
+                    ///     > run 1
+                    /// No matter what order, should still schedule the processes in round robin fashion...
+                    /// Use Single Step to see what's "really" happening...
+                    _KernelInterruptQueue.enqueue(new TSOS.Interrupt(RUN_PROCESS, [curr, args[0]]));
                 }/// else
             }/// try
             catch (e) {
                 _StdOut.putText(`${e}`);
                 _StdOut.putText(`Usage: run <int> please supply a process id.`);
+                _StdOut.advanceLine();
             }/// catch
         }/// run
 
@@ -828,43 +792,83 @@ module TSOS {
         ***************************************************************************************/
 
         /// clearmem - clear all memory partitions
-        public shellClearMem() { }/// clearmem
+        public shellClearMem() {
+            var tempSize = _ResidentList.residentList.length;
+            /// Processes are NOT running, safe to clear memory
+            if (!_CPU.isExecuting) {
+                /// Grab each volume and write "unlock" them
+                for (var vol: number = 0; vol < _MemoryManager.simpleVolumes.length; ++vol) {
+                    _MemoryManager.simpleVolumes[vol].writeUnlock();
+
+                    /// Write in 00's for the entire volume
+                    for (var logicalAddress: number = 0; logicalAddress < MAX_SIMPLE_VOLUME_CAPACITY; ++logicalAddress) {
+                        _MemoryAccessor.write(_MemoryManager.simpleVolumes[vol], logicalAddress, "00");
+                    }/// for
+                }/// for
+
+                /// Remove processes from the Resident List that were stored in these volumes
+                _ResidentList.residentList = _ResidentList.residentList.filter(pcb => (pcb.volumeIndex > 2));
+                
+                // words.filter(word => word.length > 6);
+                _StdOut.putText("Memory Cleared");
+                _StdOut.advanceLine();
+            }/// if
+
+            else {
+                _StdOut.putText("Cannot clear memory while processes running!");
+                _StdOut.advanceLine();
+            }/// else
+
+            TSOS.Control.updateVisualMemory();
+        }/// clearmem
 
         /// runall - execute all programs at once
         public shellRunAll() {
-            /// Apparently Javascripts tolerance of NaN completly defeats the purpose of using this 
-            /// try catch... nice!
-            try {
-                /// Check if the resident queue is full or not...
-                if (_ResidentList.residentList.length === 0) {
-                    _StdOut.putText(`No process control blocks found.`);
-                }/// if
-                else {
-                    /// Load the Ready Queue with ALL Loaded Processes so...
-                    /// Enqueue all NON-TERMINATED Processes from the Resident List
-                    for (var processID: number = 0; processID < _ResidentList.residentList.length; ++processID) {
-                        /// Only get Non-Terminated Processes
-                        if (_ResidentList.residentList[processID].processState !== "Terminated") {
-                            _Scheduler.scheduleProcess(_ResidentList.residentList[processID]);
-                        }/// if 
-                    }/// for
-
-                    _CPU.isExecuting = true;
-                }/// else
-            }/// try
-            catch (e) {
-                _StdOut.putText(`Usage: run <int> please supply a process id.`);
-            }/// catch
+            /// Check if the resident queue is full or not...
+            if (_ResidentList.residentList.length === 0) {
+                _StdOut.putText(`No process control blocks found.`);
+                _StdOut.advanceLine();
+            }/// if
+            else {
+                /// Use interrupt to allow for seemless integration of scheduling
+                /// For example:
+                ///     > run 0
+                ///     ...
+                ///     > runall
+                /// No matter what order, should still schedule the processes in round robin fashion...
+                /// Use Single Step to see what's "really" happening...
+                _KernelInterruptQueue.enqueue(new TSOS.Interrupt(RUN_ALL_PROCESSES, []));
+            }/// else
         }/// runall
 
         /// ps - display the PID and state of all processes
-        public shellPs() { }///ps
+        public shellPs() {
+            _KernelInterruptQueue.enqueue(new TSOS.Interrupt(PS_IRQ, []));
+        }///ps
 
         /// kill <pid> - kills one process (specified by process ID)
-        public shellKill() { }/// kill
+        public shellKill(args: string[]) {
+            /// Check if the resident queue is full or not...
+            if (_ResidentList.residentList.length === 0) {
+                _StdOut.putText(`No process control blocks found.`);
+                _StdOut.advanceLine();
+            }/// if
+            else {
+                /// Use interrupt to allow for seemless integration of scheduling
+                /// For example:
+                ///     > kill 0
+                ///     ...
+                ///     > killall
+                /// No matter what order, should still kill the processes
+                /// Use Single Step to see what's "really" happening...
+                _KernelInterruptQueue.enqueue(new TSOS.Interrupt(KILL_ALL_PROCESSES, []));
+            }/// else
+        }/// kill
 
         /// killall - kill all processes
-        public shellKillAll() { }/// kill all processes
+        public shellKillAll() {
+            _KernelInterruptQueue.enqueue(new TSOS.Interrupt(KILL_ALL_PROCESSES, []));
+        }/// kill all processes
 
         /// quantum <int> - let the user set the Round Robin Quantum (measured in CPU cycles)
         public shellQuantum(args: string[]) {
@@ -878,26 +882,43 @@ module TSOS {
                 if (/^[0-9]+$/i.test(trimmedStringQuanta)) {
 
                     /// Save old quanta
-                    var oldDecimalQuanta = _Scheduler.getQuantum();
+                    var oldDecimalQuanta = _Scheduler.quanta;
+                    
+                    /// Set the new quantum...
+                    ///
+                    /// Cannot change while processes are running
+                    if (_CPU.isExecuting === true) {
+                        _StdOut.putText(`Quantum cannot be changed while process are running!`);
+                        _StdOut.advanceLine();
+                    }/// if
 
-                    /// Set new quanta...
-                    ///     _Scheduler.setQuantum() method Returns:
-                    ///         "True" if quantum > 0
-                    ///         "False" if quantum <= 0
-                    _Scheduler.setQuantum(parseInt(trimmedStringQuanta, 10)) ?
-                        _StdOut.putText(`Quatum was: ${oldDecimalQuanta}, Quantum now: ${_Scheduler.getQuantum()}`)
-                        : _StdOut.putText(`Usage: quantum <int>  Please supply a positive, non-zero, decimal integer only.`)
+                    /// New quanta must be a positive integer
+                    else if (parseInt(trimmedStringQuanta, 10) > 0){
+                        /// Could process as interrupt to allow for changing the quantum mid cycle...
+                        /// Actually just don't allow it, too much brain damage already...
+                        _Scheduler.quanta = parseInt(trimmedStringQuanta, 10);
+                        _StdOut.putText(`Quatum was: ${oldDecimalQuanta}, Quantum now: ${_Scheduler.quanta}`);
+                        _StdOut.advanceLine();
+                    }/// else-if
+
+                    /// Invalid Quantum
+                    else {
+                        _StdOut.putText(`Usage: quantum <int>  Please supply a positive, non-zero, decimal integer only.`);
+                        _StdOut.advanceLine();
+                    }/// else
                 }/// if
 
                 /// Error, a character other than [0-9] was detected
                 else {
                     _StdOut.putText("Usage: quantum <int>  Please supply a positive decimal number only.");
+                    _StdOut.advanceLine();
                 }/// else
             }/// if 
 
             /// ERROR, More than one argument given
             else {
                 _StdOut.putText("Usage: quantum <int> Expected 1 Argument.");
+                _StdOut.advanceLine();
             }/// else
         }/// shellQuantum
 

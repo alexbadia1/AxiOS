@@ -37,7 +37,9 @@ var TSOS;
                 /// Grab the process at the front of the queue
                 _Scheduler.setCurrentProcess(_Scheduler.readyQueueDequeue());
                 /// Load CPU context with new process context
-                _Scheduler.setCurrentProcessState("Running");
+                if (_Scheduler.getCurrentProcessState() !== "Terminated") {
+                    _Scheduler.setCurrentProcessState("Running");
+                } /// if
                 this.setNewProcessToCPU(_Scheduler.getCurrentProcess());
             } /// if
         } /// contextSwitch

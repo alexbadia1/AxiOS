@@ -75,7 +75,7 @@ var TSOS;
         mainMemorySize() {
             return _Memory.size();
         } /// mainMemorySize
-    }
+    } /// class
     TSOS.MemoryAccessor = MemoryAccessor;
-})(TSOS || (TSOS = {}));
+})(TSOS || (TSOS = {})); /// module
 //# sourceMappingURL=memoryAccessor.js.map

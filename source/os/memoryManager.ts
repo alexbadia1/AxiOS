@@ -132,6 +132,6 @@ module TSOS {
             for (var logicalAddress: number = 0; logicalAddress < MAX_SIMPLE_VOLUME_CAPACITY; ++logicalAddress) {
                 _Memory.getAddress(logicalAddress + this.physicalBase).writeUnlock();
             }/// for
-        }
+        }/// writeUnlock
     }/// class
 }

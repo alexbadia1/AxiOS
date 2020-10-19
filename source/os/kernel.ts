@@ -26,7 +26,7 @@ module TSOS {
             _Console.init();
 
             // Initialize standard input and output to the _Console.
-            _StdIn  = _Console;
+            _StdIn = _Console;
             _StdOut = _Console;
 
             // Load the Keyboard Device Driver
@@ -108,7 +108,7 @@ module TSOS {
                     TSOS.Control.updateVisualPcb();
                 }/// else
                 this.getCurrentDateTime();
-            } else {                     
+            } else {
                 /// If there are no interrupts and there is nothing being executed then just be idle.
                 this.getCurrentDateTime();
                 this.krnTrace("Idle");
@@ -136,10 +136,10 @@ module TSOS {
             var hours = String(current.getHours()).padStart(2, '0');
             var minutes = String(current.getMinutes()).padStart(2, '0');
             var seconds = String(current.getSeconds()).padStart(2, '0');
-            document.getElementById('divLog--date').innerText = `${month}/${day}/${year}/`;
+            document.getElementById('divLog--date').innerText = `${month}/${day}/${year}`;
             document.getElementById('divLog--time').innerText = `${hours}:${minutes}:${seconds}`;
         }/// getCurrentDateTime
-        
+
         //
         // Interrupt Handling
         //
@@ -185,14 +185,29 @@ module TSOS {
                     this.nextStepISR();
                     break;
                 case CONTEXT_SWITCH:
-                    this.contextSwitch();
+                    this.contextSwitchISR();
+                    break;
+                case RUN_PROCESS:
+                    this.runProcessISR(params);
+                    break;
+                case RUN_ALL_PROCESSES:
+                    this.runAllProcesesISR();
+                    break;
+                case KILL_PROCESS:
+                    this.killProcessISR(params);
+                    break;
+                case KILL_ALL_PROCESSES:
+                    this.killAllProcessesISR();
+                    break;
+                case PS_IRQ:
+                    this.ps();
                     break;
                 default:
                     this.krnTrapError("Invalid Interrupt Request. irq=" + irq + " params=[" + params + "]");
             }/// switch
         }/// krnInterruptHandler
 
-        public contextSwitch() {
+        public contextSwitchISR() {
             _Dispatcher.contextSwitch();
         }/// contextSwitch
 
@@ -218,36 +233,39 @@ module TSOS {
         }/// singleStepISR
 
         public terminateProcessISR() {
-            /// Remove process from current process
-            _Scheduler.getCurrentProcessState() === "Terminated";
+            /// Terminate "Ready" process
+            /// Terminated a currently running process
+                /// Set current process state to "Terminated" for clean up
+                _Scheduler.getCurrentProcessState() === "Terminated";
 
-            /// Replace with a new process from the ready queue, if there exists one
-            // if (_Scheduler.readyQueue.length > 0) {
-            //     _KernelInterruptQueue.enqueue(new TSOS.Interrupt(CONTEXT_SWITCH, []));
-            //     _Scheduler.startBurst = _CPU_BURST;
-            // }/// if
+                /// Replace with a new process from the ready queue, if there exists one
+                // if (_Scheduler.readyQueue.length > 0) {
+                //     _KernelInterruptQueue.enqueue(new TSOS.Interrupt(CONTEXT_SWITCH, []));
+                //     _Scheduler.startBurst = _CPU_BURST;
+                // }/// if
 
-            if (_Scheduler.getCurrentProcessState() === "Terminated" && _Scheduler.readyQueueLength() === 0) {
-                /// Remove the last process from the Ready Queue
-                _Scheduler.setCurrentProcess(null);
+                if (_Scheduler.getCurrentProcessState() === "Terminated" && _Scheduler.readyQueueLength() === 0) {
+                    /// Remove the last process from the Ready Queue
+                    /// by removing the last process from current process
+                    _Scheduler.setCurrentProcess(null);
 
-                /// "Turn Off" CPU
-                _CPU.isExecuting = false;
+                    /// "Turn Off" CPU
+                    _CPU.isExecuting = false;
 
-                /// Turn "off Single Step"
-                _SingleStepMode = false;
-                _NextStep = false;
+                    /// Turn "off Single Step"
+                    _SingleStepMode = false;
+                    _NextStep = false;
 
-                /// Reset visuals for Single Step
-                (<HTMLButtonElement>document.getElementById("btnNextStep")).disabled = true;
-                (<HTMLButtonElement>document.getElementById("btnSingleStepMode")).value = "Single Step ON"; 
+                    /// Reset visuals for Single Step
+                    (<HTMLButtonElement>document.getElementById("btnNextStep")).disabled = true;
+                    (<HTMLButtonElement>document.getElementById("btnSingleStepMode")).value = "Single Step ON";
 
-                /// Prompt for more input
-                _StdOut.advanceLine();
-                _OsShell.putPrompt();
+                    /// Prompt for more input
+                    _StdOut.advanceLine();
+                    _OsShell.putPrompt();
 
-                TSOS.Control.updateVisualPcb();
-            }/// if
+                    TSOS.Control.updateVisualPcb();
+                }/// if
         }/// terminateProcessISR
 
         public sysCallISR(params) {
@@ -257,7 +275,7 @@ module TSOS {
                 _StdOut.putText(` ${_CPU.Yreg} `);
                 myPcb.outputBuffer += ` ${_CPU.Yreg} `;
             }/// if
-            
+
             /// Print from memeory starting at address
             if (parseInt(_CPU.Xreg, 16) === 2) {
                 var ans: string = "";
@@ -285,6 +303,142 @@ module TSOS {
             }/// if
         }/// sysCallISR
 
+        public runProcessISR(params): void {
+            /// Arguments: params [curr, args[0]];
+            ///     params[0]: is the current position in the resident list the process
+            ///                the user specified to "run" was found.
+            ///     params[1]: is the pid of the process the user specified to "run"
+            ///
+            /// TODO: Move if-else to _Schedule.scheduleProcess()
+            ///
+            /// Process is already running!
+            if (_ResidentList.residentList[params[0]].processState === "Running") {
+                _StdOut.putText(`Process with pid: ${parseInt(params[1])} is already running!`);
+                _StdOut.advanceLine();
+                _OsShell.putPrompt();
+            }/// if
+
+            /// Process is already "Terminated"!
+            else if (_ResidentList.residentList[params[0]].processState === "Terminated") {
+                _StdOut.putText(`Process with pid: ${parseInt(params[1])} already terminated!`);
+                _StdOut.advanceLine();
+                _OsShell.putPrompt();
+            }/// else-if
+
+            /// Process is already scheduled... "Ready"!
+            else if (_ResidentList.residentList[params[0]].processState === "Ready") {
+                _StdOut.putText(`Process with pid: ${parseInt(params[1])} is already scheduled!`);
+                _StdOut.advanceLine();
+                _OsShell.putPrompt();
+            }/// else-if
+
+            /// Schedule the new process
+            else {
+                /// Schedule the process using round robin
+                _Scheduler.scheduleProcess(_ResidentList.residentList[params[0]]);
+
+                /// Now we run it...
+                _Scheduler.runSchedule();
+            }/// else
+        }/// runProcessISR
+
+        public runAllProcesesISR() {
+            var processWasLoaded: boolean = false;
+            /// Load the Ready Queue with ALL Loaded Processes so...
+            /// Enqueue all NON-TERMINATED, Non-Running, Non-Waiting Processes from the Resident List
+            for (var processID: number = 0; processID < _ResidentList.residentList.length; ++processID) {
+                /// Only get Non-Terminated Processes
+                if (_ResidentList.residentList[processID].processState === "Resident") {
+                    var temp: boolean = _Scheduler.scheduleProcess(_ResidentList.residentList[processID]);
+                }/// if 
+                if (processWasLoaded === false && temp === true) {
+                    processWasLoaded = true;
+                }/// if
+            }/// for
+
+            _Scheduler.runSchedule(processWasLoaded);
+        }/// runAllProcessISR
+
+        public killProcessISR(params) {
+            /// Apparently Javascripts tolerance of NaN completly defeats the purpose of using this 
+            /// try catch... nice!
+            try {
+                /// Check if the process exists with basic linear search
+                var curr: number = 0;
+                var found: boolean = false;
+                while (curr < _ResidentList.residentList.length && !found) {
+                    if (_ResidentList.residentList[curr].processID == parseInt(params[0])) {
+                        found = true;
+                    }/// if
+                    else {
+                        curr++;
+                    }/// else
+                }/// while
+
+                if (!found) {
+                    _StdOut.putText(`No process control blocks found with pid: ${parseInt(params[0])}.`);
+                    _StdOut.advanceLine();
+                    _OsShell.putPrompt();
+                }/// if
+
+                /// Process exists in the resident queue
+                else {
+
+                    /// Use interrupt to allow for seemless killing of process
+                    /// For example:
+                    ///     > kill 0
+                    ///     ...
+                    ///     > kill 2
+                    ///     > kill 1
+                    /// No matter what order, should still kill process, finishing the schedule...
+                    /// Use Single Step to see what's "really" happening...
+                    switch (_ResidentList.residentList[curr].processState) {
+                        case "Terminated":
+                            _StdOut.putText("Process is already Terminated!");
+                            break;
+                        case "Ready":
+                            _StdOut.putText("Ready process removed from Ready Queue!");
+                            _ResidentList.residentList[curr].processState = "Terminated";
+                            break;
+                        case "Running":
+                            _StdOut.putText("Running process is now terminated!");
+                            _ResidentList.residentList[curr].processState = "Terminated";
+                            break;
+                        default:
+                            _StdOut.putText("Process was not scheduled to run yet!");
+                            break;
+                    }/// switch
+                }/// else
+            }/// try
+            catch (e) {
+                _StdOut.putText(`${e}`);
+                _StdOut.putText(`Usage: run <int> please supply a process id.`);
+                _OsShell.putPrompt();
+            }/// catch
+        }/// killProcessISR
+
+        public killAllProcessesISR() {
+            /// There are scheduled processes to kill
+            if (_Scheduler.readyQueueLength() > 0 || _Scheduler.getCurrentProcess !== null) {
+                _Scheduler.terminatedAllProcess();
+            }/// if
+
+            /// There are no scheduled processes to kill
+            else {
+                _StdOut.putText("No Proceses were scheduled to run yet!");
+                _StdOut.advanceLine();
+                _OsShell.putPrompt();
+            }/// else
+        }/// runAllProcessISR
+
+        public ps() {
+            for (var pid = 0; pid < _ResidentList.residentList.length; ++pid) {
+                _StdOut.putText(`pid ${_ResidentList.residentList[pid].processID}: ${_ResidentList.residentList[pid].processState} `);
+            }/// for
+            _StdOut.advanceLine();
+            _OsShell.putPrompt();
+        }/// ps
+
 
         public krnTimerISR() {
             // The built-in TIMER (not clock) Interrupt Service Routine (as opposed to an ISR coming from a device driver). {
@@ -295,6 +449,7 @@ module TSOS {
         //
         // System Calls... that generate software interrupts via tha Application Programming Interface library routines.
         //
+        /// Ahh Now this makes sense...
         // Some ideas:
         // - ReadConsole
         // - WriteConsole
@@ -312,8 +467,8 @@ module TSOS {
         // OS Utility Routines
         //
         public krnTrace(msg: string) {
-             // Check globals to see if trace is set ON.  If so, then (maybe) log the message.
-             if (_Trace) {
+            // Check globals to see if trace is set ON.  If so, then (maybe) log the message.
+            if (_Trace) {
                 if (msg === "Idle") {
                     // We can't log every idle clock pulse because it would quickly lag the browser quickly.
                     if (_OSclock % 10 == 0) {
@@ -324,7 +479,7 @@ module TSOS {
                 } else {
                     Control.hostLog(msg, "OS");
                 }
-             }
+            }
         }
 
         public krnTrapError(msg) {
