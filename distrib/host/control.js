@@ -127,16 +127,16 @@ var TSOS;
             if (_SingleStepMode) {
                 document.getElementById("btnNextStep").disabled = false;
                 document.getElementById("btnSingleStepMode").value = "Single Step OFF";
-            }
+            } /// if
             else {
                 document.getElementById("btnNextStep").disabled = true;
                 document.getElementById("btnSingleStepMode").value = "Single Step ON";
-            }
-            _KernelInterruptQueue.enqueue(new TSOS.Interrupt(SINGLE_STEP, []));
+            } /// else
+            _KernelInterruptPriorityQueue.enqueue(new TSOS.Node(new TSOS.Interrupt(SINGLE_STEP_IRQ, [])));
         }
         static hostBtnNextStep_click(btn) {
             /// Process single step interrupt
-            _KernelInterruptQueue.enqueue(new TSOS.Interrupt(NEXT_STEP, []));
+            _KernelInterruptPriorityQueue.enqueue(new TSOS.Node(new TSOS.Interrupt(NEXT_STEP_IRQ, [])));
         }
         static initializeVisualMemory() {
             /// Increment by 8 on order to create a row every 8 bytes
@@ -222,7 +222,131 @@ var TSOS;
             paddedhexNumber = paddedhexNumber.substr(paddedhexNumber.length - 2).toUpperCase();
             return paddedhexNumber;
         } /// formatToHexWithPadding
-    }
+        /*************************************************************************************
+        iProject4 Display:
+            calculateAvergeWaitTime()
+            calculateAverageTurnAroundTime()
+            showCPUBurstUsage()
+            showWaitTimes()
+            showTurnaroundTimes()
+            showProcessOutputs()
+            dumpScheduleMetaData()
+            dumpResidentList()
+        ***************************************************************************************/
+        /// Calculate the average wait time by summing all the wait times divided by the number of processes
+        static calculateAverageWaitTime() {
+            var totalWaitTime = 0;
+            for (var i = 0; i < _Scheduler.processesMetaData.length; ++i) {
+                /// _Scheduler.processWaitTimes contains a list of lists where the nested list contains:
+                ///     [processID, processTimeSpentExecuting, processWaitTime, processTurnaroundTime]
+                totalWaitTime += _Scheduler.processesMetaData[i][2];
+            } ///for
+            return (totalWaitTime / _Scheduler.processesMetaData.length);
+        } /// calculateAverageWaitTime
+        /// Calculate the average wait time by summing all the wait times divided by the number of processes
+        static calculateAverageTurnaroundTime() {
+            var totalTurnaroundTime = 0;
+            for (var i = 0; i < _Scheduler.processesMetaData.length; ++i) {
+                /// _Scheduler.processWaitTimes contains a list of lists where the nested list contains:
+                ///     [processID, processTimeSpentExecuting, processWaitTime, processTurnaroundTime]
+                /// Ex:
+                ///     [[0, 11, 2, 4], [1, 5, 4, 8], ...]
+                totalTurnaroundTime += _Scheduler.processesMetaData[i][3];
+            } /// for
+            return totalTurnaroundTime / _Scheduler.processesMetaData.length;
+        } /// calculateAverageWaitTime
+        static showCPUBurstUsage() {
+            /// Header
+            _StdOut.putText("Scheduled Processes CPU Burst Usage (cycles):");
+            _StdOut.advanceLine();
+            /// _Scheduler.processWaitTimes contains a list of lists where the nested list contains:
+            ///     [processID, processTimeSpentExecuting, processWaitTime, processTurnaroundTime]
+            /// Ex:
+            ///     [[0, 11, 2, 4], [1, 5, 4, 8], ...]
+            for (var i = 0; i < _Scheduler.processesMetaData.length; ++i) {
+                i === 0 ?
+                    /// Indent on first Pid
+                    _StdOut.putText(`  Pid ${_Scheduler.processesMetaData[i][0]}: ${_Scheduler.processesMetaData[i][1]}`)
+                    /// No Indent on all the other pid's
+                    : _StdOut.putText(`Pid ${_Scheduler.processesMetaData[i][0]}: ${_Scheduler.processesMetaData[i][1]}`);
+                /// Don't add a comma after the last pid
+                if (i !== _Scheduler.processesMetaData.length - 1) {
+                    _StdOut.putText(", ");
+                } /// if
+            } ///for
+            _StdOut.advanceLine();
+            _StdOut.putText("...");
+            _StdOut.advanceLine();
+        } /// showCPUBurstUsage
+        static showWaitTimes() {
+            _StdOut.putText("Scheduled Processes Wait Time (cycles):");
+            _StdOut.advanceLine();
+            _StdOut.putText(`  AWT: ${Math.ceil(this.calculateAverageWaitTime())}, `);
+            for (var i = 0; i < _Scheduler.processesMetaData.length; ++i) {
+                /// _Scheduler.processWaitTimes contains a list of lists where the nested list contains:
+                ///     [processID, processTimeSpentExecuting, processWaitTime, processTurnaroundTime]
+                /// Ex:
+                ///     [[0, 11, 2, 4], [1, 5, 4, 8], ...]
+                _StdOut.putText(`Pid ${_Scheduler.processesMetaData[i][0]}: ${_Scheduler.processesMetaData[i][2]}`);
+                /// Again, don't add a comma after the last pid
+                if (i !== _Scheduler.processesMetaData.length - 1) {
+                    _StdOut.putText(", ");
+                } /// if
+            } ///for
+            _StdOut.advanceLine();
+            _StdOut.putText("...");
+            _StdOut.advanceLine();
+        } /// showWaitTimes()
+        static showTurnaroundTimes() {
+            _StdOut.putText("Scheduled Processes Turnaround Time (cycles):");
+            _StdOut.advanceLine();
+            _StdOut.putText(`  ATT: ${Math.ceil(this.calculateAverageTurnaroundTime())}, `);
+            for (var i = 0; i < _Scheduler.processesMetaData.length; ++i) {
+                /// _Scheduler.processWaitTimes contains a list of lists where the nested list contains:
+                ///     [processID, processTimeSpentExecuting, processWaitTime, processTurnaroundTime]
+                /// Ex:
+                ///     [[0, 11, 2, 4], [1, 5, 4, 8], ...]
+                _StdOut.putText(`Pid ${_Scheduler.processesMetaData[i][0]}: ${_Scheduler.processesMetaData[i][3]}`);
+                if (i !== _Scheduler.processesMetaData.length - 1) {
+                    _StdOut.putText(", ");
+                } /// if
+            } ///for
+            _StdOut.advanceLine();
+            _StdOut.putText("...");
+            _StdOut.advanceLine();
+        } /// showTurnaroundTimes
+        static showProcessesOutputs() {
+            _StdOut.putText("Dumping Processes Output(s):");
+            _StdOut.advanceLine();
+            for (var i = 0; i < _Scheduler.unInterleavedOutput.length; ++i) {
+                _StdOut.putText(`  ${_Scheduler.unInterleavedOutput[i]}`);
+                if (i !== _Scheduler.unInterleavedOutput.length - 1)
+                    _StdOut.advanceLine();
+            } ///for
+        } /// showProcessesOutputs
+        static dumpScheduleMetaData() {
+            _StdOut.advanceLine();
+            _StdOut.putText("Schedule Terminated!");
+            _StdOut.advanceLine();
+            _StdOut.putText("...");
+            _StdOut.advanceLine();
+            _StdOut.putText("Schedule Metadata:");
+            _StdOut.advanceLine();
+            _StdOut.putText(`  Quantum used: ${_Scheduler.quanta}, Total CPU Bursts: ${_CPU_BURST}`);
+            _StdOut.advanceLine();
+            _StdOut.putText("...");
+            _StdOut.advanceLine();
+            /// Show scheduling and processes data
+            this.showCPUBurstUsage();
+            this.showTurnaroundTimes();
+            this.showWaitTimes();
+            this.showProcessesOutputs();
+            _StdOut.advanceLine();
+            _OsShell.putPrompt();
+        } /// dumpScheduleMetaData
+        static dumpResidentList() {
+        } /// dumpResidentList
+    } /// class
     TSOS.Control = Control;
-})(TSOS || (TSOS = {}));
+})(TSOS || (TSOS = {})); /// module
 //# sourceMappingURL=control.js.map

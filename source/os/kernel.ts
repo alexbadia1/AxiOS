@@ -10,29 +10,41 @@
 module TSOS {
 
     export class Kernel {
-        //
-        // OS Startup and Shutdown Routines
-        //
-        public krnBootstrap() {      // Page 8. {
-            Control.hostLog("bootstrap", "host");  // Use hostLog because we ALWAYS want this, even if _Trace is off.
+        ///
+        /// OS Startup and Shutdown Routines
+        ///
+        /// Page 8
+        public krnBootstrap() {
+            /// Use hostLog because we ALWAYS want this, even if _Trace is off.
+            Control.hostLog("bootstrap", "host");
 
-            // Initialize our global queues.
-            _KernelInterruptQueue = new Queue();  // A (currently) non-priority queue for interrupt requests (IRQs).
-            _KernelBuffers = new Array();         // Buffers... for the kernel.
-            _KernelInputQueue = new Queue();      // Where device input lands before being processed out somewhere.
+            /// Initialize our global queues.
+            /// 
+            /// A (currently) priority queue for interrupt requests (IRQs).
+            _KernelInterruptPriorityQueue = new PriorityQueue();
 
-            // Initialize the console.
-            _Console = new Console();             // The command line interface / console I/O device.
+            /// Buffers... for kernel
+            _KernelBuffers = new Array();
+
+            /// Where device input lands before being processed out somewhere.
+            _KernelInputQueue = new Queue();
+
+            /// Initialize the console.
+            /// The command line interface / console I/O device.
+            _Console = new Console();
             _Console.init();
 
-            // Initialize standard input and output to the _Console.
+            /// Initialize standard input and output to the _Console.
             _StdIn = _Console;
             _StdOut = _Console;
 
-            // Load the Keyboard Device Driver
+            /// Load the Keyboard Device Driver
             this.krnTrace("Loading the keyboard device driver.");
-            _krnKeyboardDriver = new DeviceDriverKeyboard();     // Construct it.
-            _krnKeyboardDriver.driverEntry();                    // Call the driverEntry() initialization routine.
+            /// "Construct" the "actual" KeyboardDevice Drives.
+            _krnKeyboardDriver = new DeviceDriverKeyboard();
+
+            /// Call the driverEntry() initialization routine.
+            _krnKeyboardDriver.driverEntry();
             this.krnTrace(_krnKeyboardDriver.status);
 
             //
@@ -43,20 +55,20 @@ module TSOS {
             /// Visualize Memory...
             TSOS.Control.initializeVisualMemory();
 
-            // Enable the OS Interrupts.  (Not the CPU clock interrupt, as that is done in the hardware sim.)
+            /// Enable the OS Interrupts.  (Not the CPU clock interrupt, as that is done in the hardware sim.)
             this.krnTrace("Enabling the interrupts.");
             this.krnEnableInterrupts();
 
-            // Launch the shell.
+            /// Launch the shell.
             this.krnTrace("Creating and Launching the shell.");
             _OsShell = new Shell();
             _OsShell.init();
 
-            // Finally, initiate student testing protocol.
+            /// Finally, initiate student testing protocol.
             if (_GLaDOS) {
                 _GLaDOS.afterStartup();
-            }
-        }
+            }/// if
+        }/// krBootstrap
 
         public krnShutdown() {
             this.krnTrace("begin shutdown OS");
@@ -69,23 +81,36 @@ module TSOS {
             // More?
             //
             this.krnTrace("end shutdown OS");
-        }
+        }/// krnShutdown
 
 
         public krnOnCPUClockPulse() {
-            /* This gets called from the host hardware simulation every time there is a hardware clock pulse.
+            /* 
+               This gets called from the host hardware simulation every time there is a hardware clock pulse.
                This is NOT the same as a TIMER, which causes an interrupt and is handled like other interrupts.
                This, on the other hand, is the clock pulse from the hardware / VM / host that tells the kernel
                that it has to look for interrupts and process them if it finds any.                          
             */
 
-            // Check for an interrupt, if there are any. Page 560
-            if (_KernelInterruptQueue.getSize() > 0) {
+            /// Check for an interrupt, if there are any. Page 560
+            if (_KernelInterruptPriorityQueue.getSize() > 0) {
+
                 // Process the first interrupt on the interrupt queue.
-                // TODO (maybe): Implement a priority queue based on the IRQ number/id to enforce interrupt priority.
-                var interrupt = _KernelInterruptQueue.dequeue();
-                this.krnInterruptHandler(interrupt.irq, interrupt.params);
-            } else if (_CPU.isExecuting) {
+                /// TODO (maybe): Implement a priority queue based on the IRQ number/id to enforce interrupt priority.
+                var interrupt = _KernelInterruptPriorityQueue.dequeue();
+                this.krnInterruptHandler(interrupt.data.irq, interrupt.data.params);
+            }/// if
+            
+            /// _CPU.isExecuting: controls if the cpu will try to read an instruction from memory
+            ///
+            /// Various things will change this including but not limited to:
+            ///     - Interrupts
+            ///     - CLI / Shell Commands
+            ///     - Error handling
+            ///     - Maybe processes themselves?
+            ///     - etc.
+            else if (_CPU.isExecuting) {
+
                 /// Perform One Single Step
                 if (_SingleStepMode) {
                     if (_NextStep) {
@@ -98,8 +123,9 @@ module TSOS {
                         _NextStep = false;
                     }/// if
                 }/// if
+
+                /// Run normally
                 else {
-                    /// Run normally
                     this.countCpuBurst();
                     _CPU.cycle();
                     _Scheduler.roundRobinCheck();
@@ -107,24 +133,32 @@ module TSOS {
                     TSOS.Control.updateVisualCpu();
                     TSOS.Control.updateVisualPcb();
                 }/// else
+
+                /// TODO: Make the date and time update NOT dependent on the cpu actually cycling
                 this.getCurrentDateTime();
-            } else {
-                /// If there are no interrupts and there is nothing being executed then just be idle.
+            }/// else
+            
+            /// If there are no interrupts and there is nothing being executed then just be idle.
+            else {
                 this.getCurrentDateTime();
                 this.krnTrace("Idle");
-            }
+            }/// else
             // _Scheduler.roundRobinCheck();
-        }
+        } /// krnOnCPUClockPulse
 
         public countCpuBurst(): void {
             /// Increase cpu burst count
             _CPU_BURST++;
 
             /// Wait time is time spent in the ready queue soo...
-            _Scheduler.incrementWaitTime();
+            /// Loop through Ready Queue and increment each pcb's wait time by 1 cycle
+            for (var i = 0; i < _Scheduler.readyQueue.length; ++i) {
+                _Scheduler.readyQueue[i].waitTime += 1;
+            }/// for
 
             /// Turnaround Time is time running and in waiting queue...
-            _Scheduler.incrementTimeExecuting();
+            /// So track nummber of cpu cycles used per process and add cpu cycles used and wait time for turnaround time
+            _Scheduler.currentProcess.timeSpentExecuting += 1;
         }/// countCpuBurst
 
         /// Hopefully Updates the Date and Time
@@ -140,20 +174,20 @@ module TSOS {
             document.getElementById('divLog--time').innerText = `${hours}:${minutes}:${seconds}`;
         }/// getCurrentDateTime
 
-        //
-        // Interrupt Handling
-        //
+        //////////////////////////
+        /// Interrupt Handling ///
+        //////////////////////////
         public krnEnableInterrupts() {
             // Keyboard
             Devices.hostEnableKeyboardInterrupt();
             // Put more here.
-        }
+        }/// krnEnableInterrupts
 
         public krnDisableInterrupts() {
             // Keyboard
             Devices.hostDisableKeyboardInterrupt();
             // Put more here.
-        }
+        }/// krnDisableInterrupts
 
         public krnInterruptHandler(irq, params) {
             // This is the Interrupt Handler Routine.  See pages 8 and 560.
@@ -165,108 +199,80 @@ module TSOS {
             // Note: There is no need to "dismiss" or acknowledge the interrupts in our design here.
             //       Maybe the hardware simulation will grow to support/require that in the future.
             switch (irq) {
+                /// Kernel built-in routine for timers (not the clock).
                 case TIMER_IRQ:
-                    this.krnTimerISR();               // Kernel built-in routine for timers (not the clock).
+                    this.krnTimerISR();
                     break;
+
+                /// Hardware Interrupt
                 case KEYBOARD_IRQ:
-                    _krnKeyboardDriver.isr(params);   // Kernel mode device driver
+                    // Kernel mode device driver
+                    _krnKeyboardDriver.isr(params);
                     _StdIn.handleInput();
                     break;
-                case TERMINATE_PROCESS_IRQ:
-                    this.terminateProcessISR();
-                    break;
+
+                /// Read/Write Console Interrupts
                 case SYS_CALL_IRQ:
                     this.sysCallISR(params);
                     break;
-                case SINGLE_STEP:
+                case PS_IRQ:
+                    this.psISR();
+                    break;
+
+                /// Single Step Interrupts
+                case SINGLE_STEP_IRQ:
                     this.singleStepISR();
                     break;
-                case NEXT_STEP:
+                case NEXT_STEP_IRQ:
                     this.nextStepISR();
                     break;
-                case CONTEXT_SWITCH:
+
+                /// Scheduling Interrupts
+                case CONTEXT_SWITCH_IRQ:
                     this.contextSwitchISR();
                     break;
-                case RUN_PROCESS:
+                case CHANGE_QUANTUM_IRQ:
+                    this.changeQuantumISR(params);
+                    break;
+
+                /// Create Process Interrupts
+                case RUN_PROCESS_IRQ:
                     this.runProcessISR(params);
                     break;
-                case RUN_ALL_PROCESSES:
+                case RUN_ALL_PROCESSES_IRQ:
                     this.runAllProcesesISR();
                     break;
-                case KILL_PROCESS:
+
+                ///////////////////////////////
+                /// Exit Process Interrupts ///
+                ///////////////////////////////
+
+                /// When a process ends, it sends its own termination interrupt
+                case TERMINATE_PROCESS_IRQ:
+                    this.terminateProcessISR();
+                    break;
+
+                /// This is the user "killing" the process,
+                /// NOT the process sending its own termination interrupt
+                case KILL_PROCESS_IRQ:
                     this.killProcessISR(params);
                     break;
-                case KILL_ALL_PROCESSES:
+                case KILL_ALL_PROCESSES_IRQ:
                     this.killAllProcessesISR();
                     break;
-                case PS_IRQ:
-                    this.ps();
-                    break;
+
+                /// Invalid interrupt doofus, make sure you defined it in global.ts and added it to the switch case, 
+                /// Otherwise the system should not be requesting unknown interrupts, dummy...
                 default:
                     this.krnTrapError("Invalid Interrupt Request. irq=" + irq + " params=[" + params + "]");
             }/// switch
         }/// krnInterruptHandler
 
-        public contextSwitchISR() {
-            _Dispatcher.contextSwitch();
-        }/// contextSwitch
-
-        public singleStepISR() {
-
-            if (_SingleStepMode) {
-                /// Stop the CPU from executing
-                _CPU.isExecuting = false;
-            }/// if
-            else {
-                /// Go back to cpu executing
-                _CPU.isExecuting = true;
-            }/// else
-        }/// singleStepISR
-
-        public nextStepISR() {
-            /// If we're in single step mode
-            if (_SingleStepMode) {
-                /// Run 1 cycle
-                _NextStep = true;
-                _CPU.isExecuting = true;
-            }/// if
-        }/// singleStepISR
-
-        public terminateProcessISR() {
-            /// Terminate "Ready" process
-            /// Terminated a currently running process
-                /// Set current process state to "Terminated" for clean up
-                _Scheduler.getCurrentProcessState() === "Terminated";
-
-                /// Replace with a new process from the ready queue, if there exists one
-                // if (_Scheduler.readyQueue.length > 0) {
-                //     _KernelInterruptQueue.enqueue(new TSOS.Interrupt(CONTEXT_SWITCH, []));
-                //     _Scheduler.startBurst = _CPU_BURST;
-                // }/// if
-
-                if (_Scheduler.getCurrentProcessState() === "Terminated" && _Scheduler.readyQueueLength() === 0) {
-                    /// Remove the last process from the Ready Queue
-                    /// by removing the last process from current process
-                    _Scheduler.setCurrentProcess(null);
-
-                    /// "Turn Off" CPU
-                    _CPU.isExecuting = false;
-
-                    /// Turn "off Single Step"
-                    _SingleStepMode = false;
-                    _NextStep = false;
-
-                    /// Reset visuals for Single Step
-                    (<HTMLButtonElement>document.getElementById("btnNextStep")).disabled = true;
-                    (<HTMLButtonElement>document.getElementById("btnSingleStepMode")).value = "Single Step ON";
-
-                    /// Prompt for more input
-                    _StdOut.advanceLine();
-                    _OsShell.putPrompt();
-
-                    TSOS.Control.updateVisualPcb();
-                }/// if
-        }/// terminateProcessISR
+        public krnTimerISR() {
+            // The built-in TIMER (not clock) Interrupt Service Routine (as opposed to an ISR coming from a device driver). {
+            // Check multiprogramming parameters and enforce quanta here. Call the scheduler / context switch here if necessary.
+            // Or do it elsewhere in the Kernel. We don't really need this.
+        }/// krnTimerISR
 
         public sysCallISR(params) {
             var myPcb: ProcessControlBlock = params[0];
@@ -302,6 +308,55 @@ module TSOS {
                 myPcb.outputBuffer += ans;
             }/// if
         }/// sysCallISR
+
+        public psISR() {
+            for (var pos = 0; pos < _ResidentList.residentList.length; ++pos) {
+                pos === 0 ?
+                    _StdOut.putText(`  pid ${_ResidentList.residentList[pos].processID}: ${_ResidentList.residentList[pos].processState}`)
+                    : _StdOut.putText(`pid ${_ResidentList.residentList[pos].processID}: ${_ResidentList.residentList[pos].processState}`);
+
+                if (pos !== _ResidentList.residentList.length - 1) {
+                    _StdOut.putText(`, `);
+                }/// if
+            }/// for
+            _StdOut.advanceLine();
+            _OsShell.putPrompt();
+        }/// psISR
+
+        public singleStepISR() {
+            if (_SingleStepMode) {
+                /// Stop the CPU from executing
+                _CPU.isExecuting = false;
+            }/// if
+            else {
+                /// Go back to cpu executing
+                _CPU.isExecuting = true;
+            }/// else
+        }/// singleStepISR
+
+        public nextStepISR() {
+            /// If we're in single step mode
+            if (_SingleStepMode) {
+                /// Run 1 cycle
+                _NextStep = true;
+                _CPU.isExecuting = true;
+            }/// if
+        }/// singleStepISR
+
+        public contextSwitchISR() {
+            this.krnTrace("Calling dispatcher for context switch");
+            _Dispatcher.contextSwitch();
+        }/// contextSwitch
+
+        public changeQuantumISR(params: any[]) {
+            this.krnTrace(`Quantum ISR- Quatum was: ${oldDecimalQuanta}, Quantum now: ${_Scheduler.quanta}`);
+            var oldDecimalQuanta = params[0];
+            var newQuanta = params[1];
+            _Scheduler.quanta = newQuanta;
+            _StdOut.putText(`Quatum was: ${oldDecimalQuanta}, Quantum now: ${_Scheduler.quanta}`);
+            _StdOut.advanceLine();
+            _OsShell.putPrompt();
+        }/// changeQuantumISR
 
         public runProcessISR(params): void {
             /// Arguments: params [curr, args[0]];
@@ -359,6 +414,34 @@ module TSOS {
             _Scheduler.runSchedule(processWasLoaded);
         }/// runAllProcessISR
 
+        public terminateProcessISR() {
+            /// Set current process state to "Terminated" for clean up
+            _Scheduler.currentProcess.processState === "Terminated";
+
+            if (_Scheduler.currentProcess.processState === "Terminated" && _Scheduler.readyQueue.length === 0) {
+                /// Remove the last process from the Ready Queue
+                /// by removing the last process from current process
+                _Scheduler.currentProcess = null;
+
+                /// "Turn Off" CPU
+                _CPU.isExecuting = false;
+
+                /// Turn "off Single Step"
+                _SingleStepMode = false;
+                _NextStep = false;
+
+                /// Reset visuals for Single Step
+                (<HTMLButtonElement>document.getElementById("btnNextStep")).disabled = true;
+                (<HTMLButtonElement>document.getElementById("btnSingleStepMode")).value = "Single Step ON";
+
+                /// Prompt for more input
+                _StdOut.advanceLine();
+                _OsShell.putPrompt();
+
+                TSOS.Control.updateVisualPcb();
+            }/// if
+        }/// terminateProcessISR
+
         public killProcessISR(params) {
             /// Apparently Javascripts tolerance of NaN completly defeats the purpose of using this 
             /// try catch... nice!
@@ -367,7 +450,7 @@ module TSOS {
                 var curr: number = 0;
                 var found: boolean = false;
                 while (curr < _ResidentList.residentList.length && !found) {
-                    if (_ResidentList.residentList[curr].processID == parseInt(params[0])) {
+                    if (_ResidentList.residentList[curr].processID == parseInt(params[0][0])) {
                         found = true;
                     }/// if
                     else {
@@ -376,7 +459,7 @@ module TSOS {
                 }/// while
 
                 if (!found) {
-                    _StdOut.putText(`No process control blocks found with pid: ${parseInt(params[0])}.`);
+                    _StdOut.putText(`No process control blocks found with pid: ${parseInt(params[0][0])}.`);
                     _StdOut.advanceLine();
                     _OsShell.putPrompt();
                 }/// if
@@ -419,8 +502,14 @@ module TSOS {
 
         public killAllProcessesISR() {
             /// There are scheduled processes to kill
-            if (_Scheduler.readyQueueLength() > 0 || _Scheduler.getCurrentProcess !== null) {
-                _Scheduler.terminatedAllProcess();
+            if (_Scheduler.readyQueue.length > 0 || _Scheduler.currentProcess !== null) {
+
+                /// Mark all process in the schedule queue as terminated
+                _Scheduler.currentProcess.processState = "Terminated";
+                for (var i = 0; i < _Scheduler.readyQueue.length; ++i) {
+                    _Scheduler.readyQueue[i].processState = "Terminated";
+                }/// for
+                // _Scheduler.terminatedAllProcess();
             }/// if
 
             /// There are no scheduled processes to kill
@@ -430,21 +519,6 @@ module TSOS {
                 _OsShell.putPrompt();
             }/// else
         }/// runAllProcessISR
-
-        public ps() {
-            for (var pid = 0; pid < _ResidentList.residentList.length; ++pid) {
-                _StdOut.putText(`pid ${_ResidentList.residentList[pid].processID}: ${_ResidentList.residentList[pid].processState} `);
-            }/// for
-            _StdOut.advanceLine();
-            _OsShell.putPrompt();
-        }/// ps
-
-
-        public krnTimerISR() {
-            // The built-in TIMER (not clock) Interrupt Service Routine (as opposed to an ISR coming from a device driver). {
-            // Check multiprogramming parameters and enforce quanta here. Call the scheduler / context switch here if necessary.
-            // Or do it elsewhere in the Kernel. We don't really need this.
-        }
 
         //
         // System Calls... that generate software interrupts via tha Application Programming Interface library routines.
@@ -463,9 +537,10 @@ module TSOS {
         // - CloseFile
 
 
-        //
-        // OS Utility Routines
-        //
+        ///////////////////////////
+        /// OS Utility Routines ///
+        ///////////////////////////
+
         public krnTrace(msg: string) {
             // Check globals to see if trace is set ON.  If so, then (maybe) log the message.
             if (_Trace) {
@@ -475,18 +550,19 @@ module TSOS {
                         // Check the CPU_CLOCK_INTERVAL in globals.ts for an
                         // idea of the tick rate and adjust this line accordingly.
                         Control.hostLog(msg, "OS");
-                    }
-                } else {
+                    }/// if
+                }/// if 
+                else {
                     Control.hostLog(msg, "OS");
-                }
-            }
-        }
+                }/// else
+            }/// if
+        }/// krnTrace
 
         public krnTrapError(msg) {
             Control.hostLog("OS ERROR - TRAP: " + msg);
             // TODO: Display error on console, perhaps in some sort of colored screen. (Maybe blue?)
             document.getElementById('bsod').style.visibility = "visible"; /// Making layered image visible
             this.krnShutdown();
-        }
-    }
-}
+        }/// krnTrapError
+    }/// Kernel
+}/// TSOS

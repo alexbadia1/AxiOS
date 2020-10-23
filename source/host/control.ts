@@ -48,11 +48,11 @@ module TSOS {
 
             // Clear the log text box.
             // Use the TypeScript cast to HTMLInputElement
-            (<HTMLInputElement> document.getElementById("taHostLog")).value="";
+            (<HTMLInputElement>document.getElementById("taHostLog")).value = "";
 
             // Set focus on the start button.
             // Use the TypeScript cast to HTMLInputElement
-            (<HTMLInputElement> document.getElementById("btnStartOS")).focus();
+            (<HTMLInputElement>document.getElementById("btnStartOS")).focus();
 
             // Check for our testing and enrichment core, which
             // may be referenced here (from index.html) as function Glados().
@@ -72,10 +72,10 @@ module TSOS {
             var now: number = new Date().getTime();
 
             // Build the log string.
-            var str: string = "({ clock:" + clock + ", source:" + source + ", msg:" + msg + ", now:" + now  + " })"  + "\n";
+            var str: string = "({ clock:" + clock + ", source:" + source + ", msg:" + msg + ", now:" + now + " })" + "\n";
 
             // Update the log console.
-            var taLog = <HTMLInputElement> document.getElementById("taHostLog");
+            var taLog = <HTMLInputElement>document.getElementById("taHostLog");
             taLog.value = str + taLog.value;
 
             // TODO in the future: Optionally update a log database or some streaming service.
@@ -113,7 +113,7 @@ module TSOS {
             /// ...Create a PCB queue to keep track of currently running pcb's
             _ResidentList = new ResidentList();
             _ResidentList.init();
-            
+
             /// ... Create and initialize Dispatcher
             _Dispatcher = new Dispatcher();
 
@@ -160,17 +160,17 @@ module TSOS {
             if (_SingleStepMode) {
                 (<HTMLButtonElement>document.getElementById("btnNextStep")).disabled = false;
                 (<HTMLButtonElement>document.getElementById("btnSingleStepMode")).value = "Single Step OFF";
-            } 
+            }/// if
             else {
                 (<HTMLButtonElement>document.getElementById("btnNextStep")).disabled = true;
-                (<HTMLButtonElement>document.getElementById("btnSingleStepMode")).value = "Single Step ON"; 
-            }
-            _KernelInterruptQueue.enqueue(new TSOS.Interrupt(SINGLE_STEP, []));
+                (<HTMLButtonElement>document.getElementById("btnSingleStepMode")).value = "Single Step ON";
+            }/// else
+            _KernelInterruptPriorityQueue.enqueue(new TSOS.Node(new TSOS.Interrupt(SINGLE_STEP_IRQ, [])));
         }
 
         public static hostBtnNextStep_click(btn): void {
             /// Process single step interrupt
-            _KernelInterruptQueue.enqueue(new TSOS.Interrupt(NEXT_STEP, []));
+            _KernelInterruptPriorityQueue.enqueue(new TSOS.Node(new TSOS.Interrupt(NEXT_STEP_IRQ, [])));
         }
 
         public static initializeVisualMemory() {
@@ -262,7 +262,7 @@ module TSOS {
             _CPU.localPCB.instructionRegister = newInsruction;
         }/// visualizeInstructionRegister
 
-        
+
         public static formatToHexWithPadding(decimalNum: number) {
             var hexNumber: string = decimalNum.toString(16);
 
@@ -272,5 +272,146 @@ module TSOS {
 
             return paddedhexNumber;
         }/// formatToHexWithPadding
-    }
-}
+
+
+        /*************************************************************************************
+        iProject4 Display: 
+            calculateAvergeWaitTime()
+            calculateAverageTurnAroundTime()
+            showCPUBurstUsage()
+            showWaitTimes()
+            showTurnaroundTimes()
+            showProcessOutputs()
+            dumpScheduleMetaData()
+            dumpResidentList()
+        ***************************************************************************************/
+
+        /// Calculate the average wait time by summing all the wait times divided by the number of processes
+        public static calculateAverageWaitTime(): number {
+            var totalWaitTime: number = 0;
+            for (var i: number = 0; i < _Scheduler.processesMetaData.length; ++i) {
+                /// _Scheduler.processWaitTimes contains a list of lists where the nested list contains:
+                ///     [processID, processTimeSpentExecuting, processWaitTime, processTurnaroundTime]
+                totalWaitTime += _Scheduler.processesMetaData[i][2];
+            }///for
+            return (totalWaitTime / _Scheduler.processesMetaData.length);
+        }/// calculateAverageWaitTime
+
+        /// Calculate the average wait time by summing all the wait times divided by the number of processes
+        public static calculateAverageTurnaroundTime(): number {
+            var totalTurnaroundTime: number = 0;
+            for (var i: number = 0; i < _Scheduler.processesMetaData.length; ++i) {
+                /// _Scheduler.processWaitTimes contains a list of lists where the nested list contains:
+                ///     [processID, processTimeSpentExecuting, processWaitTime, processTurnaroundTime]
+                /// Ex:
+                ///     [[0, 11, 2, 4], [1, 5, 4, 8], ...]
+                totalTurnaroundTime += _Scheduler.processesMetaData[i][3];
+            }/// for
+            return totalTurnaroundTime / _Scheduler.processesMetaData.length;
+        }/// calculateAverageWaitTime
+
+
+        public static showCPUBurstUsage(): void {
+            /// Header
+            _StdOut.putText("Scheduled Processes CPU Burst Usage (cycles):");
+            _StdOut.advanceLine();
+
+            /// _Scheduler.processWaitTimes contains a list of lists where the nested list contains:
+            ///     [processID, processTimeSpentExecuting, processWaitTime, processTurnaroundTime]
+            /// Ex:
+            ///     [[0, 11, 2, 4], [1, 5, 4, 8], ...]
+            for (var i: number = 0; i < _Scheduler.processesMetaData.length; ++i) {
+                i === 0 ?
+                    /// Indent on first Pid
+                    _StdOut.putText(`  Pid ${_Scheduler.processesMetaData[i][0]}: ${_Scheduler.processesMetaData[i][1]}`)
+
+                    /// No Indent on all the other pid's
+                    : _StdOut.putText(`Pid ${_Scheduler.processesMetaData[i][0]}: ${_Scheduler.processesMetaData[i][1]}`)
+                
+                /// Don't add a comma after the last pid
+                if (i !== _Scheduler.processesMetaData.length - 1) {
+                    _StdOut.putText(", ");
+                }/// if
+            }///for
+            _StdOut.advanceLine();
+            _StdOut.putText("...");
+            _StdOut.advanceLine();
+        }/// showCPUBurstUsage
+
+        public static showWaitTimes(): void {
+            _StdOut.putText("Scheduled Processes Wait Time (cycles):");
+            _StdOut.advanceLine();
+            _StdOut.putText(`  AWT: ${Math.ceil(this.calculateAverageWaitTime())}, `);
+            for (var i: number = 0; i < _Scheduler.processesMetaData.length; ++i) {
+                /// _Scheduler.processWaitTimes contains a list of lists where the nested list contains:
+                ///     [processID, processTimeSpentExecuting, processWaitTime, processTurnaroundTime]
+                /// Ex:
+                ///     [[0, 11, 2, 4], [1, 5, 4, 8], ...]
+                _StdOut.putText(`Pid ${_Scheduler.processesMetaData[i][0]}: ${_Scheduler.processesMetaData[i][2]}`);
+
+                /// Again, don't add a comma after the last pid
+                if (i !== _Scheduler.processesMetaData.length - 1) {
+                    _StdOut.putText(", ");
+                }/// if
+            }///for
+            _StdOut.advanceLine();
+            _StdOut.putText("...");
+            _StdOut.advanceLine();
+        }/// showWaitTimes()
+
+        public static showTurnaroundTimes(): void {
+            _StdOut.putText("Scheduled Processes Turnaround Time (cycles):");
+            _StdOut.advanceLine();
+            _StdOut.putText(`  ATT: ${Math.ceil(this.calculateAverageTurnaroundTime())}, `);
+            for (var i: number = 0; i < _Scheduler.processesMetaData.length; ++i) {
+                /// _Scheduler.processWaitTimes contains a list of lists where the nested list contains:
+                ///     [processID, processTimeSpentExecuting, processWaitTime, processTurnaroundTime]
+                /// Ex:
+                ///     [[0, 11, 2, 4], [1, 5, 4, 8], ...]
+                _StdOut.putText(`Pid ${_Scheduler.processesMetaData[i][0]}: ${_Scheduler.processesMetaData[i][3]}`);
+                if (i !== _Scheduler.processesMetaData.length - 1) {
+                    _StdOut.putText(", ");
+                }/// if
+            }///for
+            _StdOut.advanceLine();
+            _StdOut.putText("...");
+            _StdOut.advanceLine();
+        }/// showTurnaroundTimes
+
+        public static showProcessesOutputs(): void {
+            _StdOut.putText("Dumping Processes Output(s):");
+            _StdOut.advanceLine();
+            for (var i: number = 0; i < _Scheduler.unInterleavedOutput.length; ++i) {
+                _StdOut.putText(`  ${_Scheduler.unInterleavedOutput[i]}`);
+                if (i !== _Scheduler.unInterleavedOutput.length - 1)
+                    _StdOut.advanceLine();
+            }///for
+        }/// showProcessesOutputs
+
+        public static dumpScheduleMetaData(): void {
+            _StdOut.advanceLine();
+            _StdOut.putText("Schedule Terminated!");
+            _StdOut.advanceLine();
+            _StdOut.putText("...");
+            _StdOut.advanceLine();
+            _StdOut.putText("Schedule Metadata:");
+            _StdOut.advanceLine();
+            _StdOut.putText(`  Quantum used: ${_Scheduler.quanta}, Total CPU Bursts: ${_CPU_BURST}`);
+            _StdOut.advanceLine();
+            _StdOut.putText("...");
+            _StdOut.advanceLine();
+
+            /// Show scheduling and processes data
+            this.showCPUBurstUsage();
+            this.showTurnaroundTimes();
+            this.showWaitTimes();
+            this.showProcessesOutputs();
+            _StdOut.advanceLine();
+            _OsShell.putPrompt();
+        }/// dumpScheduleMetaData
+
+        public static dumpResidentList(): void {
+            
+        }/// dumpResidentList
+    }/// class
+}/// module

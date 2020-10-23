@@ -15,7 +15,7 @@ var TSOS;
         krnBootstrap() {
             TSOS.Control.hostLog("bootstrap", "host"); // Use hostLog because we ALWAYS want this, even if _Trace is off.
             // Initialize our global queues.
-            _KernelInterruptQueue = new TSOS.Queue(); // A (currently) non-priority queue for interrupt requests (IRQs).
+            _KernelInterruptPriorityQueue = new TSOS.PriorityQueue(); // A (currently) non-priority queue for interrupt requests (IRQs).
             _KernelBuffers = new Array(); // Buffers... for the kernel.
             _KernelInputQueue = new TSOS.Queue(); // Where device input lands before being processed out somewhere.
             // Initialize the console.
@@ -66,11 +66,11 @@ var TSOS;
                that it has to look for interrupts and process them if it finds any.
             */
             // Check for an interrupt, if there are any. Page 560
-            if (_KernelInterruptQueue.getSize() > 0) {
+            if (_KernelInterruptPriorityQueue.getSize() > 0) {
                 // Process the first interrupt on the interrupt queue.
                 // TODO (maybe): Implement a priority queue based on the IRQ number/id to enforce interrupt priority.
-                var interrupt = _KernelInterruptQueue.dequeue();
-                this.krnInterruptHandler(interrupt.irq, interrupt.params);
+                var interrupt = _KernelInterruptPriorityQueue.dequeue();
+                this.krnInterruptHandler(interrupt.data.irq, interrupt.data.params);
             }
             else if (_CPU.isExecuting) {
                 /// Perform One Single Step
@@ -107,9 +107,13 @@ var TSOS;
             /// Increase cpu burst count
             _CPU_BURST++;
             /// Wait time is time spent in the ready queue soo...
-            _Scheduler.incrementWaitTime();
+            /// Loop through Ready Queue and increment each pcb's wait time by 1 cycle
+            for (var i = 0; i < _Scheduler.readyQueue.length; ++i) {
+                _Scheduler.readyQueue[i].waitTime += 1;
+            } /// for
             /// Turnaround Time is time running and in waiting queue...
-            _Scheduler.incrementTimeExecuting();
+            /// So track nummber of cpu cycles used per process and add cpu cycles used and wait time for turnaround time
+            _Scheduler.currentProcess.timeSpentExecuting += 1;
         } /// countCpuBurst
         /// Hopefully Updates the Date and Time
         getCurrentDateTime() {
@@ -146,42 +150,62 @@ var TSOS;
             //       Maybe the hardware simulation will grow to support/require that in the future.
             switch (irq) {
                 case TIMER_IRQ:
-                    this.krnTimerISR(); // Kernel built-in routine for timers (not the clock).
+                    // Kernel built-in routine for timers (not the clock).
+                    this.krnTimerISR();
                     break;
+                /// Hardware Interrupt
                 case KEYBOARD_IRQ:
-                    _krnKeyboardDriver.isr(params); // Kernel mode device driver
+                    // Kernel mode device driver
+                    _krnKeyboardDriver.isr(params);
                     _StdIn.handleInput();
                     break;
-                case TERMINATE_PROCESS_IRQ:
-                    this.terminateProcessISR();
-                    break;
+                /// Read/Write Console Interrupts
                 case SYS_CALL_IRQ:
                     this.sysCallISR(params);
-                    break;
-                case SINGLE_STEP:
-                    this.singleStepISR();
-                    break;
-                case NEXT_STEP:
-                    this.nextStepISR();
-                    break;
-                case CONTEXT_SWITCH:
-                    this.contextSwitchISR();
-                    break;
-                case RUN_PROCESS:
-                    this.runProcessISR(params);
-                    break;
-                case RUN_ALL_PROCESSES:
-                    this.runAllProcesesISR();
-                    break;
-                case KILL_PROCESS:
-                    this.killProcessISR(params);
-                    break;
-                case KILL_ALL_PROCESSES:
-                    this.killAllProcessesISR();
                     break;
                 case PS_IRQ:
                     this.ps();
                     break;
+                /// Single Step Interrupts
+                case SINGLE_STEP_IRQ:
+                    this.singleStepISR();
+                    break;
+                case NEXT_STEP_IRQ:
+                    this.nextStepISR();
+                    break;
+                /// Scheduling Interrupts
+                case CONTEXT_SWITCH_IRQ:
+                    this.contextSwitchISR();
+                    break;
+                case CHANGE_QUANTUM_IRQ:
+                    this.changeQuantumISR(params);
+                    break;
+                /// Create Process Interrupts
+                case RUN_PROCESS_IRQ:
+                    this.runProcessISR(params);
+                    break;
+                case RUN_ALL_PROCESSES_IRQ:
+                    this.runAllProcesesISR();
+                    break;
+                /// Exit Process Interrupts
+                ///
+                /// When a process ends, it sends its own termination interrupt
+                case TERMINATE_PROCESS_IRQ:
+                    this.terminateProcessISR();
+                    break;
+                /// More Exit process Interrupts
+                ///
+                /// This is the user "killing" the process,
+                /// NOT the process sending its own termination interrupt
+                case KILL_PROCESS_IRQ:
+                    this.killProcessISR(params);
+                    break;
+                case KILL_ALL_PROCESSES_IRQ:
+                    this.killAllProcessesISR();
+                    break;
+                /// Invalid interrupt doofus, make sure you defined it in global.ts and added it to the switch case, 
+                ///
+                /// Otherwise the system should not be requesting unknown interrupts, dummy...
                 default:
                     this.krnTrapError("Invalid Interrupt Request. irq=" + irq + " params=[" + params + "]");
             } /// switch
@@ -208,19 +232,12 @@ var TSOS;
             } /// if
         } /// singleStepISR
         terminateProcessISR() {
-            /// Terminate "Ready" process
-            /// Terminated a currently running process
             /// Set current process state to "Terminated" for clean up
-            _Scheduler.getCurrentProcessState() === "Terminated";
-            /// Replace with a new process from the ready queue, if there exists one
-            // if (_Scheduler.readyQueue.length > 0) {
-            //     _KernelInterruptQueue.enqueue(new TSOS.Interrupt(CONTEXT_SWITCH, []));
-            //     _Scheduler.startBurst = _CPU_BURST;
-            // }/// if
-            if (_Scheduler.getCurrentProcessState() === "Terminated" && _Scheduler.readyQueueLength() === 0) {
+            _Scheduler.currentProcess.processState === "Terminated";
+            if (_Scheduler.currentProcess.processState === "Terminated" && _Scheduler.readyQueue.length === 0) {
                 /// Remove the last process from the Ready Queue
                 /// by removing the last process from current process
-                _Scheduler.setCurrentProcess(null);
+                _Scheduler.currentProcess = null;
                 /// "Turn Off" CPU
                 _CPU.isExecuting = false;
                 /// Turn "off Single Step"
@@ -321,7 +338,7 @@ var TSOS;
                 var curr = 0;
                 var found = false;
                 while (curr < _ResidentList.residentList.length && !found) {
-                    if (_ResidentList.residentList[curr].processID == parseInt(params[0])) {
+                    if (_ResidentList.residentList[curr].processID == parseInt(params[0][0])) {
                         found = true;
                     } /// if
                     else {
@@ -329,7 +346,7 @@ var TSOS;
                     } /// else
                 } /// while
                 if (!found) {
-                    _StdOut.putText(`No process control blocks found with pid: ${parseInt(params[0])}.`);
+                    _StdOut.putText(`No process control blocks found with pid: ${parseInt(params[0][0])}.`);
                     _StdOut.advanceLine();
                     _OsShell.putPrompt();
                 } /// if
@@ -369,8 +386,13 @@ var TSOS;
         } /// killProcessISR
         killAllProcessesISR() {
             /// There are scheduled processes to kill
-            if (_Scheduler.readyQueueLength() > 0 || _Scheduler.getCurrentProcess !== null) {
-                _Scheduler.terminatedAllProcess();
+            if (_Scheduler.readyQueue.length > 0 || _Scheduler.currentProcess !== null) {
+                /// Mark all process in the schedule queue as terminated
+                _Scheduler.currentProcess.processState = "Terminated";
+                for (var i = 0; i < _Scheduler.readyQueue.length; ++i) {
+                    _Scheduler.readyQueue[i].processState = "Terminated";
+                } /// for
+                // _Scheduler.terminatedAllProcess();
             } /// if
             /// There are no scheduled processes to kill
             else {
@@ -380,12 +402,25 @@ var TSOS;
             } /// else
         } /// runAllProcessISR
         ps() {
-            for (var pid = 0; pid < _ResidentList.residentList.length; ++pid) {
-                _StdOut.putText(`pid ${_ResidentList.residentList[pid].processID}: ${_ResidentList.residentList[pid].processState} `);
+            for (var pos = 0; pos < _ResidentList.residentList.length; ++pos) {
+                pos === 0 ?
+                    _StdOut.putText(`  pid ${_ResidentList.residentList[pos].processID}: ${_ResidentList.residentList[pos].processState}`)
+                    : _StdOut.putText(`pid ${_ResidentList.residentList[pos].processID}: ${_ResidentList.residentList[pos].processState}`);
+                if (pos !== _ResidentList.residentList.length - 1) {
+                    _StdOut.putText(`, `);
+                } /// if
             } /// for
             _StdOut.advanceLine();
             _OsShell.putPrompt();
         } /// ps
+        changeQuantumISR(params) {
+            var oldDecimalQuanta = params[0];
+            var newQuanta = params[1];
+            _Scheduler.quanta = newQuanta;
+            _StdOut.putText(`Quatum was: ${oldDecimalQuanta}, Quantum now: ${_Scheduler.quanta}`);
+            _StdOut.advanceLine();
+            _OsShell.putPrompt();
+        } /// changeQuantumISR
         krnTimerISR() {
             // The built-in TIMER (not clock) Interrupt Service Routine (as opposed to an ISR coming from a device driver). {
             // Check multiprogramming parameters and enforce quanta here. Call the scheduler / context switch here if necessary.

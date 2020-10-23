@@ -10,22 +10,38 @@
 //
 // Global CONSTANTS (TypeScript 1.5 introduced const. Very cool.)
 //
-const APP_NAME = "TSOS"; // 'cause Bob and I were at a loss for a better name.
-const APP_VERSION = "0.07"; // What did you expect?
-const CPU_CLOCK_INTERVAL = .01; // This is in ms (milliseconds) so 1000 = 1 second.
-const TIMER_IRQ = 0; // Pages 23 (timer), 9 (interrupts), and 561 (interrupt priority).
+// 'cause Bob and I were at a loss for a better name. What did you expect?
+const APP_NAME = "TSOS";
+const APP_VERSION = "0.07";
+// This is in ms (milliseconds) so 1000 = 1 second.
+const CPU_CLOCK_INTERVAL = .0000001;
+// Pages 23 (timer), 9 (interrupts), and 561 (interrupt priority).
 // NOTE: The timer is different from hardware/host clock pulses. Don't confuse these.
+const TIMER_IRQ = 0;
+/// Hardware Interrupt
 const KEYBOARD_IRQ = 1;
-const TERMINATE_PROCESS_IRQ = 2;
-const SYS_CALL_IRQ = 3;
-const SINGLE_STEP = 4;
-const NEXT_STEP = 5;
-const CONTEXT_SWITCH = 6;
-const RUN_PROCESS = 7;
-const RUN_ALL_PROCESSES = 8;
-const KILL_PROCESS = 9;
-const KILL_ALL_PROCESSES = 10;
-const PS_IRQ = 11;
+/// Read/Write Console Interrupts
+const SYS_CALL_IRQ = 2;
+const PS_IRQ = 3;
+/// Single Step Interrupts
+const SINGLE_STEP_IRQ = 4;
+const NEXT_STEP_IRQ = 5;
+/// Scheduling Interrupts
+const CONTEXT_SWITCH_IRQ = 6;
+const CHANGE_QUANTUM_IRQ = 7;
+/// Create Process Interrupts
+const RUN_PROCESS_IRQ = 8;
+const RUN_ALL_PROCESSES_IRQ = 9;
+/// Exit Process Interrupts
+///
+/// When a process ends, it sends its own termination interrupt
+const TERMINATE_PROCESS_IRQ = 10;
+/// This is the user "killing" the process,
+/// NOT the process sending its own termination interrupt
+const KILL_PROCESS_IRQ = 11;
+const KILL_ALL_PROCESSES_IRQ = 12;
+/// Priority Queue Constants
+const ROOT_NODE = 0;
 //
 // Global Variables
 // TODO: Make a global object and use that instead of the "_" naming convention in the global namespace.
@@ -58,7 +74,7 @@ var _FontHeightMargin = 4; // Additional space added to font size when advancing
 var _Trace = true; // Default the OS trace to be on.
 // The OS Kernel and its queues.
 var _Kernel;
-var _KernelInterruptQueue = null;
+var _KernelInterruptPriorityQueue = null;
 var _KernelInputQueue = null;
 var _KernelBuffers = null;
 // Standard input and output

@@ -29,37 +29,44 @@ module TSOS {
         constructor() {}/// constructor
 
         public contextSwitch() {
+            _Kernel.krnTrace("Switching context...");
             /// Move current process to end of ready queue
-            if (_Scheduler.getCurrentProcessState() !== "Terminated") {
-                /// Put the current process in the end
-                this.saveOldContextFromCPU(_Scheduler.getCurrentProcess());
-                _Scheduler.setCurrentProcessState("Ready");
-                _Scheduler.readyQueueEnqueue(_Scheduler.getCurrentProcess());
+            if (_Scheduler.currentProcess.processState !== "Terminated") {
+                /// Save current process cpu context
+                this.saveOldContextFromCPU(_Scheduler.currentProcess);
+
+                _Kernel.krnTrace(`Releasing process ${_Scheduler.currentProcess.processID} to cpu.`);
+
+                /// Enqueue the current process to end of Ready Queue
+                _Scheduler.currentProcess.processState = "Ready";
+                _Scheduler.readyQueue.push(_Scheduler.currentProcess);
             }/// if
 
-            if (_Scheduler.readyQueueLength() > 0) {
-                /// Grab the process at the front of the queue
-                _Scheduler.setCurrentProcess(_Scheduler.readyQueueDequeue());
+            if (_Scheduler.readyQueue.length > 0) {
+                /// Dequeue process from front of ready queue
+                _Scheduler.currentProcess = _Scheduler.readyQueue.shift();
 
                 /// Load CPU context with new process context
-                if (_Scheduler.getCurrentProcessState() !== "Terminated") {
-                    _Scheduler.setCurrentProcessState("Running");
+                if (_Scheduler.currentProcess.processState !== "Terminated") {
+                    _Scheduler.currentProcess.processState = "Running";
                 }/// if
-                this.setNewProcessToCPU(_Scheduler.getCurrentProcess());
+                this.setNewProcessToCPU(_Scheduler.currentProcess);
             }/// if
         }/// contextSwitch
 
         public setNewProcessToCPU(newPcb) {
+            _Kernel.krnTrace(`Attaching process ${newPcb.processID} to cpu.`);
             _CPU.PC = newPcb.programCounter;
             _CPU.IR = newPcb.instructionRegister;
             _CPU.Acc = newPcb.accumulator;
             _CPU.Xreg = newPcb.xRegister;
             _CPU.Yreg = newPcb.yRegister;
             _CPU.Zflag = newPcb.zFlag;
-            _CPU.localPCB = _Scheduler.getCurrentProcess();
+            _CPU.localPCB = _Scheduler.currentProcess;
         }/// contextSwitch
 
         public saveOldContextFromCPU(pcb) {
+            _Kernel.krnTrace(`Saving process ${pcb.processID} context from cpu.`);
             pcb.programCounter = _CPU.PC;
             pcb.instructionRegister = _CPU.IR;
             pcb.accumulator = _CPU.Acc;

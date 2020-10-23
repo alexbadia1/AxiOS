@@ -740,44 +740,53 @@ module TSOS {
 
         /// run <int> - Executes a program in memory
         public shellRun(args: string[]) {
-            /// Apparently Javascripts tolerance of NaN completly defeats the purpose of using this 
-            /// try catch... nice!
-            try {
-                /// Check if the process exists with basic linear search
-                var curr: number = 0;
-                var found: boolean = false;
-                while (curr < _ResidentList.residentList.length && !found) {
-                    if (_ResidentList.residentList[curr].processID == parseInt(args[0])) {
-                        found = true;
+
+            if (args.length === 1) {
+                /// Apparently Javascripts tolerance of NaN completly defeats the purpose of using this 
+                /// try catch... nice!
+                try {
+                    /// Check if the process exists with basic linear search
+                    var curr: number = 0;
+                    var found: boolean = false;
+                    while (curr < _ResidentList.residentList.length && !found) {
+                        if (_ResidentList.residentList[curr].processID == parseInt(args[0])) {
+                            found = true;
+                        }/// if
+                        else {
+                            curr++;
+                        }/// else
+                    }/// while
+
+                    if (!found) {
+                        _StdOut.putText(`No process control blocks found with pid: ${parseInt(args[0])}.`);
+                        _StdOut.advanceLine();
                     }/// if
+
+                    /// Process exists in the resident queue
                     else {
-                        curr++;
+                        /// Use interrupt to allow for seemless integration of scheduling
+                        /// For example:
+                        ///     > run 0
+                        ///     ...
+                        ///     > run 2
+                        ///     > run 1
+                        /// No matter what order, should still schedule the processes in round robin fashion...
+                        /// Use Single Step to see what's "really" happening...
+                        _KernelInterruptPriorityQueue.enqueue(new Node (new TSOS.Interrupt(RUN_PROCESS_IRQ, [curr, args[0]])));
                     }/// else
-                }/// while
-
-                if (!found) {
-                    _StdOut.putText(`No process control blocks found with pid: ${parseInt(args[0])}.`);
+                }/// try
+                catch (e) {
+                    _StdOut.putText(`${e}`);
+                    _StdOut.putText(`Usage: run <int> please supply a process id.`);
                     _StdOut.advanceLine();
-                }/// if
+                }/// catch
+            }/// if
 
-                /// Process exists in the resident queue
-                else {
-                    /// Use interrupt to allow for seemless integration of scheduling
-                    /// For example:
-                    ///     > run 0
-                    ///     ...
-                    ///     > run 2
-                    ///     > run 1
-                    /// No matter what order, should still schedule the processes in round robin fashion...
-                    /// Use Single Step to see what's "really" happening...
-                    _KernelInterruptQueue.enqueue(new TSOS.Interrupt(RUN_PROCESS, [curr, args[0]]));
-                }/// else
-            }/// try
-            catch (e) {
-                _StdOut.putText(`${e}`);
-                _StdOut.putText(`Usage: run <int> please supply a process id.`);
+            /// Not only 1 argument was given
+            else {
+                _StdOut.putText(`Usage: run <int> Expected 1 arguments, but got ${args.length}`);
                 _StdOut.advanceLine();
-            }/// catch
+            }/// else
         }/// run
 
 
@@ -837,37 +846,47 @@ module TSOS {
                 ///     > runall
                 /// No matter what order, should still schedule the processes in round robin fashion...
                 /// Use Single Step to see what's "really" happening...
-                _KernelInterruptQueue.enqueue(new TSOS.Interrupt(RUN_ALL_PROCESSES, []));
+                _KernelInterruptPriorityQueue.enqueue(new Node(new TSOS.Interrupt(RUN_ALL_PROCESSES_IRQ, [])));
             }/// else
         }/// runall
 
         /// ps - display the PID and state of all processes
         public shellPs() {
-            _KernelInterruptQueue.enqueue(new TSOS.Interrupt(PS_IRQ, []));
+            _KernelInterruptPriorityQueue.enqueue(new Node (new TSOS.Interrupt(PS_IRQ, [])));
         }///ps
 
         /// kill <pid> - kills one process (specified by process ID)
         public shellKill(args: string[]) {
-            /// Check if the resident queue is full or not...
-            if (_ResidentList.residentList.length === 0) {
-                _StdOut.putText(`No process control blocks found.`);
-                _StdOut.advanceLine();
+
+            if (args.length === 1) {
+                
+                /// Check if the resident queue is full or not...
+                if (_ResidentList.residentList.length === 0) {
+                    _StdOut.putText(`No process control blocks found.`);
+                    _StdOut.advanceLine();
+                }/// if
+                else {
+                    /// Use interrupt to allow for seemless integration of scheduling
+                    /// For example:
+                    ///     > kill 0
+                    ///     ...
+                    ///     > killall
+                    /// No matter what order, should still kill the processes
+                    /// Use Single Step to see what's "really" happening...
+                    _KernelInterruptPriorityQueue.enqueue(new Node (new TSOS.Interrupt(KILL_PROCESS_IRQ, [args])));
+                }/// else
             }/// if
+
+            /// More than one argument was given
             else {
-                /// Use interrupt to allow for seemless integration of scheduling
-                /// For example:
-                ///     > kill 0
-                ///     ...
-                ///     > killall
-                /// No matter what order, should still kill the processes
-                /// Use Single Step to see what's "really" happening...
-                _KernelInterruptQueue.enqueue(new TSOS.Interrupt(KILL_ALL_PROCESSES, []));
+                _StdOut.putText(`Usage: kill <int> Expected 1 arguments, but got ${args.length}`);
+                _StdOut.advanceLine();
             }/// else
         }/// kill
 
         /// killall - kill all processes
         public shellKillAll() {
-            _KernelInterruptQueue.enqueue(new TSOS.Interrupt(KILL_ALL_PROCESSES, []));
+            _KernelInterruptPriorityQueue.enqueue(new Node (new TSOS.Interrupt(KILL_ALL_PROCESSES_IRQ, [])));
         }/// kill all processes
 
         /// quantum <int> - let the user set the Round Robin Quantum (measured in CPU cycles)
@@ -893,16 +912,16 @@ module TSOS {
                     }/// if
 
                     /// New quanta must be a positive integer
-                    else if (parseInt(trimmedStringQuanta, 10) > 0){
+                    if (parseInt(trimmedStringQuanta, 10) > 0){
                         /// Could process as interrupt to allow for changing the quantum mid cycle...
                         /// Actually just don't allow it, too much brain damage already...
-                        _Scheduler.quanta = parseInt(trimmedStringQuanta, 10);
-                        _StdOut.putText(`Quatum was: ${oldDecimalQuanta}, Quantum now: ${_Scheduler.quanta}`);
-                        _StdOut.advanceLine();
+                        /// interrupt it is
+                        _KernelInterruptPriorityQueue.enqueue(new Node (new TSOS.Interrupt(CHANGE_QUANTUM_IRQ, [oldDecimalQuanta, parseInt(trimmedStringQuanta, 10)])));
                     }/// else-if
 
                     /// Invalid Quantum
                     else {
+                        
                         _StdOut.putText(`Usage: quantum <int>  Please supply a positive, non-zero, decimal integer only.`);
                         _StdOut.advanceLine();
                     }/// else
@@ -917,7 +936,7 @@ module TSOS {
 
             /// ERROR, More than one argument given
             else {
-                _StdOut.putText("Usage: quantum <int> Expected 1 Argument.");
+                _StdOut.putText(`Usage: quantum <int> Expected 1 arguments, but got ${args.length}`);
                 _StdOut.advanceLine();
             }/// else
         }/// shellQuantum

@@ -11,32 +11,48 @@
 //
 // Global CONSTANTS (TypeScript 1.5 introduced const. Very cool.)
 //
-const APP_NAME: string    = "TSOS";   // 'cause Bob and I were at a loss for a better name.
-const APP_VERSION: string = "0.07";   // What did you expect?
+// 'cause Bob and I were at a loss for a better name. What did you expect?
+const APP_NAME: string    = "TSOS";
+const APP_VERSION: string = "0.07";
 
-const CPU_CLOCK_INTERVAL: number = .01;   // This is in ms (milliseconds) so 1000 = 1 second.
+// This is in ms (milliseconds) so 1000 = 1 second.
+const CPU_CLOCK_INTERVAL: number = .0000001;
 
-const TIMER_IRQ: number = 0;  // Pages 23 (timer), 9 (interrupts), and 561 (interrupt priority).
-                              // NOTE: The timer is different from hardware/host clock pulses. Don't confuse these.
+// Pages 23 (timer), 9 (interrupts), and 561 (interrupt priority).
+// NOTE: The timer is different from hardware/host clock pulses. Don't confuse these.
+const TIMER_IRQ: number = 0;
+
+/// Hardware Interrupt
 const KEYBOARD_IRQ: number = 1;
 
-const TERMINATE_PROCESS_IRQ: number = 2;
+/// Read/Write Console Interrupts
+const SYS_CALL_IRQ: number = 2;
+const PS_IRQ: number = 3;
 
-const SYS_CALL_IRQ: number = 3;
+/// Single Step Interrupts
+const SINGLE_STEP_IRQ: number = 4;
+const NEXT_STEP_IRQ: number = 5;
 
-const SINGLE_STEP: number = 4;
-const NEXT_STEP: number = 5;
+/// Scheduling Interrupts
+const CONTEXT_SWITCH_IRQ: number = 6;
+const CHANGE_QUANTUM_IRQ: number = 7;
 
-const CONTEXT_SWITCH: number = 6;
+/// Create Process Interrupts
+const RUN_PROCESS_IRQ: number = 8;
+const RUN_ALL_PROCESSES_IRQ: number = 9;
 
-const RUN_PROCESS: number = 7;
-const RUN_ALL_PROCESSES: number = 8;
+/// Exit Process Interrupts
+///
+/// When a process ends, it sends its own termination interrupt
+const TERMINATE_PROCESS_IRQ: number = 10;
 
-const KILL_PROCESS: number = 9;
-const KILL_ALL_PROCESSES: number = 10;
+/// This is the user "killing" the process,
+/// NOT the process sending its own termination interrupt
+const KILL_PROCESS_IRQ: number = 11;
+const KILL_ALL_PROCESSES_IRQ: number = 12;
 
-const PS_IRQ: number = 11;
-
+/// Priority Queue Constants
+const ROOT_NODE = 0;
 //
 // Global Variables
 // TODO: Make a global object and use that instead of the "_" naming convention in the global namespace.
@@ -78,7 +94,7 @@ var _Trace: boolean = true;              // Default the OS trace to be on.
 
 // The OS Kernel and its queues.
 var _Kernel: TSOS.Kernel;
-var _KernelInterruptQueue: TSOS.Queue = null;
+var _KernelInterruptPriorityQueue: TSOS.PriorityQueue = null;
 var _KernelInputQueue: TSOS.Queue = null; 
 var _KernelBuffers = null; 
 

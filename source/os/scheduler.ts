@@ -16,14 +16,15 @@
  *      I aced it on the midterm (not like it was suppose to be hard, these are very simple concepts). BUT...
  * 
  *      I learn best through "doing". The only reason why I still remember half of Gormanly's and Schwartz's information
- *      from Org and Arch and Database is well, I remember explaining all the concepts to a friend of mine (Brian, who will 
- *      probably have you next semester). Stuff with the Arduinos (rolling averages), Atomicity and all that jazz.
+ *      from Org and Arch and Database is, well, I remember explaining all the concepts to a friend of mine (Brian, who will 
+ *      probably have you next semester), stuff with the Arduinos (rolling averages), atomicity and all that jazz.
  *      
  *      Otherwise, teaching me theory from a book is the equivalent to throwing a bunch of mud at a wall and seeing what sticks
- *      (I know, I'm not the sharpest tool in the shed). This is why I'm glad we're actually coding this...
+ *      (I know. I'm far from the sharpest tool in the shed). This is why I'm glad we're actually coding this...
  *      
- *      So yeah, I implemented them all (again not like this is suppose to be a "hard" class, this is an introductory class to OS's anyway
- *         and like with everything else we're only scraping the surface).
+ *      So yeah, I implemented them all except SJF, cause well I don't think I can make that graph thing, at least not yet
+ *      (again not like this is suppose to be a "hard" class, this is an introductory class to OS's anyway
+ *      and like with everything else we're only scraping the surface).
  * 
  */
 
@@ -33,94 +34,62 @@ module TSOS {
 
         constructor(
             public quanta: number = 6,
-            private startBurst: number = 0,
-            private unInterleavedOutput: string[] = [],
-            private processWaitTimes: any[] = [],
-            private processTimeSpentExecuting: any[] = [],
-            private processTurnaroundTime: number[] = [],
-            private readyQueue: ProcessControlBlock[] = [],
-            private currentProcess: ProcessControlBlock = null,
+            public startBurst: number = 0,
+            public processesMetaData: any[] = [],
+            public unInterleavedOutput: string[] = [],
+            public processTurnaroundTime: number[] = [],
+            public readyQueue: ProcessControlBlock[] = [],
+            public currentProcess: ProcessControlBlock = null,
         ) { }/// constructor
 
-        /******************************
-         * Ready Queue Helper Methods *
-         ******************************/
-        public terminatedAllProcess() {
-            this.currentProcess.processState = "Terminated";
-            for (var i = 0; i < this.readyQueueLength(); ++i){
-                this.readyQueue[i].processState = "Terminated";
-            }/// for
-        }/// terminateAllProcess
+        public init() {
+            this.startBurst = 0;
+            this.readyQueue = [];
+            this.currentProcess = null;
+            this.processesMetaData = [];
+            this.unInterleavedOutput = [];
+        }/// init
 
-        public incrementWaitTime() {
-            /// Loop through Ready Queue and increment each pcb's
-            /// wait time by 1
-            for (var i = 0; i < this.readyQueueLength(); ++i){
-                this.readyQueue[i].waitTime +=1;
-            }/// for
-        }/// incrementWaitTime
+        public scheduleProcess(newProcess: ProcessControlBlock): boolean {
+            /// Give feedback if the process was successfuly scheduled or not
+            var success = false;
 
-        public readyQueueLength(): number {
-            return this.readyQueue.length;
-        }/// getReadyQueue
+            /// Kernel mode to schedule processes
+            _Mode = 0;
 
-        public readyQueueEnqueue (newPcb): boolean {
-            return this.readyQueue.push(newPcb) > 0;
-        }/// readyQueueEnqueue
+            /// Ensure a new process is passed
+            if (newProcess !== null) {
+                /// Round Robin Scheduling allows us to just keep enqueueing processes
+                newProcess.processState = "Ready";
 
-        public readyQueueDequeue(): ProcessControlBlock {
-            return _Scheduler.readyQueue.shift();
-        }/// readyQueueDequeue
+                /// Put the first process in the current process "slot"
+                if (this.currentProcess === null) {
+                    _Kernel.krnTrace(`Process ${newProcess.processID} set as first process`);
+                    this.currentProcess = newProcess;
+                    _Dispatcher.setNewProcessToCPU( this.currentProcess);
+                }/// if
 
-        /**********************************
-         * Current Process Helper Methods *
-         **********************************/
+                /// Put the remaining process in the ready queue
+                else {
+                    _Kernel.krnTrace(`Process ${newProcess.processID} added to ready queue`);
+                    this.readyQueue.push(newProcess);
+                }/// else
 
-        public incrementTimeExecuting() {
-            this.currentProcess.timeSpentExecuting += 1;
-        }/// incrementTimeExecuting
-
-        public hasCurrentProcess(): boolean {
-            return _Scheduler.currentProcess !== null;
-        }/// hasCurrentProcess
-
-        public getCurrentProcess(): ProcessControlBlock {
-            return this.currentProcess;
-        }/// getCurrentProcess
-
-        public setCurrentProcess(newProcess: ProcessControlBlock): void {
-            this.currentProcess = newProcess;
-        }/// getCurrentProcess
-
-        public getCurrentProcessState(): string {
-            return this.currentProcess.processState;
-        }/// getCurrentProcessState
-
-        public setCurrentProcessState(newProcessState: string): void {
-            this.currentProcess.processState = newProcessState;
-        }/// setCurrentProcessState
-
-        /*******************************
-         *    Scheduling Algorithms    *
-         ******************************/
-        public scheduleProcess(newProcess: ProcessControlBlock): boolean { 
-            var ans: boolean = false;
-            /// Round Robin Scheduling allows us to just keep enqueing processes
-            newProcess.processState = "Ready";
-            if (this.currentProcess === null) {
-                this.currentProcess = newProcess;
-                _Dispatcher.setNewProcessToCPU( this.currentProcess);
-                ans = true;
+                /// Process scheduled successfully
+                success = true;
             }/// if
-            else {
-                this.readyQueue.push(newProcess);
-                ans = true;
-            }/// else
+
+            return success;
             /// More...?
-            return ans;
+            /// TODO: Implement the other types of scheuling...
+            // public firstComeFirstServeSchedule() { }
+            // public preEmptivePriority() { }
+            // public prioritySchedule() { }
         }/// scheduleProcess
 
         public runSchedule(aNewProcessWasLoaded: boolean = true) {
+            /// Kernel Mode
+            _Mode = 0;
             /// Make sure there are process loaded in the ready queue or
             /// in the current process slot
             if (this.readyQueue.length === 0 && this.currentProcess === null) {
@@ -136,167 +105,105 @@ module TSOS {
             }/// else 
             else {
                 _CPU.isExecuting = true;
+                /// Program is running so User Mode
+                _Mode = 1;
             }/// else
         }/// runSchedule
 
         public roundRobinCheck(): void {
+            /// Back to kernel mode for quantum and termination check
+            _Kernel.krnTrace(`Kernel Mode Activated...`);
+            _Kernel.krnTrace(`Round Robin Qunatum Check!`);
+            _Mode = 0;
+
             /// Current Process has terminated either Right On or Before quanta limit:
             if (this.currentProcess.processState === "Terminated") {
+                _Kernel.krnTrace(`Current process ${this.currentProcess.processID} terminated.`);
+
                 /// Context Switch but don't put current process back in process queue
                 if (this.readyQueue.length > 0) {
-                    /// Queue interrupt for context switch
-                    _KernelInterruptQueue.enqueue(new TSOS.Interrupt(CONTEXT_SWITCH, []));
+                    _Kernel.krnTrace(`Another process was found in Ready Queue, issuing context switch...`);
 
-                    /// Grab the procress' output, time spent executing, time spent waiting
+                    /// Queue interrupt for context switch
+                    _KernelInterruptPriorityQueue.enqueue(new Node (new TSOS.Interrupt(CONTEXT_SWITCH_IRQ, [])));
+                    
+                    /// Grab the procress' output, time spent executing, time spent waiting, turnaround time
+                    _Kernel.krnTrace(`Collecting process ${this.currentProcess.processID} metadata before context switch.`);
+                    var turnAroundTime = (this.currentProcess.timeSpentExecuting + this.currentProcess.waitTime);
                     this.unInterleavedOutput.push(`Pid ${this.currentProcess.processID}: ${this.currentProcess.outputBuffer}`); 
-                    this.processTimeSpentExecuting.push([this.currentProcess.timeSpentExecuting, this.currentProcess.processID]);
-                    this.processWaitTimes.push([this.currentProcess.waitTime, this.currentProcess.processID]);
+                    this.processesMetaData.push([
+                        this.currentProcess.processID, 
+                        this.currentProcess.timeSpentExecuting,
+                        this.currentProcess.waitTime, 
+                        turnAroundTime,
+                    ]);
 
                     /// Reset the starting burst for the next new process
+                    _Kernel.krnTrace(`Updating relative starting burst...`);
                     this.startBurst = _CPU_BURST;
+
+                    /// Back to running programs
+                    _Kernel.krnTrace(`User Mode Activated`);
+                    _Mode = 1;
                 }/// if
+
+                /// Final process terminated!
+                /// Stop the CPU, grab scedule metadata and show it to the user and reset the scheduler
+                ///
+                /// TODO: Implement as an interrupt
                 else {
-                    /// TODO: Preferably End Scheduled Session With Interrupt
+                    _Kernel.krnTrace(`No more process found in Ready Queue, preparing to clear scheduler...`);
+                    /// Stay in Kernel Mode
+                    _Mode = 0;
+                    
+                    /// Stop CPU execution since all processe are terminated
                     _CPU.isExecuting = false;
 
-                    /// Grab the final procress' output, time spent executing, time spent waiting
+                    /// Grab the final procresses' output, time spent executing, time spent waiting, turnaround time
+                    _Kernel.krnTrace(`Collecting final process ${this.currentProcess.processID} metadata.`);
+                    var turnAroundTime = (this.currentProcess.timeSpentExecuting + this.currentProcess.waitTime);
                     this.unInterleavedOutput.push(`Pid ${this.currentProcess.processID}: ${this.currentProcess.outputBuffer}`);
-                    this.processTimeSpentExecuting.push([this.currentProcess.timeSpentExecuting, this.currentProcess.processID]);
-                    this.processWaitTimes.push([this.currentProcess.waitTime, this.currentProcess.processID]);
-                    
-                    /// Print each process order in a readable fashion
-                    _StdOut.advanceLine();
-                    _StdOut.putText("Schedule Terminated!");
-                    _StdOut.advanceLine();
-                    _StdOut.putText("...");
-                    _StdOut.advanceLine();
-                    _StdOut.putText("Schedule Metadata:");
-                    _StdOut.advanceLine();
-                    _StdOut.putText(`  Quantum used: ${this.quanta}, Total CPU Bursts: ${_CPU_BURST}`);
-                    _StdOut.advanceLine();
-                    _StdOut.putText("...");
-                    _StdOut.advanceLine();
+                    this.processesMetaData.push([
+                        this.currentProcess.processID, 
+                        this.currentProcess.timeSpentExecuting,
+                        this.currentProcess.waitTime, 
+                        turnAroundTime,
+                    ]);
 
-                    /// Show scheduling and processes data
-                    this.showCPUBurstUsage();
-                    this.showTurnaroundTimes();
-                    this.showWaitTimes();
-                    this.showProcessesOutputs();
-                    _StdOut.advanceLine();
-                    _OsShell.putPrompt();
+                    /// Show user schedule metadata
+                    _Kernel.krnTrace(`Dumping all processes metadata...`);
+                    TSOS.Control.dumpScheduleMetaData();
 
                     /// Clear scheduling metadata
+                    _Kernel.krnTrace(`Clearing Scheduler...`);
                     _CPU_BURST = 0;
-                    this.startBurst = 0;
-                    this.unInterleavedOutput = [];
-                    this.processWaitTimes = [];
-                    this.processTimeSpentExecuting = [];
-                    this.processTurnaroundTime = [];
-                    this.readyQueue = [];
-                    this.currentProcess = null;
+                    this.init();
                 }/// else
             }/// if
 
-            /// Current process has not terminated but the quanta was reached:
-            else if ((_CPU_BURST - this.startBurst) === this.quanta) {
+            /// Current process has not terminated but the quantum was reached:
+            else if ((_CPU_BURST - this.startBurst) >= this.quanta) {
                 /// Context Switch but put process back in process queue
                 if (this.readyQueue.length > 0) {
+                    _Kernel.krnTrace(`Process ${this.currentProcess.processID} quantum reached, issuing context switch...`);
                     /// Queue interrupt for context switch
-                    _KernelInterruptQueue.enqueue(new TSOS.Interrupt(CONTEXT_SWITCH, []));
+                    _KernelInterruptPriorityQueue.enqueue(new Node(new TSOS.Interrupt(CONTEXT_SWITCH_IRQ, [])));
 
                     /// Reset the starting burst for the next new process
                     this.startBurst = _CPU_BURST;
+
                 }/// if
                 else {
+                    _Kernel.krnTrace(`Process ${this.currentProcess.processID} is the final process, renewing quantum...`);
                     /// There is one process left "in" the scheduler so keep renewing
-                    /// its quanta to let the process run as it will termination.
+                    /// its quantum to let the process run as it will termination.
                     this.startBurst = _CPU_BURST;
                 }///else
+
+                /// Back to running programs
+                _Kernel.krnTrace(`User Mode Activated!`);
+                _Mode = 0;
             }/// if
         }/// roundRobinCheck
-
-        
-        private calculateAverageWaitTime(): number {
-            var ans: number = 0;
-            for (var i:number = 0; i < this.processWaitTimes.length; ++i) {
-                ans += this.processWaitTimes[i][0];
-            }///for
-            return ans/this.processWaitTimes.length;
-        }/// calculateAverageWaitTime
-
-        private calculateAverageTurnaroundTime(): number {
-            var ans: number = 0;
-            for (var i: number = 0; i < this.processWaitTimes.length; ++i) {
-                var turnaroundTime = this.processWaitTimes[i][0] + this.processTimeSpentExecuting[i][0];
-                this.processTurnaroundTime.push(turnaroundTime);
-            }/// for
-
-            for (var i:number = 0; i < this.processTurnaroundTime.length; ++i) {
-                ans += this.processTurnaroundTime[i];
-            }///for
-            return ans/this.processTurnaroundTime.length;
-        }/// calculateAverageWaitTime
-
-        private showCPUBurstUsage(): void {
-            _StdOut.putText("Scheduled Processes CPU Burst Usage (cycles):");
-            _StdOut.advanceLine();
-            for (var i:number = 0; i < this.processTimeSpentExecuting.length; ++i) {
-                i === 0?
-                _StdOut.putText(`  Pid ${this.processTimeSpentExecuting[i][1]}: ${this.processTimeSpentExecuting[i][0]}`)
-                : _StdOut.putText(`Pid ${this.processTimeSpentExecuting[i][1]}: ${this.processTimeSpentExecuting[i][0]}`)
-                if (i !== this.processTimeSpentExecuting.length - 1) {
-                    _StdOut.putText(", ");
-                }/// if
-            }///for
-            _StdOut.advanceLine();
-            _StdOut.putText("...");
-            _StdOut.advanceLine();
-        }/// showCPUBurstUsage
-
-        private showWaitTimes(): void {
-            _StdOut.putText("Scheduled Processes Wait Time (cycles):");
-            _StdOut.advanceLine();
-            _StdOut.putText(`  AWT: ${Math.ceil(this.calculateAverageWaitTime())}, `);
-            for (var i:number = 0; i < this.processWaitTimes.length; ++i) {
-                _StdOut.putText(`Pid ${this.processWaitTimes[i][1]}: ${this.processWaitTimes[i][0]}`);
-                if (i !== this.processTimeSpentExecuting.length - 1) {
-                    _StdOut.putText(", ");
-                }/// if
-            }///for
-            _StdOut.advanceLine();
-            _StdOut.putText("...");
-            _StdOut.advanceLine();
-        }/// showWaitTimes()
-
-        private showTurnaroundTimes(): void {
-            _StdOut.putText("Scheduled Processes Turnaround Time (cycles):");
-            _StdOut.advanceLine();
-            _StdOut.putText(`  ATT: ${Math.ceil(this.calculateAverageTurnaroundTime())}, `);
-            for (var i:number = 0; i < this.processTurnaroundTime.length; ++i) {
-                var turnaroundTime = this.processWaitTimes[i][0] + this.processTimeSpentExecuting[i][0];
-                _StdOut.putText(`Pid ${this.processWaitTimes[i][1]}: ${turnaroundTime}`);
-                if (i !== this.processTimeSpentExecuting.length - 1) {
-                    _StdOut.putText(", ");
-                }/// if
-            }///for
-            _StdOut.advanceLine();
-            _StdOut.putText("...");
-            _StdOut.advanceLine();
-        }/// showTurnaroundTimes
-
-        private showProcessesOutputs() {
-            _StdOut.putText("Dumping Processes Output(s):");
-            _StdOut.advanceLine();
-            for (var i:number = 0; i < this.unInterleavedOutput.length; ++i) {
-                _StdOut.putText(`  ${this.unInterleavedOutput[i]}`);
-                if (i !== this.unInterleavedOutput.length - 1)
-                    _StdOut.advanceLine();
-            }///for
-        }/// showProcessesOutputs
-
-        /// TODO: Implement the other types of scheuling...
-        // public firstComeFirstServeSchedule() { }
-        // public preEmptivePriority() { }
-        // public prioritySchedule() { }
     }/// class
 }/// module
