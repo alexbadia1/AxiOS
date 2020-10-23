@@ -74,8 +74,8 @@
                onclick="TSOS.Control.hostBtnReset_click(this); document.getElementById('divLog--status').innerText = 'Resetting';">
 
             <!-- TODO: Single Step -->
-            <input type="button" id="btnSingleStepMode" name="btnSingleStep" class="single_step_button" disabled="disabled"
-               value="Single Step ON" tabindex="3"
+            <input type="button" id="btnSingleStepMode" name="btnSingleStep" class="single_step_button"
+               disabled="disabled" value="Single Step ON" tabindex="3"
                onclick="TSOS.Control.hostBtnSingleStep_click(this); document.getElementById('divLog--status').innerText = 'Single Step Off';">
 
             <!-- TODO: Single Step -->
@@ -87,6 +87,7 @@
          CPU
 
          <!--CPU Information-->
+         <div id="visual--cpu" style = "max-width: 100%">
          <table id="visual--cpu--table" style="width: 100%; border: 1px solid black;">
             <tr>
                <th><span> PC </span></th>
@@ -105,35 +106,37 @@
                <th><span id="cpu--z"> - </span></th>
             </tr>
          </table>
-
+      </div>
          <!--Process Control Block Information-->
          Processes
-         <table id="visual--pcb--table" style="width: 100%; border: 1px solid black;">
-            <tr>
-               <th><span> PID </span></th>
-               <th><span> PC </span></th>
-               <th><span> IR </span></th>
-               <th><span> ACC </span></th>
-               <th><span> X </span></th>
-               <th><span> Y </span></th>
-               <th><span> Z </span></th>
-               <th><span> Priority </span></th>
-               <th><span> State </span></th>
-               <th><span> Location </span></th>
-            </tr>
-            <tr>
-               <th><span id="pcb--pid"> - </span></th>
-               <th><span id="pcb--pc"> - </span></th>
-               <th><span id="pcb--ir"> - </span></th>
-               <th><span id="pcb--acc"> - </span></th>
-               <th><span id="pcb--x"> - </span></th>
-               <th><span id="pcb--y"> - </span></th>
-               <th><span id="pcb--z"> - </span></th>
-               <th><span id="pcb--priority"> - </span></th>
-               <th><span id="pcb--state"> - </span></th>
-               <th><span id="pcb--location"> - </span></th>
-            </tr>
-         </table>
+         <div id="visual--pcb" style="max-width: 100%;">
+            <table id="visual--pcb--table" style="width: 100%; border: 1px solid black;">
+               <tr>
+                  <th><span> PID </span></th>
+                  <th><span> PC </span></th>
+                  <th><span> IR </span></th>
+                  <th><span> ACC </span></th>
+                  <th><span> X </span></th>
+                  <th><span> Y </span></th>
+                  <th><span> Z </span></th>
+                  <th><span> Priority </span></th>
+                  <th><span> State </span></th>
+                  <th><span> Location </span></th>
+               </tr>
+               <tr>
+                  <th><span id="pcb--pid"> - </span></th>
+                  <th><span id="pcb--pc"> - </span></th>
+                  <th><span id="pcb--ir"> - </span></th>
+                  <th><span id="pcb--acc"> - </span></th>
+                  <th><span id="pcb--x"> - </span></th>
+                  <th><span id="pcb--y"> - </span></th>
+                  <th><span id="pcb--z"> - </span></th>
+                  <th><span id="pcb--priority"> - </span></th>
+                  <th><span id="pcb--state"> - </span></th>
+                  <th><span id="pcb--location"> - </span></th>
+               </tr>
+            </table>
+         </div>
          <div style="width: 100%; height: 320px;">
             Memory
             <div style="width: 100%; height: 100%; overflow-y: scroll; border: 1px solid black;">
@@ -176,10 +179,11 @@
                Time: [Press Start]
             </label>
             <br>
-            <label> Status: <label id = divLog--status>AxiOS Dead</label></label>
+            <label> Status: <label id=divLog--status>AxiOS Dead</label></label>
             <br>
             <label>
-               <textarea name="taHostLog" id="taHostLog" rows="26" cols="48" style = 'width: 98.75%; height: 100%; resize: none;'></textarea>
+               <textarea name="taHostLog" id="taHostLog" rows="26" cols="48"
+                  style='width: 98.75%; height: 100%; resize: none;'></textarea>
             </label>
          </div>
       </div>
@@ -190,11 +194,12 @@
       <div class="item item--5">
 
          <!--User Input-->
-         <div id="divUserProgramInput" >
+         <div id="divUserProgramInput">
             <label>
                User Program Input
                <br>
-               <textarea name="taProgramInput" id="taProgramInput" rows="8" cols="48" style = 'width: 99.475%; height: 90%; resize: none; overflow-y: scroll; word-wrap: break-word;'></textarea>
+               <textarea name="taProgramInput" id="taProgramInput" rows="8" cols="48"
+                  style='width: 99.475%; height: 90%; resize: none; overflow-y: scroll; word-wrap: break-word;'></textarea>
             </label>
          </div>
       </div>

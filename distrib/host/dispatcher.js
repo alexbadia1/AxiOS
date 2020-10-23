@@ -26,10 +26,12 @@ var TSOS;
     class Dispatcher {
         constructor() { } /// constructor
         contextSwitch() {
+            _Kernel.krnTrace("Switching context...");
             /// Move current process to end of ready queue
             if (_Scheduler.currentProcess.processState !== "Terminated") {
                 /// Save current process cpu context
                 this.saveOldContextFromCPU(_Scheduler.currentProcess);
+                _Kernel.krnTrace(`Releasing process ${_Scheduler.currentProcess.processID} to cpu.`);
                 /// Enqueue the current process to end of Ready Queue
                 _Scheduler.currentProcess.processState = "Ready";
                 _Scheduler.readyQueue.push(_Scheduler.currentProcess);
@@ -45,6 +47,7 @@ var TSOS;
             } /// if
         } /// contextSwitch
         setNewProcessToCPU(newPcb) {
+            _Kernel.krnTrace(`Attaching process ${newPcb.processID} to cpu.`);
             _CPU.PC = newPcb.programCounter;
             _CPU.IR = newPcb.instructionRegister;
             _CPU.Acc = newPcb.accumulator;
@@ -54,6 +57,7 @@ var TSOS;
             _CPU.localPCB = _Scheduler.currentProcess;
         } /// contextSwitch
         saveOldContextFromCPU(pcb) {
+            _Kernel.krnTrace(`Saving process ${pcb.processID} context from cpu.`);
             pcb.programCounter = _CPU.PC;
             pcb.instructionRegister = _CPU.IR;
             pcb.accumulator = _CPU.Acc;

@@ -59,11 +59,10 @@ module TSOS {
 
             /// Ensure a new process is passed
             if (newProcess !== null) {
-                /// Round Robin Scheduling allows us to just keep enqueueing processes
-                newProcess.processState = "Ready";
-
                 /// Put the first process in the current process "slot"
                 if (this.currentProcess === null) {
+                    /// Round Robin Scheduling allows us to just keep enqueueing processes
+                    newProcess.processState = "Running";
                     _Kernel.krnTrace(`Process ${newProcess.processID} set as first process`);
                     this.currentProcess = newProcess;
                     _Dispatcher.setNewProcessToCPU( this.currentProcess);
@@ -71,6 +70,8 @@ module TSOS {
 
                 /// Put the remaining process in the ready queue
                 else {
+                    /// Round Robin Scheduling allows us to just keep enqueueing processes
+                    newProcess.processState = "Ready";
                     _Kernel.krnTrace(`Process ${newProcess.processID} added to ready queue`);
                     this.readyQueue.push(newProcess);
                 }/// else

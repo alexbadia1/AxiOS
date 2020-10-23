@@ -68,6 +68,7 @@ var _taProgramInput;
 var _visualMemory; /// global variable for the memory table
 var _visualCpu; /// global variable for the CPU table
 var _visualPcb; /// global variable for the PCB table
+var _visualResidentList; /// global variable for the residentlis
 var _DefaultFontFamily = "sans"; // Ignored, I think. The was just a place-holder in 2008, but the HTML canvas may have use for it.
 var _DefaultFontSize = 13;
 var _FontHeightMargin = 4; // Additional space added to font size when advancing a line.

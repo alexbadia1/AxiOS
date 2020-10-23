@@ -43,6 +43,9 @@ module TSOS {
             /// Get global reference for visual pcb
             _visualPcb = document.getElementById("visual--pcb--table");
 
+            /// Get global reference for visual pcb
+            _visualResidentList = document.getElementById("visual--pcb");
+
             // Enable the added-in canvas text functions (see canvastext.ts for provenance and details).
             CanvasTextFunctions.enable(_DrawingContext);   // Text functionality is now built in to the HTML5 canvas. But this is old-school, and fun, so we'll keep it.
 
@@ -232,17 +235,6 @@ module TSOS {
         }/// updateVisualCpu
 
         public static updateVisualPcb() {
-            /// Process Control Block should be updated but not wiped.
-            /// Should be able to see the last state of the PCB
-            ///
-            /// This is technically context switching so move to dispatcher
-            ///
-            // _CPU.localPCB.programCounter = _CPU.PC;
-            // _CPU.localPCB.accumulator = _CPU.Acc;
-            // _CPU.localPCB.xRegister = _CPU.Xreg;
-            // _CPU.localPCB.yRegister = _CPU.Yreg;
-            // _CPU.localPCB.zFlag = _CPU.Zflag;
-
             /// Visual Updates
             _visualPcb.rows[1].cells[0].innerHTML = _CPU.localPCB.processID;
             _visualPcb.rows[1].cells[1].innerHTML = this.formatToHexWithPadding(_CPU.PC);
@@ -327,7 +319,7 @@ module TSOS {
 
                     /// No Indent on all the other pid's
                     : _StdOut.putText(`Pid ${_Scheduler.processesMetaData[i][0]}: ${_Scheduler.processesMetaData[i][1]}`)
-                
+
                 /// Don't add a comma after the last pid
                 if (i !== _Scheduler.processesMetaData.length - 1) {
                     _StdOut.putText(", ");
@@ -410,8 +402,61 @@ module TSOS {
             _OsShell.putPrompt();
         }/// dumpScheduleMetaData
 
-        public static dumpResidentList(): void {
-            
+        public static createVisualResidentList(pcb): void {
+            /// Create a table with two rows
+            var table = document.createElement('table');
+            table.setAttribute("id", "tempTable");
+            var rowWithHeaders = document.createElement('tr');
+            var rowWithValues = document.createElement('tr');
+
+            table.appendChild(rowWithHeaders);
+            table.appendChild(rowWithValues);
+
+            /// Create cells with text
+            for (var cellNum: number = 0; cellNum < 10; ++cellNum) {
+                /// Create the header cell
+                var headerCell = document.createElement('td');
+                var innerHtmlHeaderCell = document.createTextNode("");
+
+                /// Create value cell
+                var valueCell = document.createElement('td');
+                var innerHtmlValueCell = document.createTextNode("");
+
+                /// Append the cells and their values
+                valueCell.appendChild(innerHtmlValueCell);
+                headerCell.appendChild(innerHtmlHeaderCell);
+                rowWithValues.appendChild(valueCell);
+                rowWithHeaders.appendChild(headerCell);
+            }/// for
+
+            _visualResidentList.appendChild(table);
+
+            for (var i: number = 0; i < 1; ++i) {
+                table.rows[1].cells[0].innerHTML = pcb.processID.toString();
+                table.rows[1].cells[1].innerHTML = this.formatToHexWithPadding(pcb.programCounter);
+                table.rows[1].cells[2].innerHTML = pcb.instructionRegister;
+                table.rows[1].cells[3].innerHTML = pcb.accumulator;
+                table.rows[1].cells[4].innerHTML = pcb.xRegister;
+                table.rows[1].cells[5].innerHTML = pcb.yRegister;
+                table.rows[1].cells[6].innerHTML = pcb.zFlag.toString();
+                table.rows[1].cells[7].innerHTML = pcb.priority.toString();
+                table.rows[1].cells[8].innerHTML = pcb.processState;
+                table.rows[1].cells[9].innerHTML = `Vol ${pcb.volumeIndex + 1}`;
+            }/// for
         }/// dumpResidentList
+
+        public static visualizeResidentList() {
+            try {
+                document.getElementById("tempTable").parentNode.removeChild(document.getElementById("tempTable"));
+                document.getElementById("tempTable").parentNode.removeChild(document.getElementById("tempTable"));
+            }/// try
+            catch (e) {
+                _Kernel.krnTrace(e);
+                 _Kernel.krnTrace("No resident list to delete.");
+            }/// catch
+            for (var index: number = 0; index < _Scheduler.readyQueue.length; ++index){
+                this.createVisualResidentList(_Scheduler.readyQueue[index]);
+            }/// for
+        }/// visualizeResidentList
     }/// class
 }/// module

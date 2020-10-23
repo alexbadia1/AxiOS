@@ -120,6 +120,7 @@ module TSOS {
                         TSOS.Control.updateVisualMemory();
                         TSOS.Control.updateVisualCpu();
                         TSOS.Control.updateVisualPcb();
+                        TSOS.Control.visualizeResidentList();
                         _NextStep = false;
                     }/// if
                 }/// if
@@ -132,6 +133,7 @@ module TSOS {
                     TSOS.Control.updateVisualMemory();
                     TSOS.Control.updateVisualCpu();
                     TSOS.Control.updateVisualPcb();
+                    TSOS.Control.visualizeResidentList();
                 }/// else
 
                 /// TODO: Make the date and time update NOT dependent on the cpu actually cycling
@@ -143,7 +145,6 @@ module TSOS {
                 this.getCurrentDateTime();
                 this.krnTrace("Idle");
             }/// else
-            // _Scheduler.roundRobinCheck();
         } /// krnOnCPUClockPulse
 
         public countCpuBurst(): void {

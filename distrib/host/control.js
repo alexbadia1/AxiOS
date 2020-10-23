@@ -34,6 +34,8 @@ var TSOS;
             _visualCpu = document.getElementById("visual--cpu--table");
             /// Get global reference for visual pcb
             _visualPcb = document.getElementById("visual--pcb--table");
+            /// Get global reference for visual pcb
+            _visualResidentList = document.getElementById("visual--pcb");
             // Enable the added-in canvas text functions (see canvastext.ts for provenance and details).
             TSOS.CanvasTextFunctions.enable(_DrawingContext); // Text functionality is now built in to the HTML5 canvas. But this is old-school, and fun, so we'll keep it.
             // Clear the log text box.
@@ -188,16 +190,6 @@ var TSOS;
             _visualCpu.rows[1].cells[5].innerHTML = _CPU.Zflag;
         } /// updateVisualCpu
         static updateVisualPcb() {
-            /// Process Control Block should be updated but not wiped.
-            /// Should be able to see the last state of the PCB
-            ///
-            /// This is technically context switching so move to dispatcher
-            ///
-            // _CPU.localPCB.programCounter = _CPU.PC;
-            // _CPU.localPCB.accumulator = _CPU.Acc;
-            // _CPU.localPCB.xRegister = _CPU.Xreg;
-            // _CPU.localPCB.yRegister = _CPU.Yreg;
-            // _CPU.localPCB.zFlag = _CPU.Zflag;
             /// Visual Updates
             _visualPcb.rows[1].cells[0].innerHTML = _CPU.localPCB.processID;
             _visualPcb.rows[1].cells[1].innerHTML = this.formatToHexWithPadding(_CPU.PC);
@@ -344,8 +336,55 @@ var TSOS;
             _StdOut.advanceLine();
             _OsShell.putPrompt();
         } /// dumpScheduleMetaData
-        static dumpResidentList() {
+        static createVisualResidentList(pcb) {
+            /// Create a table with two rows
+            var table = document.createElement('table');
+            table.setAttribute("id", "tempTable");
+            var rowWithHeaders = document.createElement('tr');
+            var rowWithValues = document.createElement('tr');
+            table.appendChild(rowWithHeaders);
+            table.appendChild(rowWithValues);
+            /// Create cells with text
+            for (var cellNum = 0; cellNum < 10; ++cellNum) {
+                /// Create the header cell
+                var headerCell = document.createElement('td');
+                var innerHtmlHeaderCell = document.createTextNode("");
+                /// Create value cell
+                var valueCell = document.createElement('td');
+                var innerHtmlValueCell = document.createTextNode("");
+                /// Append the cells and their values
+                valueCell.appendChild(innerHtmlValueCell);
+                headerCell.appendChild(innerHtmlHeaderCell);
+                rowWithValues.appendChild(valueCell);
+                rowWithHeaders.appendChild(headerCell);
+            } /// for
+            _visualResidentList.appendChild(table);
+            for (var i = 0; i < 1; ++i) {
+                table.rows[1].cells[0].innerHTML = pcb.processID.toString();
+                table.rows[1].cells[1].innerHTML = this.formatToHexWithPadding(pcb.programCounter);
+                table.rows[1].cells[2].innerHTML = pcb.instructionRegister;
+                table.rows[1].cells[3].innerHTML = pcb.accumulator;
+                table.rows[1].cells[4].innerHTML = pcb.xRegister;
+                table.rows[1].cells[5].innerHTML = pcb.yRegister;
+                table.rows[1].cells[6].innerHTML = pcb.zFlag.toString();
+                table.rows[1].cells[7].innerHTML = pcb.priority.toString();
+                table.rows[1].cells[8].innerHTML = pcb.processState;
+                table.rows[1].cells[9].innerHTML = `Vol ${pcb.volumeIndex + 1}`;
+            } /// for
         } /// dumpResidentList
+        static visualizeResidentList() {
+            try {
+                document.getElementById("tempTable").parentNode.removeChild(document.getElementById("tempTable"));
+                document.getElementById("tempTable").parentNode.removeChild(document.getElementById("tempTable"));
+            } /// try
+            catch (e) {
+                _Kernel.krnTrace(e);
+                _Kernel.krnTrace("No resident list to delete.");
+            } /// catch
+            for (var index = 0; index < _Scheduler.readyQueue.length; ++index) {
+                this.createVisualResidentList(_Scheduler.readyQueue[index]);
+            } /// for
+        } /// visualizeResidentList
     } /// class
     TSOS.Control = Control;
 })(TSOS || (TSOS = {})); /// module
