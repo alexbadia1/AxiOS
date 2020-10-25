@@ -340,6 +340,8 @@ var TSOS;
             /// Create a table with two rows
             var table = document.createElement('table');
             table.setAttribute("id", "tempTable");
+            table.style.width = "100%";
+            table.style.border = "1px solid black";
             var rowWithHeaders = document.createElement('tr');
             var rowWithValues = document.createElement('tr');
             table.appendChild(rowWithHeaders);
@@ -360,15 +362,25 @@ var TSOS;
             } /// for
             _visualResidentList.appendChild(table);
             for (var i = 0; i < 1; ++i) {
+                table.rows[0].cells[0].innerHTML = "PID";
                 table.rows[1].cells[0].innerHTML = pcb.processID.toString();
+                table.rows[0].cells[1].innerHTML = "PC";
                 table.rows[1].cells[1].innerHTML = this.formatToHexWithPadding(pcb.programCounter);
+                table.rows[0].cells[2].innerHTML = "IR";
                 table.rows[1].cells[2].innerHTML = pcb.instructionRegister;
+                table.rows[0].cells[2].innerHTML = "ACC";
                 table.rows[1].cells[3].innerHTML = pcb.accumulator;
+                table.rows[0].cells[4].innerHTML = "X";
                 table.rows[1].cells[4].innerHTML = pcb.xRegister;
+                table.rows[0].cells[5].innerHTML = "Y";
                 table.rows[1].cells[5].innerHTML = pcb.yRegister;
+                table.rows[0].cells[6].innerHTML = "Z";
                 table.rows[1].cells[6].innerHTML = pcb.zFlag.toString();
+                table.rows[0].cells[7].innerHTML = "Priority";
                 table.rows[1].cells[7].innerHTML = pcb.priority.toString();
+                table.rows[0].cells[8].innerHTML = "State";
                 table.rows[1].cells[8].innerHTML = pcb.processState;
+                table.rows[0].cells[9].innerHTML = "Location";
                 table.rows[1].cells[9].innerHTML = `Vol ${pcb.volumeIndex + 1}`;
             } /// for
         } /// dumpResidentList

@@ -125,7 +125,18 @@ var TSOS;
         } /// krnOnCPUClockPulse
         countCpuBurst() {
             /// Increase cpu burst count
-            _CPU_BURST++;
+            ///
+            /// Single Step is special as you can force count to keep increasing in single step...
+            /// so reset _CPU_BURST when in Single Step and the scheduler is empty
+            ///
+            /// Not the best solution I could think of, but the first,
+            /// Call this a "temporary fix"
+            if (_Scheduler.currentProcess === null && _Scheduler.readyQueue.length === 0) {
+                _CPU_BURST = 0;
+            } /// if
+            else {
+                _CPU_BURST++;
+            }
             /// Wait time is time spent in the ready queue soo...
             /// Loop through Ready Queue and increment each pcb's wait time by 1 cycle
             for (var i = 0; i < _Scheduler.readyQueue.length; ++i) {
@@ -408,17 +419,21 @@ var TSOS;
                     switch (_ResidentList.residentList[curr].processState) {
                         case "Terminated":
                             _StdOut.putText("Process is already Terminated!");
+                            _StdOut.advanceLine();
                             break;
                         case "Ready":
                             _StdOut.putText("Ready process removed from Ready Queue!");
+                            _StdOut.advanceLine();
                             _ResidentList.residentList[curr].processState = "Terminated";
                             break;
                         case "Running":
                             _StdOut.putText("Running process is now terminated!");
+                            _StdOut.advanceLine();
                             _ResidentList.residentList[curr].processState = "Terminated";
                             break;
                         default:
                             _StdOut.putText("Process was not scheduled to run yet!");
+                            _StdOut.advanceLine();
                             break;
                     } /// switch
                 } /// else

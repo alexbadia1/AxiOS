@@ -58,8 +58,6 @@ var TSOS;
             /// Put data into the instruction register... just to log what's going on right now
             /// Obviously b/c of the shared stored program concept we won't know that this is necessarily
             /// an instruction or not until it's decoded... 
-            ///
-            /// Hopefully I rememebr to do this cleaner...
             this.IR = data;
             this.localPCB.instructionRegister = data;
             return data;
@@ -126,12 +124,21 @@ var TSOS;
                     this.sysCall();
                     break;
                 default:
-                    /// Throw error
-                    /// Should I crash the OS instead with FATAL Error?
-                    _StdOut.putText(`Data: ${newAddressData} could not be decoded into an instruction!`);
-                    _StdOut.advanceLine();
-                    _OsShell.putPrompt();
-                    this.isExecuting = false;
+                    if (this.localPCB.processState !== "Terminated") {
+                        /// "Program" hit an invalid op code, just kill the program for now...
+                        /// By changing the current process state to "Terminated", the following 
+                        /// _Scheduler.roundRobinCheck() in Kernel will clean up this process.
+                        this.localPCB.processState = "Terminated";
+                        _Scheduler.currentProcess.processState = "Terminated";
+                        /// Letting the user know what's going on
+                        _Kernel.krnTrace(`Pid ${this.localPCB.processID} intstruction error: ${newAddressData} could not be decoded into an instruction!`);
+                        _Kernel.krnTrace(`Killing process ${this.localPCB.processID}...`);
+                        _StdOut.putText(`Pid ${this.localPCB.processID} intstruction error: ${newAddressData} could not be decoded into an instruction!`);
+                        _StdOut.advanceLine();
+                        _StdOut.putText(`Killing process ${this.localPCB.processID}...`);
+                        _StdOut.advanceLine();
+                        _OsShell.putPrompt();
+                    } /// if
                     break;
             } /// switch
             TSOS.Control.visualizeInstructionRegister(newAddressData);

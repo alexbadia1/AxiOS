@@ -44,8 +44,8 @@
    <script type="text/javascript" src="distrib/utils.js"></script>
    <!-- Uncomment the line below to enable GLaDOS testing. -->
    <!-- Apparently GlaDos is ACTUALLY poisonous-->
-   <!-- <script type="text/javascript" src="http://alanclasses.github.io/TSOS/test/glados-ip3.js"></script> -->
-   <script type="text/javascript" src="test/myGlados.js"></script>
+   <script type="text/javascript" src="http://alanclasses.github.io/TSOS/test/glados-ip3.js"></script>
+   <!-- <script type="text/javascript" src="test\myGlados.js"></script> -->
 
 </head>
 
@@ -87,7 +87,7 @@
          CPU
 
          <!--CPU Information-->
-         <div id="visual--cpu" style = "max-width: 100%">
+         <div id="visual--cpu" style="width: 100%;">
          <table id="visual--cpu--table" style="width: 100%; border: 1px solid black;">
             <tr>
                <th><span> PC </span></th>
@@ -109,7 +109,7 @@
       </div>
          <!--Process Control Block Information-->
          Processes
-         <div id="visual--pcb" style="max-width: 100%;">
+         <div id="visual--pcb" style="width: 100%;">
             <table id="visual--pcb--table" style="width: 100%; border: 1px solid black;">
                <tr>
                   <th><span> PID </span></th>
@@ -137,12 +137,12 @@
                </tr>
             </table>
          </div>
-         <div style="width: 100%; height: 320px;">
-            Memory
-            <div style="width: 100%; height: 100%; overflow-y: scroll; border: 1px solid black;">
+         Memory
+         <div style="width: 100%; max-height: 211px; overflow: hidden; overflow-y: scroll; border: 1px solid black;">
+            <div style="width: 99.475%; border: 1px solid black;">
                <!-- Functionality over fancy styling stuff for now... probably gonna switch this entire index.html to a simple flex layout 
             but now that I'm thinking about this, maybe a more modern grid layout. -->
-               <Table id="visual--memory--table" style="border: 1px solid black;"></Table>
+               <Table id="visual--memory--table" style="width: 100%;"></Table>
             </div>
          </div>
       </div>

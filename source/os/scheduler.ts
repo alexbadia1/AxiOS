@@ -9,23 +9,6 @@
  *          3.) Unordered Linked 
  *      Having a Ready Queue and Resident List should make calculating the AWT much easier 
  *      later... *Cough* *Cough* time spent in the ready queue *Cough* *Cough*
- * 
- * Why Did I Implement them all? 
- * 
- *      If you noticed when I (redundantly) implemeneted the Segmentation algorithms: First-Fit, Worst-Fit, Best-Fit
- *      I aced it on the midterm (not like it was suppose to be hard, these are very simple concepts). BUT...
- * 
- *      I learn best through "doing". The only reason why I still remember half of Gormanly's and Schwartz's information
- *      from Org and Arch and Database is, well, I remember explaining all the concepts to a friend of mine (Brian, who will 
- *      probably have you next semester), stuff with the Arduinos (rolling averages), atomicity and all that jazz.
- *      
- *      Otherwise, teaching me theory from a book is the equivalent to throwing a bunch of mud at a wall and seeing what sticks
- *      (I know. I'm far from the sharpest tool in the shed). This is why I'm glad we're actually coding this...
- *      
- *      So yeah, I implemented them all except SJF, cause well I don't think I can make that graph thing, at least not yet
- *      (again not like this is suppose to be a "hard" class, this is an introductory class to OS's anyway
- *      and like with everything else we're only scraping the surface).
- * 
  */
 
 module TSOS {
@@ -40,6 +23,7 @@ module TSOS {
             public processTurnaroundTime: number[] = [],
             public readyQueue: ProcessControlBlock[] = [],
             public currentProcess: ProcessControlBlock = null,
+            public schedulingMethod = "Round Robin",
         ) { }/// constructor
 
         public init() {
@@ -50,35 +34,26 @@ module TSOS {
             this.unInterleavedOutput = [];
         }/// init
 
-        public scheduleProcess(newProcess: ProcessControlBlock): boolean {
-            /// Give feedback if the process was successfuly scheduled or not
-            var success = false;
-
-            /// Kernel mode to schedule processes
-            _Mode = 0;
-
-            /// Ensure a new process is passed
-            if (newProcess !== null) {
-                /// Put the first process in the current process "slot"
-                if (this.currentProcess === null) {
-                    /// Round Robin Scheduling allows us to just keep enqueueing processes
-                    newProcess.processState = "Running";
-                    _Kernel.krnTrace(`Process ${newProcess.processID} set as first process`);
-                    this.currentProcess = newProcess;
-                    _Dispatcher.setNewProcessToCPU( this.currentProcess);
-                }/// if
-
-                /// Put the remaining process in the ready queue
-                else {
-                    /// Round Robin Scheduling allows us to just keep enqueueing processes
-                    newProcess.processState = "Ready";
-                    _Kernel.krnTrace(`Process ${newProcess.processID} added to ready queue`);
-                    this.readyQueue.push(newProcess);
-                }/// else
-
-                /// Process scheduled successfully
-                success = true;
-            }/// if
+        public scheduleProcess(newPcb: ProcessControlBlock): boolean {
+            var success: boolean = false;
+            switch (this.schedulingMethod) {
+                case "Round Robin":
+                    success = this.scheduleAsRoundRobin(newPcb);
+                    break;
+                case "First Come First Serve":
+                    /// FCFS is basically round robin with an infinite quantum...
+                    this.quanta = Number.MAX_SAFE_INTEGER;
+                    success = this.scheduleAsRoundRobin(newPcb);
+                    break;
+                /// Make this extra credit and I'll do it...
+                /// I already have a priority queue implemented
+                /// case "Non-Preemptive Priority":
+                    /// break;
+                /// case "Preemptive Priority":
+                    /// break;
+                default: 
+                    break;
+            }/// switch
 
             return success;
             /// More...?
@@ -111,6 +86,39 @@ module TSOS {
             }/// else
         }/// runSchedule
 
+        public scheduleAsRoundRobin(newProcess: ProcessControlBlock): boolean {
+             /// Give feedback if the process was successfuly scheduled or not
+             var success = false;
+
+             /// Kernel mode to schedule processes
+             _Mode = 0;
+
+             /// Ensure a new process is passed
+             if (newProcess !== null) {
+                 /// Put the first process in the current process "slot"
+                 if (this.currentProcess === null) {
+                     /// Round Robin Scheduling allows us to just keep enqueueing processes
+                     newProcess.processState = "Running";
+                     _Kernel.krnTrace(`Process ${newProcess.processID} set as first process`);
+                     this.currentProcess = newProcess;
+                     _Dispatcher.setNewProcessToCPU(this.currentProcess);
+                 }/// if
+
+                 /// Put the remaining process in the ready queue
+                 else {
+                     /// Round Robin Scheduling allows us to just keep enqueueing processes
+                     newProcess.processState = "Ready";
+                     _Kernel.krnTrace(`Process ${newProcess.processID} added to ready queue`);
+                     this.readyQueue.push(newProcess);
+                 }/// else
+
+                 /// Process scheduled successfully
+                 success = true;
+             }/// if
+
+             return success;
+        }/// scheduleAsRoundRobin
+
         public roundRobinCheck(): void {
             /// Back to kernel mode for quantum and termination check
             _Kernel.krnTrace(`Kernel Mode Activated...`);
@@ -126,16 +134,16 @@ module TSOS {
                     _Kernel.krnTrace(`Another process was found in Ready Queue, issuing context switch...`);
 
                     /// Queue interrupt for context switch
-                    _KernelInterruptPriorityQueue.enqueue(new Node (new TSOS.Interrupt(CONTEXT_SWITCH_IRQ, [])));
-                    
+                    _KernelInterruptPriorityQueue.enqueue(new Node(new TSOS.Interrupt(CONTEXT_SWITCH_IRQ, [])));
+
                     /// Grab the procress' output, time spent executing, time spent waiting, turnaround time
                     _Kernel.krnTrace(`Collecting process ${this.currentProcess.processID} metadata before context switch.`);
                     var turnAroundTime = (this.currentProcess.timeSpentExecuting + this.currentProcess.waitTime);
-                    this.unInterleavedOutput.push(`Pid ${this.currentProcess.processID}: ${this.currentProcess.outputBuffer}`); 
+                    this.unInterleavedOutput.push(`Pid ${this.currentProcess.processID}: ${this.currentProcess.outputBuffer}`);
                     this.processesMetaData.push([
-                        this.currentProcess.processID, 
+                        this.currentProcess.processID,
                         this.currentProcess.timeSpentExecuting,
-                        this.currentProcess.waitTime, 
+                        this.currentProcess.waitTime,
                         turnAroundTime,
                     ]);
 
@@ -156,7 +164,7 @@ module TSOS {
                     _Kernel.krnTrace(`No more process found in Ready Queue, preparing to clear scheduler...`);
                     /// Stay in Kernel Mode
                     _Mode = 0;
-                    
+
                     /// Stop CPU execution since all processe are terminated
                     _CPU.isExecuting = false;
 
@@ -165,9 +173,9 @@ module TSOS {
                     var turnAroundTime = (this.currentProcess.timeSpentExecuting + this.currentProcess.waitTime);
                     this.unInterleavedOutput.push(`Pid ${this.currentProcess.processID}: ${this.currentProcess.outputBuffer}`);
                     this.processesMetaData.push([
-                        this.currentProcess.processID, 
+                        this.currentProcess.processID,
                         this.currentProcess.timeSpentExecuting,
-                        this.currentProcess.waitTime, 
+                        this.currentProcess.waitTime,
                         turnAroundTime,
                     ]);
 

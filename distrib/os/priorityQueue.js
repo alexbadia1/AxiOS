@@ -12,7 +12,7 @@
 var TSOS;
 (function (TSOS) {
     class Node {
-        constructor(data = null, priority = 0) {
+        constructor(data = null, priority = 1) {
             this.data = data;
             this.priority = priority;
             this.data = data;
@@ -28,50 +28,13 @@ var TSOS;
         }
         /// Put on end of queue and bubble it up to correct spot
         enqueue(newValue) {
-            switch (newValue.data.irq) {
-                case TIMER_IRQ:
-                    newValue.priority = 1;
-                    break;
-                case KEYBOARD_IRQ:
-                    newValue.priority = 1;
-                    break;
-                case SYS_CALL_IRQ:
-                    newValue.priority = 1;
-                    break;
-                case PS_IRQ:
-                    newValue.priority = 1;
-                    break;
-                case SINGLE_STEP_IRQ:
-                    newValue.priority = 1;
-                    break;
-                case NEXT_STEP_IRQ:
-                    newValue.priority = 1;
-                    break;
-                case CONTEXT_SWITCH_IRQ:
-                    newValue.priority = 1;
-                    break;
-                case CHANGE_QUANTUM_IRQ:
-                    newValue.priority = 2;
-                    break;
-                case RUN_PROCESS_IRQ:
-                    newValue.priority = 1;
-                    break;
-                case RUN_ALL_PROCESSES_IRQ:
-                    newValue.priority = 1;
-                    break;
-                case TERMINATE_PROCESS_IRQ:
-                    newValue.priority = 1;
-                    break;
-                case KILL_PROCESS_IRQ:
-                    newValue.priority = 1;
-                    break;
-                case KILL_ALL_PROCESSES_IRQ:
-                    newValue.priority = 1;
-                    break;
-                default:
-                    newValue.priority = 1;
-                    break;
-            } /// switch
+            /// Technically doesn't belong here
+            ///
+            /// Make sure quantum changes happen last by giving a higher number for priority
+            /// All other interrupts have a default priority of 1, as you can see in the Node class constructor
+            if (newValue.data.irq === CHANGE_QUANTUM_IRQ) {
+                newValue.priority = 2;
+            } /// if
             /// Put value on the "bottom-left" most part of the heap...
             this.nodes.push(newValue);
             /// Bubble to proper spot
@@ -195,4 +158,49 @@ var TSOS;
     } /// class
     TSOS.PriorityQueue = PriorityQueue;
 })(TSOS || (TSOS = {})); /// module
+/// TODO: move out of data structure
+// switch (newValue.data.irq) {
+//     case TIMER_IRQ:
+//         newValue.priority = 1;
+//         break;
+//     case KEYBOARD_IRQ:
+//         newValue.priority = 1;
+//         break;
+//     case SYS_CALL_IRQ:
+//         newValue.priority = 1;
+//         break;
+//     case PS_IRQ:
+//         newValue.priority = 1;
+//         break;
+//     case SINGLE_STEP_IRQ:
+//         newValue.priority = 1;
+//         break;
+//     case NEXT_STEP_IRQ:
+//         newValue.priority = 1;
+//         break;
+//     case CONTEXT_SWITCH_IRQ:
+//         newValue.priority = 1;
+//         break;
+//     case CHANGE_QUANTUM_IRQ:
+//         newValue.priority = 2;
+//         break;
+//     case RUN_PROCESS_IRQ:
+//         newValue.priority = 1;
+//         break;
+//     case RUN_ALL_PROCESSES_IRQ:
+//         newValue.priority = 1;
+//         break;
+//     case TERMINATE_PROCESS_IRQ:
+//         newValue.priority = 1;
+//         break;
+//     case KILL_PROCESS_IRQ:
+//         newValue.priority = 1;
+//         break;
+//     case KILL_ALL_PROCESSES_IRQ:
+//         newValue.priority = 1;
+//         break;
+//     default:
+//         newValue.priority = 1;
+//         break;
+// }/// switch
 //# sourceMappingURL=priorityQueue.js.map

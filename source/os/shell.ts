@@ -804,7 +804,7 @@ module TSOS {
         public shellClearMem() {
             var tempSize = _ResidentList.residentList.length;
             /// Processes are NOT running, safe to clear memory
-            if (!_CPU.isExecuting) {
+            if (!_CPU.isExecuting || (_Scheduler.currentProcess === null && _Scheduler.readyQueue.length === 0)) {
                 /// Grab each volume and write "unlock" them
                 for (var vol: number = 0; vol < _MemoryManager.simpleVolumes.length; ++vol) {
                     _MemoryManager.simpleVolumes[vol].writeUnlock();
@@ -891,6 +891,12 @@ module TSOS {
 
         /// quantum <int> - let the user set the Round Robin Quantum (measured in CPU cycles)
         public shellQuantum(args: string[]) {
+            if (_Scheduler.schedulingMethod !== "Round Robin"){
+                _StdOut.putText(`Quantum cannot be changed while using ${_Scheduler.schedulingMethod} schheduling!`);
+                _StdOut.advanceLine();
+                return;
+            }/// if
+
             /// Check for one argmument
             if (args.length === 1) {
                 /// Getting and cleansing input
@@ -904,13 +910,6 @@ module TSOS {
                     var oldDecimalQuanta = _Scheduler.quanta;
                     
                     /// Set the new quantum...
-                    ///
-                    /// Cannot change while processes are running
-                    if (_CPU.isExecuting === true) {
-                        _StdOut.putText(`Quantum cannot be changed while process are running!`);
-                        _StdOut.advanceLine();
-                    }/// if
-
                     /// New quanta must be a positive integer
                     if (parseInt(trimmedStringQuanta, 10) > 0){
                         /// Could process as interrupt to allow for changing the quantum mid cycle...
