@@ -16,7 +16,7 @@ Master:
 Branches: 
 - [iProject1](https://github.com/alexbadia1/myAlanClasses/tree/iProject1)
 - [iProject2](https://github.com/alexbadia1/myAlanClasses/tree/iProject2)
-- [iProject3](https://github.com/alexbadia1/myAlanClasses/tree/iProject3)
+- [iProject3](https://github.com/alexbadia1/myAlanClasses/tree/iPorject3)
 - [iProject4](https://github.com/alexbadia1/myAlanClasses/tree/iProject4)
 
 Labs:
