@@ -116,7 +116,7 @@ module TSOS {
                     if (_NextStep) {
                         this.countCpuBurst();
                         _CPU.cycle();
-                        _Scheduler.roundRobinCheck();
+                        _Scheduler.checkSchedule();
                         TSOS.Control.updateVisualMemory();
                         TSOS.Control.updateVisualCpu();
                         TSOS.Control.updateVisualPcb();
@@ -129,7 +129,7 @@ module TSOS {
                 else {
                     this.countCpuBurst();
                     _CPU.cycle();
-                    _Scheduler.roundRobinCheck();
+                    _Scheduler.checkSchedule();
                     TSOS.Control.updateVisualMemory();
                     TSOS.Control.updateVisualCpu();
                     TSOS.Control.updateVisualPcb();

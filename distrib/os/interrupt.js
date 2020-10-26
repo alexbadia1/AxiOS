@@ -15,7 +15,7 @@ var TSOS;
                 case KEYBOARD_IRQ:
                     this.priority = 1;
                     break;
-                case SYS_CALL_IRQ:
+                case SYS_CALL_IRQ: /// Maybe should have a higher priority (lower number)?
                     this.priority = 1;
                     break;
                 case PS_IRQ:

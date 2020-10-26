@@ -1,5 +1,5 @@
 /**
- * Now that I've found a free pdf version of the textbook, everything makes a little more sense...
+ * Now that I've found a FREE PDF version of the textbook, everything makes a little more sense...
  *
  * 5.1.4 Dispatcher
  * Another component involved in the CPU-scheduling function is the dispatcher. The dispatcher
@@ -27,7 +27,13 @@ var TSOS;
         constructor() { } /// constructor
         contextSwitch() {
             _Kernel.krnTrace("Switching context...");
-            /// Move current process to end of ready queue
+            /// if (current process isn't terminated)
+            ///     put the process back at the end of the ready queue
+            ///
+            /// else (current process is terminated)
+            ///     let the terminated current process get overwritten by the next process
+            ///     dequeud from the ready queue, WITHOUT re-queueing the terminated current process
+            ///     effectivley "removing" the terminated current process
             if (_Scheduler.currentProcess.processState !== "Terminated") {
                 /// Save current process cpu context
                 this.saveOldContextFromCPU(_Scheduler.currentProcess);
@@ -36,6 +42,12 @@ var TSOS;
                 _Scheduler.currentProcess.processState = "Ready";
                 _Scheduler.readyQueue.enqueue(_Scheduler.currentProcess);
             } /// if
+            /// if (there are more processes)
+            ///     dequeue a process from the ready queue and set it as the new "current process"
+            ///
+            /// else (no more process)
+            ///     don't try to deqeueue and process from the ready queue, instead let the current
+            ///     process keep running until termination.
             if (_Scheduler.readyQueue.getSize() > 0) {
                 /// Dequeue process from front of ready queue
                 _Scheduler.currentProcess = _Scheduler.readyQueue.dequeue();
@@ -55,7 +67,7 @@ var TSOS;
             _CPU.Yreg = newPcb.yRegister;
             _CPU.Zflag = newPcb.zFlag;
             _CPU.localPCB = _Scheduler.currentProcess;
-        } /// contextSwitch
+        } /// setNewProcessToCPU
         saveOldContextFromCPU(pcb) {
             _Kernel.krnTrace(`Saving process ${pcb.processID} context from cpu.`);
             pcb.programCounter = _CPU.PC;

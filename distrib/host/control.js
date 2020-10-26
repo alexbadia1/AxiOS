@@ -51,8 +51,11 @@ var TSOS;
                 // the global (and properly capitalized) _GLaDOS variable.
                 _GLaDOS = new Glados();
                 _GLaDOS.init();
-            }
-        }
+            } /// if
+        } /// hostInit
+        ///////////////
+        /// Buttons ///
+        ///////////////
         static hostLog(msg, source = "?") {
             // Note the OS CLOCK.
             var clock = _OSclock;
@@ -64,7 +67,7 @@ var TSOS;
             var taLog = document.getElementById("taHostLog");
             taLog.value = str + taLog.value;
             // TODO in the future: Optionally update a log database or some streaming service.
-        }
+        } /// hostLog
         //
         // Host Events
         //
@@ -101,7 +104,7 @@ var TSOS;
             document.getElementById('divLog--status').innerText = 'AxiOS Alive';
             _Kernel = new TSOS.Kernel();
             _Kernel.krnBootstrap(); // _GLaDOS.afterStartup() will get called in there, if configured.
-        }
+        } /// hostBtnStartOS_click
         static hostBtnHaltOS_click(btn) {
             Control.hostLog("Emergency halt", "host");
             Control.hostLog("Attempting Kernel shutdown.", "host");
@@ -110,36 +113,49 @@ var TSOS;
             // Stop the interval that's simulating our clock pulse.
             clearInterval(_hardwareClockID);
             // TODO: Is there anything else we need to do here?
-        }
+        } /// hostBtnHaltOS_click
         static hostBtnReset_click(btn) {
             // The easiest and most thorough way to do this is to reload (not refresh) the document.
             location.reload(true);
             // That boolean parameter is the 'forceget' flag. When it is true it causes the page to always
             // be reloaded from the server. If it is false or not specified the browser may reload the
             // page from its cache, which is not what we want.
-        }
+        } /// hostBtnReset_click
+        /************************************************************************************************
+        iProject2 Buttons and Display:
+            Provides the ability to single-step execution (via GUI buttons):
+                - hostBtnSingleStep_click(): toggles single step mode on or off
+                - hostBtnNextStep_click(): performs one kernel clock pulse per button press
+                - intializeVisualMemory(): called on start up of os to create the table for memory
+                - updateVisualMemory(): called after every cpu cycle to visually update the memory table
+                - updateVisualCpu(): called after every cpu cycle to visually update the cpu table
+                - updateVisualPcb(): called after every cpu cycle to visually update the process table
+                - visualizeInstructionRegister()
+                - formatToHexWithPadding(): formats decimal string to hexadecimal
+        **************************************************************************************************/
         static hostBtnSingleStep_click(btn) {
-            /// Enable Next Step Button
-            ///
-            ///Enter Single step mode...
-            /// Or out of single step mode..
-            ///
             /// Must do this first so the text label updates properly
             _SingleStepMode = !_SingleStepMode;
+            /// Single Step Mode active
             if (_SingleStepMode) {
+                /// Enable the "Next Step" button
                 document.getElementById("btnNextStep").disabled = false;
+                /// Show user that single step mode is ON
                 document.getElementById("btnSingleStepMode").value = "Single Step OFF";
             } /// if
+            /// Single Step Mode 
             else {
+                /// Enable the "Next Step" button
                 document.getElementById("btnNextStep").disabled = true;
+                /// Visually show user that single step mode is OFF
                 document.getElementById("btnSingleStepMode").value = "Single Step ON";
             } /// else
             _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(SINGLE_STEP_IRQ, []));
-        }
+        } /// hostBtnSingleStep_click
         static hostBtnNextStep_click(btn) {
             /// Process single step interrupt
             _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(NEXT_STEP_IRQ, []));
-        }
+        } /// hostBtnNextStep_click
         static initializeVisualMemory() {
             /// Increment by 8 on order to create a row every 8 bytes
             for (var physicalAddressRow = 0; physicalAddressRow < _MemoryAccessor.mainMemorySize() / 8; ++physicalAddressRow) {
@@ -215,7 +231,7 @@ var TSOS;
             return paddedhexNumber;
         } /// formatToHexWithPadding
         /*************************************************************************************
-        iProject4 Display:
+        iProject3 Display:
             calculateAvergeWaitTime()
             calculateAverageTurnAroundTime()
             showCPUBurstUsage()
@@ -383,6 +399,9 @@ var TSOS;
             table.rows[1].cells[9].innerHTML = `Vol ${pcb.volumeIndex + 1}`;
         } /// dumpResidentList
         static visualizeResidentList() {
+            /// Visually refreshing the "Ready Queue" requires deleting the pre-existing tables.
+            /// Obviously on the first iteration there will be no pre-existing tables, so just catch the error
+            /// and continue building the table.
             try {
                 document.getElementById("tempTable").parentNode.removeChild(document.getElementById("tempTable"));
                 document.getElementById("tempTable").parentNode.removeChild(document.getElementById("tempTable"));

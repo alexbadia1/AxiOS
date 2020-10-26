@@ -79,6 +79,31 @@ var TSOS;
                 _Mode = 1;
             } /// else
         } /// runSchedule
+        checkSchedule() {
+            var success = false;
+            switch (this.schedulingMethod) {
+                case "Round Robin":
+                    this.roundRobinCheck();
+                    break;
+                case "First Come First Serve":
+                    this.roundRobinCheck();
+                    break;
+                /// Make this extra credit and I'll do it...
+                /// I already have a priority queue implemented
+                /// case "Non-Preemptive Priority":
+                /// break;
+                /// case "Preemptive Priority":
+                /// break;
+                default:
+                    break;
+            } /// switch
+            return success;
+            /// More...?
+            /// TODO: Implement the other types of scheuling...
+            // public firstComeFirstServeSchedule() { }
+            // public preEmptivePriority() { }
+            // public prioritySchedule() { }
+        } /// checkSchedule
         scheduleAsRoundRobin(newProcess) {
             /// Give feedback if the process was successfuly scheduled or not
             var success = false;
