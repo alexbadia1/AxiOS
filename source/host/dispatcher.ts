@@ -39,12 +39,12 @@ module TSOS {
 
                 /// Enqueue the current process to end of Ready Queue
                 _Scheduler.currentProcess.processState = "Ready";
-                _Scheduler.readyQueue.push(_Scheduler.currentProcess);
+                _Scheduler.readyQueue.enqueue(_Scheduler.currentProcess);
             }/// if
 
-            if (_Scheduler.readyQueue.length > 0) {
+            if (_Scheduler.readyQueue.getSize() > 0) {
                 /// Dequeue process from front of ready queue
-                _Scheduler.currentProcess = _Scheduler.readyQueue.shift();
+                _Scheduler.currentProcess = _Scheduler.readyQueue.dequeue();
 
                 /// Load CPU context with new process context
                 if (_Scheduler.currentProcess.processState !== "Terminated") {

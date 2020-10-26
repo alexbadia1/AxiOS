@@ -59,16 +59,36 @@ module TSOS {
             /// Make sure I can't overflow into other parts of memory
             /// I am very paranoid...
             if ((physicalAddress >= newVolume.physialLimit) || (newLogicalAddress > 255)) {
+                /// Let user know what happened
+                _Kernel.krnTrace("Memory Upper Bound Limit Reached, Cannot Write Out of Bounds Address!");
                 _StdOut.advanceLine();
                 _StdOut.putText("Memory Upper Bound Limit Reached, Cannot Write Out of Bounds Address!");
                 _OsShell.putPrompt();
+
                 /// Terminate Program (don't forget to update the PCB process state)
+                if (_CPU.localPCB.processState !== "Terminated") {
+                    /// "Program" memory bounds violation, just kill the program for now...
+                    /// By changing the current process state to "Terminated", the following 
+                    /// _Scheduler.roundRobinCheck() in Kernel will clean up _CPU process.
+                    _CPU.localPCB.processState = "Terminated";
+                    _Scheduler.currentProcess.processState = "Terminated";
+                }/// if
             }///else-if
             else if ((physicalAddress < newVolume.physicalBase) || (newLogicalAddress < 0)) {
+                /// Let user know what happened
+                _Kernel.krnTrace("Memory Lower Bound Limit Reached, Cannot Write Out of Bounds Address!");
                 _StdOut.advanceLine();
                 _StdOut.putText("Memory Lower Bound Limit Reached, Cannot Write Out of Bounds Address!");
                 _OsShell.putPrompt();
+
                 /// Terminate Program (don't forget to update the PCB process state)
+                if (_CPU.localPCB.processState !== "Terminated") {
+                    /// "Program" memory bounds violation, just kill the program for now...
+                    /// By changing the current process state to "Terminated", the following 
+                    /// _Scheduler.roundRobinCheck() in Kernel will clean up _CPU process.
+                    _CPU.localPCB.processState = "Terminated";
+                    _Scheduler.currentProcess.processState = "Terminated";
+                }/// if
             }///else-if
             else {
                 _Memory.getAddress(physicalAddress).write(newData);

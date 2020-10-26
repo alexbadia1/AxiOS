@@ -772,7 +772,7 @@ module TSOS {
                         ///     > run 1
                         /// No matter what order, should still schedule the processes in round robin fashion...
                         /// Use Single Step to see what's "really" happening...
-                        _KernelInterruptPriorityQueue.enqueue(new Node (new TSOS.Interrupt(RUN_PROCESS_IRQ, [curr, args[0]])));
+                        _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(RUN_PROCESS_IRQ, [curr, args[0]]));
                     }/// else
                 }/// try
                 catch (e) {
@@ -804,7 +804,7 @@ module TSOS {
         public shellClearMem() {
             var tempSize = _ResidentList.residentList.length;
             /// Processes are NOT running, safe to clear memory
-            if (!_CPU.isExecuting || (_Scheduler.currentProcess === null && _Scheduler.readyQueue.length === 0)) {
+            if (!_CPU.isExecuting || (_Scheduler.currentProcess === null && _Scheduler.readyQueue.getSize() === 0)) {
                 /// Grab each volume and write "unlock" them
                 for (var vol: number = 0; vol < _MemoryManager.simpleVolumes.length; ++vol) {
                     _MemoryManager.simpleVolumes[vol].writeUnlock();
@@ -846,13 +846,13 @@ module TSOS {
                 ///     > runall
                 /// No matter what order, should still schedule the processes in round robin fashion...
                 /// Use Single Step to see what's "really" happening...
-                _KernelInterruptPriorityQueue.enqueue(new Node(new TSOS.Interrupt(RUN_ALL_PROCESSES_IRQ, [])));
+                _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(RUN_ALL_PROCESSES_IRQ, []));
             }/// else
         }/// runall
 
         /// ps - display the PID and state of all processes
         public shellPs() {
-            _KernelInterruptPriorityQueue.enqueue(new Node (new TSOS.Interrupt(PS_IRQ, [])));
+            _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(PS_IRQ, []));
         }///ps
 
         /// kill <pid> - kills one process (specified by process ID)
@@ -873,7 +873,7 @@ module TSOS {
                     ///     > killall
                     /// No matter what order, should still kill the processes
                     /// Use Single Step to see what's "really" happening...
-                    _KernelInterruptPriorityQueue.enqueue(new Node (new TSOS.Interrupt(KILL_PROCESS_IRQ, [args])));
+                    _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(KILL_PROCESS_IRQ, [args]));
                 }/// else
             }/// if
 
@@ -886,7 +886,7 @@ module TSOS {
 
         /// killall - kill all processes
         public shellKillAll() {
-            _KernelInterruptPriorityQueue.enqueue(new Node (new TSOS.Interrupt(KILL_ALL_PROCESSES_IRQ, [])));
+            _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(KILL_ALL_PROCESSES_IRQ, []));
         }/// kill all processes
 
         /// quantum <int> - let the user set the Round Robin Quantum (measured in CPU cycles)
@@ -915,7 +915,7 @@ module TSOS {
                         /// Could process as interrupt to allow for changing the quantum mid cycle...
                         /// Actually just don't allow it, too much brain damage already...
                         /// interrupt it is
-                        _KernelInterruptPriorityQueue.enqueue(new Node (new TSOS.Interrupt(CHANGE_QUANTUM_IRQ, [oldDecimalQuanta, parseInt(trimmedStringQuanta, 10)])));
+                        _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(CHANGE_QUANTUM_IRQ, [oldDecimalQuanta, parseInt(trimmedStringQuanta, 10)]));
                     }/// else-if
 
                     /// Invalid Quantum

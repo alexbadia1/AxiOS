@@ -21,14 +21,14 @@ module TSOS {
             public processesMetaData: any[] = [],
             public unInterleavedOutput: string[] = [],
             public processTurnaroundTime: number[] = [],
-            public readyQueue: ProcessControlBlock[] = [],
+            public readyQueue = new PriorityQueue(),
             public currentProcess: ProcessControlBlock = null,
             public schedulingMethod = "Round Robin",
         ) { }/// constructor
 
         public init() {
             this.startBurst = 0;
-            this.readyQueue = [];
+            this.readyQueue = new PriorityQueue();
             this.currentProcess = null;
             this.processesMetaData = [];
             this.unInterleavedOutput = [];
@@ -68,7 +68,7 @@ module TSOS {
             _Mode = 0;
             /// Make sure there are process loaded in the ready queue or
             /// in the current process slot
-            if (this.readyQueue.length === 0 && this.currentProcess === null) {
+            if (this.readyQueue.getSize() === 0 && this.currentProcess === null) {
                 /// Don't stop the cpu from executing, as it may already be executing other process
                 _StdOut.putText("No process found either loaded or not already terminated, running, scheduled.");
                 _StdOut.advanceLine();
@@ -109,7 +109,7 @@ module TSOS {
                      /// Round Robin Scheduling allows us to just keep enqueueing processes
                      newProcess.processState = "Ready";
                      _Kernel.krnTrace(`Process ${newProcess.processID} added to ready queue`);
-                     this.readyQueue.push(newProcess);
+                     this.readyQueue.enqueue(newProcess);
                  }/// else
 
                  /// Process scheduled successfully
@@ -130,11 +130,11 @@ module TSOS {
                 _Kernel.krnTrace(`Current process ${this.currentProcess.processID} terminated.`);
 
                 /// Context Switch but don't put current process back in process queue
-                if (this.readyQueue.length > 0) {
+                if (this.readyQueue.getSize() > 0) {
                     _Kernel.krnTrace(`Another process was found in Ready Queue, issuing context switch...`);
 
                     /// Queue interrupt for context switch
-                    _KernelInterruptPriorityQueue.enqueue(new Node(new TSOS.Interrupt(CONTEXT_SWITCH_IRQ, [])));
+                    _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(CONTEXT_SWITCH_IRQ, []));
 
                     /// Grab the procress' output, time spent executing, time spent waiting, turnaround time
                     _Kernel.krnTrace(`Collecting process ${this.currentProcess.processID} metadata before context switch.`);
@@ -193,10 +193,10 @@ module TSOS {
             /// Current process has not terminated but the quantum was reached:
             else if ((_CPU_BURST - this.startBurst) >= this.quanta) {
                 /// Context Switch but put process back in process queue
-                if (this.readyQueue.length > 0) {
+                if (this.readyQueue.getSize() > 0) {
                     _Kernel.krnTrace(`Process ${this.currentProcess.processID} quantum reached, issuing context switch...`);
                     /// Queue interrupt for context switch
-                    _KernelInterruptPriorityQueue.enqueue(new Node(new TSOS.Interrupt(CONTEXT_SWITCH_IRQ, [])));
+                    _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(CONTEXT_SWITCH_IRQ, []));
 
                     /// Reset the starting burst for the next new process
                     this.startBurst = _CPU_BURST;

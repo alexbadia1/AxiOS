@@ -16,7 +16,7 @@ const APP_NAME: string    = "TSOS";
 const APP_VERSION: string = "0.07";
 
 // This is in ms (milliseconds) so 1000 = 1 second.
-const CPU_CLOCK_INTERVAL: number = 1000;
+const CPU_CLOCK_INTERVAL: number = .000000001;
 
 // Pages 23 (timer), 9 (interrupts), and 561 (interrupt priority).
 // NOTE: The timer is different from hardware/host clock pulses. Don't confuse these.

@@ -243,7 +243,7 @@ var TSOS;
         /// Break
         break() {
             /// Process break as an interrupt as well.
-            _KernelInterruptPriorityQueue.enqueue(new TSOS.Node(new TSOS.Interrupt(TERMINATE_PROCESS_IRQ, [])));
+            _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(TERMINATE_PROCESS_IRQ, []));
             /// Update the local process state that each
             /// 
             /// The local PCB really just refernces the global PCB in the global PCB queue
@@ -310,10 +310,10 @@ var TSOS;
         sysCall() {
             /// Process handling Y register as an interrupt
             if (parseInt(this.Xreg, 16) === 1) {
-                _KernelInterruptPriorityQueue.enqueue(new TSOS.Node(new TSOS.Interrupt(SYS_CALL_IRQ, [this.localPCB])));
+                _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(SYS_CALL_IRQ, [this.localPCB]));
             } /// if
             else if (parseInt(this.Xreg, 16) === 2) {
-                _KernelInterruptPriorityQueue.enqueue(new TSOS.Node(new TSOS.Interrupt(SYS_CALL_IRQ, [this.localPCB])));
+                _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(SYS_CALL_IRQ, [this.localPCB]));
             } /// else if
             this.PC++;
         } /// sysCall

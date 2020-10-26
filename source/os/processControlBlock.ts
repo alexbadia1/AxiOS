@@ -23,7 +23,7 @@ module TSOS {
             public xRegister: string = "00",
             public yRegister: string = "00",
             public zFlag: number = 0,
-            public priority: number = 0,
+            public priority: number = 1,
             public processState: string = 'New',
             public volumeIndex: number = -1,
             public outputBuffer: string = "",

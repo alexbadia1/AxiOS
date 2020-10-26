@@ -15,7 +15,7 @@ Might include:
 var TSOS;
 (function (TSOS) {
     class ProcessControlBlock {
-        constructor(processID = 0, programCounter = 0, instructionRegister = "00", accumulator = "00", xRegister = "00", yRegister = "00", zFlag = 0, priority = 0, processState = 'New', volumeIndex = -1, outputBuffer = "", timeSpentExecuting = 0, waitTime = 0) {
+        constructor(processID = 0, programCounter = 0, instructionRegister = "00", accumulator = "00", xRegister = "00", yRegister = "00", zFlag = 0, priority = 1, processState = 'New', volumeIndex = -1, outputBuffer = "", timeSpentExecuting = 0, waitTime = 0) {
             this.processID = processID;
             this.programCounter = programCounter;
             this.instructionRegister = instructionRegister;

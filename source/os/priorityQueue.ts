@@ -5,38 +5,29 @@
  * Yeah request an change_quantum_irq, but what if there's a 
  * context_switch_irq, or termination_queued? 
  * 
- * The quantum change should probably take lower priority (higher number),
- * even though implementing a priority queue may not be fully necessary.
+ * The quantum change should probably take lower priority (higher number).
+ * Implementing a priority queue may not be fully necessary, but it'll make project 4 
+ * a little bit easier...
  * 
  */
 module TSOS {
 
-    export class Node {
-        constructor(
-            public data: any = null,
-            public priority: number = 1) {
-                this.data = data;
-        }/// constructor
-    }/// class
-
     export class PriorityQueue {
         constructor(
-            public nodes: Node[] = [],
+            public nodes: any[] = [],
         ) { }
 
         public getSize(): number {
             return this.nodes.length;
-        }
+        }/// getSize
+
+        /// TODO: Add protection
+        public getIndex(index: number = 0) {
+            return this.nodes[index];
+        }/// getIndex
+
         /// Put on end of queue and bubble it up to correct spot
-        public enqueue(newValue: Node): void {
-            /// Technically doesn't belong here
-            ///
-            /// Make sure quantum changes happen last by giving a higher number for priority
-            /// All other interrupts have a default priority of 1, as you can see in the Node class constructor
-            if (newValue.data.irq === CHANGE_QUANTUM_IRQ) {
-                newValue.priority = 2;
-            }/// if
-        
+        public enqueue(newValue: any): void {
             /// Put value on the "bottom-left" most part of the heap...
             this.nodes.push(newValue)
 
@@ -45,7 +36,7 @@ module TSOS {
         }/// enqueue
 
         /// Remove the highest priority (the root node)
-        public dequeue(): Node {
+        public dequeue(): any {
 
             /// Swap the root node with the bottom most left node (last node)
             this.swapNodes(ROOT_NODE, this.nodes.length - 1);
@@ -84,39 +75,35 @@ module TSOS {
                 var rChildIndex: number = (2 * parentIndex) + 2;
                 var indexToSwap: number = -1;
 
-                /// Check if there are any more bubble down swaps to perform
-                if (indexToSwap !== -1) {
-                    /// Left child exists?
-                    if (lChildIndex < this.nodes.length) {
+                /// Left child exists?
+                if (lChildIndex < this.nodes.length) {
 
-                        /// Set swap to bubble down left
-                        if (this.nodes[lChildIndex].priority < nodePriority) {
-                            indexToSwap = this.nodes[lChildIndex].priority;
-                        }/// if
+                    /// Set swap to bubble down left
+                    if (this.nodes[lChildIndex].priority <= nodePriority) {
+                        indexToSwap = lChildIndex;
                     }/// if
+                }/// if
 
-                    /// Right child exists?
-                    if (rChildIndex < this.nodes.length) {
+                /// Right child exists?
+                if (rChildIndex < this.nodes.length) {
 
-                        /// Left child was not a candidate
-                        /// Check if the right child has a lower priority
-                        /// and if so bubble down right child
-                        if (indexToSwap === -1) {
-                            if (this.nodes[rChildIndex].priority < nodePriority) {
-                                indexToSwap = rChildIndex;
-                            }/// if
+                    /// Left child was not a candidate
+                    /// Check if the right child has a lower priority
+                    /// and if so bubble down right child
+                    if (indexToSwap === -1) {
+                        if (this.nodes[rChildIndex].priority <= nodePriority) {
+                            indexToSwap = rChildIndex;
                         }/// if
 
                         /// Left Child Index was a potential candidate
                         /// Swap to right if the difference in priority is bigger
-                        else {
-                            if (this.nodes[rChildIndex].priority < this.nodes[lChildIndex].priority) {
-                                indexToSwap = rChildIndex;
-                            }/// if
-                        }/// else
+                        if (this.nodes[rChildIndex].priority <= this.nodes[lChildIndex].priority) {
+                            indexToSwap = rChildIndex;
+                        }/// if
                     }/// if
                 }/// if
-                else {
+
+                if (indexToSwap === -1) {
                     swapsNeeded = false;
                 }/// else
 
@@ -153,7 +140,7 @@ module TSOS {
             ///         parentIndex = floor( (rChildIndex - 1) / 2 );
             while (childIndex > 0 && !inPlace) {
                 /// Parent index location based off of child
-                var parentIndex = (childIndex - 1) / 2;
+                var parentIndex = Math.floor((childIndex - 1) / 2);
 
                 /// If the childs priority is greater than the parents priority, keep bubbling
                 /// (remember lower number for priority is higher priority)
@@ -181,49 +168,3 @@ module TSOS {
         }/// swapNode
     }/// class
 }/// module
-
-/// TODO: move out of data structure
-// switch (newValue.data.irq) {
-//     case TIMER_IRQ:
-//         newValue.priority = 1;
-//         break;
-//     case KEYBOARD_IRQ:
-//         newValue.priority = 1;
-//         break;
-//     case SYS_CALL_IRQ:
-//         newValue.priority = 1;
-//         break;
-//     case PS_IRQ:
-//         newValue.priority = 1;
-//         break;
-//     case SINGLE_STEP_IRQ:
-//         newValue.priority = 1;
-//         break;
-//     case NEXT_STEP_IRQ:
-//         newValue.priority = 1;
-//         break;
-//     case CONTEXT_SWITCH_IRQ:
-//         newValue.priority = 1;
-//         break;
-//     case CHANGE_QUANTUM_IRQ:
-//         newValue.priority = 2;
-//         break;
-//     case RUN_PROCESS_IRQ:
-//         newValue.priority = 1;
-//         break;
-//     case RUN_ALL_PROCESSES_IRQ:
-//         newValue.priority = 1;
-//         break;
-//     case TERMINATE_PROCESS_IRQ:
-//         newValue.priority = 1;
-//         break;
-//     case KILL_PROCESS_IRQ:
-//         newValue.priority = 1;
-//         break;
-//     case KILL_ALL_PROCESSES_IRQ:
-//         newValue.priority = 1;
-//         break;
-//     default:
-//         newValue.priority = 1;
-//         break;
-// }/// switch

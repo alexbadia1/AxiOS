@@ -134,11 +134,11 @@ var TSOS;
                 document.getElementById("btnNextStep").disabled = true;
                 document.getElementById("btnSingleStepMode").value = "Single Step ON";
             } /// else
-            _KernelInterruptPriorityQueue.enqueue(new TSOS.Node(new TSOS.Interrupt(SINGLE_STEP_IRQ, [])));
+            _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(SINGLE_STEP_IRQ, []));
         }
         static hostBtnNextStep_click(btn) {
             /// Process single step interrupt
-            _KernelInterruptPriorityQueue.enqueue(new TSOS.Node(new TSOS.Interrupt(NEXT_STEP_IRQ, [])));
+            _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(NEXT_STEP_IRQ, []));
         }
         static initializeVisualMemory() {
             /// Increment by 8 on order to create a row every 8 bytes
@@ -361,28 +361,26 @@ var TSOS;
                 rowWithHeaders.appendChild(headerCell);
             } /// for
             _visualResidentList.appendChild(table);
-            for (var i = 0; i < 1; ++i) {
-                table.rows[0].cells[0].innerHTML = "PID";
-                table.rows[1].cells[0].innerHTML = pcb.processID.toString();
-                table.rows[0].cells[1].innerHTML = "PC";
-                table.rows[1].cells[1].innerHTML = this.formatToHexWithPadding(pcb.programCounter);
-                table.rows[0].cells[2].innerHTML = "IR";
-                table.rows[1].cells[2].innerHTML = pcb.instructionRegister;
-                table.rows[0].cells[2].innerHTML = "ACC";
-                table.rows[1].cells[3].innerHTML = pcb.accumulator;
-                table.rows[0].cells[4].innerHTML = "X";
-                table.rows[1].cells[4].innerHTML = pcb.xRegister;
-                table.rows[0].cells[5].innerHTML = "Y";
-                table.rows[1].cells[5].innerHTML = pcb.yRegister;
-                table.rows[0].cells[6].innerHTML = "Z";
-                table.rows[1].cells[6].innerHTML = pcb.zFlag.toString();
-                table.rows[0].cells[7].innerHTML = "Priority";
-                table.rows[1].cells[7].innerHTML = pcb.priority.toString();
-                table.rows[0].cells[8].innerHTML = "State";
-                table.rows[1].cells[8].innerHTML = pcb.processState;
-                table.rows[0].cells[9].innerHTML = "Location";
-                table.rows[1].cells[9].innerHTML = `Vol ${pcb.volumeIndex + 1}`;
-            } /// for
+            table.rows[0].cells[0].innerHTML = "PID";
+            table.rows[1].cells[0].innerHTML = pcb.processID.toString();
+            table.rows[0].cells[1].innerHTML = "PC";
+            table.rows[1].cells[1].innerHTML = this.formatToHexWithPadding(pcb.programCounter);
+            table.rows[0].cells[2].innerHTML = "IR";
+            table.rows[1].cells[2].innerHTML = pcb.instructionRegister;
+            table.rows[0].cells[2].innerHTML = "ACC";
+            table.rows[1].cells[3].innerHTML = pcb.accumulator;
+            table.rows[0].cells[4].innerHTML = "X";
+            table.rows[1].cells[4].innerHTML = pcb.xRegister;
+            table.rows[0].cells[5].innerHTML = "Y";
+            table.rows[1].cells[5].innerHTML = pcb.yRegister;
+            table.rows[0].cells[6].innerHTML = "Z";
+            table.rows[1].cells[6].innerHTML = pcb.zFlag.toString();
+            table.rows[0].cells[7].innerHTML = "Priority";
+            table.rows[1].cells[7].innerHTML = pcb.priority.toString();
+            table.rows[0].cells[8].innerHTML = "State";
+            table.rows[1].cells[8].innerHTML = pcb.processState;
+            table.rows[0].cells[9].innerHTML = "Location";
+            table.rows[1].cells[9].innerHTML = `Vol ${pcb.volumeIndex + 1}`;
         } /// dumpResidentList
         static visualizeResidentList() {
             try {
@@ -393,8 +391,8 @@ var TSOS;
                 _Kernel.krnTrace(e);
                 _Kernel.krnTrace("No resident list to delete.");
             } /// catch
-            for (var index = 0; index < _Scheduler.readyQueue.length; ++index) {
-                this.createVisualResidentList(_Scheduler.readyQueue[index]);
+            for (var index = 0; index < _Scheduler.readyQueue.getSize(); ++index) {
+                this.createVisualResidentList(_Scheduler.readyQueue.getIndex(index));
             } /// for
         } /// visualizeResidentList
     } /// class

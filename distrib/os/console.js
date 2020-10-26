@@ -51,7 +51,7 @@ var TSOS;
                 else if (chr === '^C') {
                     if (_CPU.isExecuting) {
                         /// Queue an interrupt for termination of the program
-                        _KernelInterruptPriorityQueue.enqueue(new TSOS.Node(new TSOS.Interrupt(KILL_ALL_PROCESSES_IRQ, [])));
+                        _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(KILL_ALL_PROCESSES_IRQ, []));
                         this.eraseText();
                         this.putText("^c");
                     } /// if

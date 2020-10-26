@@ -13,7 +13,7 @@
 var TSOS;
 (function (TSOS) {
     class Scheduler {
-        constructor(quanta = 6, startBurst = 0, processesMetaData = [], unInterleavedOutput = [], processTurnaroundTime = [], readyQueue = [], currentProcess = null, schedulingMethod = "Round Robin") {
+        constructor(quanta = 6, startBurst = 0, processesMetaData = [], unInterleavedOutput = [], processTurnaroundTime = [], readyQueue = new TSOS.PriorityQueue(), currentProcess = null, schedulingMethod = "Round Robin") {
             this.quanta = quanta;
             this.startBurst = startBurst;
             this.processesMetaData = processesMetaData;
@@ -25,7 +25,7 @@ var TSOS;
         } /// constructor
         init() {
             this.startBurst = 0;
-            this.readyQueue = [];
+            this.readyQueue = new TSOS.PriorityQueue();
             this.currentProcess = null;
             this.processesMetaData = [];
             this.unInterleavedOutput = [];
@@ -62,7 +62,7 @@ var TSOS;
             _Mode = 0;
             /// Make sure there are process loaded in the ready queue or
             /// in the current process slot
-            if (this.readyQueue.length === 0 && this.currentProcess === null) {
+            if (this.readyQueue.getSize() === 0 && this.currentProcess === null) {
                 /// Don't stop the cpu from executing, as it may already be executing other process
                 _StdOut.putText("No process found either loaded or not already terminated, running, scheduled.");
                 _StdOut.advanceLine();
@@ -99,7 +99,7 @@ var TSOS;
                     /// Round Robin Scheduling allows us to just keep enqueueing processes
                     newProcess.processState = "Ready";
                     _Kernel.krnTrace(`Process ${newProcess.processID} added to ready queue`);
-                    this.readyQueue.push(newProcess);
+                    this.readyQueue.enqueue(newProcess);
                 } /// else
                 /// Process scheduled successfully
                 success = true;
@@ -115,10 +115,10 @@ var TSOS;
             if (this.currentProcess.processState === "Terminated") {
                 _Kernel.krnTrace(`Current process ${this.currentProcess.processID} terminated.`);
                 /// Context Switch but don't put current process back in process queue
-                if (this.readyQueue.length > 0) {
+                if (this.readyQueue.getSize() > 0) {
                     _Kernel.krnTrace(`Another process was found in Ready Queue, issuing context switch...`);
                     /// Queue interrupt for context switch
-                    _KernelInterruptPriorityQueue.enqueue(new TSOS.Node(new TSOS.Interrupt(CONTEXT_SWITCH_IRQ, [])));
+                    _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(CONTEXT_SWITCH_IRQ, []));
                     /// Grab the procress' output, time spent executing, time spent waiting, turnaround time
                     _Kernel.krnTrace(`Collecting process ${this.currentProcess.processID} metadata before context switch.`);
                     var turnAroundTime = (this.currentProcess.timeSpentExecuting + this.currentProcess.waitTime);
@@ -168,10 +168,10 @@ var TSOS;
             /// Current process has not terminated but the quantum was reached:
             else if ((_CPU_BURST - this.startBurst) >= this.quanta) {
                 /// Context Switch but put process back in process queue
-                if (this.readyQueue.length > 0) {
+                if (this.readyQueue.getSize() > 0) {
                     _Kernel.krnTrace(`Process ${this.currentProcess.processID} quantum reached, issuing context switch...`);
                     /// Queue interrupt for context switch
-                    _KernelInterruptPriorityQueue.enqueue(new TSOS.Node(new TSOS.Interrupt(CONTEXT_SWITCH_IRQ, [])));
+                    _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(CONTEXT_SWITCH_IRQ, []));
                     /// Reset the starting burst for the next new process
                     this.startBurst = _CPU_BURST;
                 } /// if

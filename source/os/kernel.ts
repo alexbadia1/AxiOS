@@ -98,7 +98,7 @@ module TSOS {
                 // Process the first interrupt on the interrupt queue.
                 /// TODO (maybe): Implement a priority queue based on the IRQ number/id to enforce interrupt priority.
                 var interrupt = _KernelInterruptPriorityQueue.dequeue();
-                this.krnInterruptHandler(interrupt.data.irq, interrupt.data.params);
+                this.krnInterruptHandler(interrupt.irq, interrupt.params);
             }/// if
             
             /// _CPU.isExecuting: controls if the cpu will try to read an instruction from memory
@@ -155,15 +155,15 @@ module TSOS {
             ///
             /// Not the best solution I could think of, but the first,
             /// Call this a "temporary fix"
-            if (_Scheduler.currentProcess === null && _Scheduler.readyQueue.length === 0){
+            if (_Scheduler.currentProcess === null && _Scheduler.readyQueue.getSize() === 0){
                 _CPU_BURST = 0;
             }/// if
             else {_CPU_BURST++;}
 
             /// Wait time is time spent in the ready queue soo...
             /// Loop through Ready Queue and increment each pcb's wait time by 1 cycle
-            for (var i = 0; i < _Scheduler.readyQueue.length; ++i) {
-                _Scheduler.readyQueue[i].waitTime += 1;
+            for (var i = 0; i < _Scheduler.readyQueue.getSize(); ++i) {
+                _Scheduler.readyQueue.getIndex(i).waitTime += 1;
             }/// for
 
             /// Turnaround Time is time running and in waiting queue...
@@ -428,7 +428,7 @@ module TSOS {
             /// Set current process state to "Terminated" for clean up
             _Scheduler.currentProcess.processState === "Terminated";
 
-            if (_Scheduler.currentProcess.processState === "Terminated" && _Scheduler.readyQueue.length === 0) {
+            if (_Scheduler.currentProcess.processState === "Terminated" && _Scheduler.readyQueue.getSize() === 0) {
                 /// Remove the last process from the Ready Queue
                 /// by removing the last process from current process
                 _Scheduler.currentProcess = null;
@@ -516,12 +516,12 @@ module TSOS {
 
         public killAllProcessesISR() {
             /// There are scheduled processes to kill
-            if (_Scheduler.readyQueue.length > 0 || _Scheduler.currentProcess !== null) {
+            if (_Scheduler.readyQueue.getSize() > 0 || _Scheduler.currentProcess !== null) {
 
                 /// Mark all process in the schedule queue as terminated
                 _Scheduler.currentProcess.processState = "Terminated";
-                for (var i = 0; i < _Scheduler.readyQueue.length; ++i) {
-                    _Scheduler.readyQueue[i].processState = "Terminated";
+                for (var i = 0; i < _Scheduler.readyQueue.getSize(); ++i) {
+                    _Scheduler.readyQueue.getIndex(i).processState = "Terminated";
                 }/// for
                 // _Scheduler.terminatedAllProcess();
             }/// if

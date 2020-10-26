@@ -51,7 +51,7 @@ var TSOS;
                 /// TODO: Check to see if this will work: event.getModifierState("CapsLock")
                 var params = new Array(event.which, event.shiftKey, event.ctrlKey, event.altKey);
                 // Enqueue this interrupt on the kernel interrupt queue so that it gets to the Interrupt handler.
-                _KernelInterruptPriorityQueue.enqueue(new TSOS.Node(new TSOS.Interrupt(KEYBOARD_IRQ, params)));
+                _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(KEYBOARD_IRQ, params));
             }
         }
         /// 
