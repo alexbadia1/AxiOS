@@ -502,5 +502,11 @@ module TSOS {
                 this.createVisualResidentList(_Scheduler.readyQueue.getIndex(index));
             }/// for
         }/// visualizeResidentList
+
+
+        /**
+         * iProject4 Control Methods
+         * 
+         */
     }/// class
 }/// module

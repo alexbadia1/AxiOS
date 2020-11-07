@@ -111,6 +111,7 @@ module TSOS {
                         'kill',
                         'killall',
                         'quantum',
+                        'format'
                     ];
 
                     var matches: string[] = [];

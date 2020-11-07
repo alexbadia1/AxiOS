@@ -24,6 +24,7 @@ const TIMER_IRQ: number = 0;
 
 /// Hardware Interrupt
 const KEYBOARD_IRQ: number = 1;
+const DISK_IRQ: number = 13; /// uh oh, unlucky 13...
 
 /// Read/Write Console Interrupts
 const SYS_CALL_IRQ: number = 2;
@@ -53,6 +54,15 @@ const KILL_ALL_PROCESSES_IRQ: number = 12;
 
 /// Priority Queue Constants
 const ROOT_NODE = 0;
+
+/// Disk Constants
+///
+/// 16KB limit means 4 tracks, 8 sectors, 8 blocks (each 64 Bytes)
+const TRACK_LIMIT = 4;
+const SECTOR_LIMIT = 8;
+const BLOCK_LIMIT = 8;
+const BLOCK_SIZE_LIMIT = 64;
+
 //
 // Global Variables
 // TODO: Make a global object and use that instead of the "_" naming convention in the global namespace.
@@ -69,6 +79,8 @@ var _MemoryAccessor: TSOS.MemoryAccessor;
 var _Dispatcher: TSOS.Dispatcher;
 
 var _Scheduler: TSOS.Scheduler;
+
+var _Disk: TSOS.Disk;
 
 /// Software (OS)
 var _MemoryManager: any = null;
@@ -112,6 +124,7 @@ var _SarcasticMode: boolean = false;
 
 // Global Device Driver Objects - page 12
 var _krnKeyboardDriver: TSOS.DeviceDriverKeyboard  = null;
+var _krnDiskDriver: TSOS.DeviceDriverDisk = null;
 
 var  _hardwareClockID: any = null;
 

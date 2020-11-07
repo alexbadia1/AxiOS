@@ -99,6 +99,7 @@ var TSOS;
                         'kill',
                         'killall',
                         'quantum',
+                        'format'
                     ];
                     var matches = [];
                     for (var pos = 0; pos < cmds.length; ++pos) {

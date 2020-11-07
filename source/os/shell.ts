@@ -186,6 +186,7 @@ module TSOS {
                 killall - Kill all processes
                 quantum <int> - Let the user set the Round Robin Quantum (measured in CPU cycles)
             ***************************************************************************************/
+
             /// clearmem - Clear all memory partitions
             sc = new ShellCommand(this.shellClearMem,
                 'clearmem',
@@ -223,9 +224,39 @@ module TSOS {
             this.commandList[this.commandList.length] = sc;
 
             /*************************************************************************************
-            TODO: Implement iProject 4 Commands: 
-                ...
+            iProject4 Commands: 
+            Disk Operations
+                create <filename>: Create the file [filename] and display a message denoting success or failure
+                read <filename>: Read and display the contents of [filename] or display an error if something went wrong
+                write <filename> "data": Write data inside the quotes to [filename] and display a message denoting success or failure
+                delete <filename>: Remove [filename] from storage and display a message denoting success or failure
+                format: Initialize all blocks in all sectors in all tracks and display a message denoting success or failure
+                ls: List files currently stored on the disk
+                format -quick: initialize the first four bytes of every directory and data block
+                format -full: same as quick and also initializes bytes 4-63 in directory and data blocks too.
+                ls -l: lists all filenames [even hidden ones] as well as their size and create date.
+            Scheduling
+                setSchedule <rr, fcfs, priority> - selects a CPU scheduling algorithm
+                getSchedule - returns the current CPU scheduling program
             ***************************************************************************************/
+
+            /// format - Initialize all blocks in all sectors in all tracks and display a message denoting success or failure
+            /// Optional parameters: 
+            ///     format -quick: initialize the first four bytes of every directory and data block
+            ///     format -full: same as quick and also initializes bytes 4-63 in directory and data blocks too.
+            sc = new ShellCommand(this.shellFormat,
+                'format',
+                'Initialize blocks, sectors and tracks in disk');
+            this.commandList[this.commandList.length] = sc;
+
+            /// ls - List files currently stored on the disk
+            /// Optional parameters: 
+            ///     ls -l: lists all filenames [even hidden ones] as well as their size and create date.
+            sc = new ShellCommand(this.shellList,
+                'ls',
+                'List files currently stored on the disk');
+            this.commandList[this.commandList.length] = sc;
+
 
             /// Display the initial prompt.
             ///
@@ -471,7 +502,20 @@ module TSOS {
             killall - kill all processes
             quantum <int> - let the user set the Round Robin Quantum (measured in CPU cycles)
         
-        TODO: Implement iProject 4 Commands:
+        iProject4 Commands: 
+            Disk Operations
+                create <filename>: Create the file [filename] and display a message denoting success or failure
+                read <filename>: Read and display the contents of [filename] or display an error if something went wrong
+                write <filename> "data": Write data inside the quotes to [filename] and display a message denoting success or failure
+                delete <filename>: Remove [filename] from storage and display a message denoting success or failure
+                format: Initialize all blocks in all sectors in all tracks and display a message denoting success or failure
+                ls: List files currently stored on the disk
+                format -quick: initialize the first four bytes of every directory and data block
+                format -full: same as quick and also initializes bytes 4-63 in directory and data blocks too.
+                ls -l: lists all filenames [even hidden ones] as well as their size and create date.
+            Scheduling
+                setSchedule <rr, fcfs, priority> - selects a CPU scheduling algorithm
+                getSchedule - returns the current CPU scheduling program
         ***************************************************************************************/
         public shellMan(args: string[]) {
             if (args.length > 0) {
@@ -521,6 +565,12 @@ module TSOS {
                         break;
                     case "quantum":
                         _StdOut.putText("quantum <int> - let the user set the Round Robin Quantum (measured in CPU cycles).");
+                        break;
+                    case "format":
+                        _StdOut.putText("format <-quick|-full> - Initialize all blocks in all sectors in all tracks in disk.");
+                        break;
+                    case "ls":
+                        _StdOut.putText("ls <-l> - List files currently stored on the disk.");
                         break;
                     default:
                         _StdOut.putText("No manual entry for " + args[0] + ".");
@@ -817,7 +867,7 @@ module TSOS {
 
                 /// Remove processes from the Resident List that were stored in these volumes
                 _ResidentList.residentList = _ResidentList.residentList.filter(pcb => (pcb.volumeIndex > 2));
-                
+
                 // words.filter(word => word.length > 6);
                 _StdOut.putText("Memory Cleared");
                 _StdOut.advanceLine();
@@ -857,9 +907,8 @@ module TSOS {
 
         /// kill <pid> - kills one process (specified by process ID)
         public shellKill(args: string[]) {
-
             if (args.length === 1) {
-                
+
                 /// Check if the resident queue is full or not...
                 if (_ResidentList.residentList.length === 0) {
                     _StdOut.putText(`No process control blocks found.`);
@@ -891,7 +940,7 @@ module TSOS {
 
         /// quantum <int> - let the user set the Round Robin Quantum (measured in CPU cycles)
         public shellQuantum(args: string[]) {
-            if (_Scheduler.schedulingMethod !== "Round Robin"){
+            if (_Scheduler.schedulingMethod !== "Round Robin") {
                 _StdOut.putText(`Quantum cannot be changed while using ${_Scheduler.schedulingMethod} schheduling!`);
                 _StdOut.advanceLine();
                 return;
@@ -908,10 +957,10 @@ module TSOS {
 
                     /// Save old quanta
                     var oldDecimalQuanta = _Scheduler.quanta;
-                    
+
                     /// Set the new quantum...
                     /// New quanta must be a positive integer
-                    if (parseInt(trimmedStringQuanta, 10) > 0){
+                    if (parseInt(trimmedStringQuanta, 10) > 0) {
                         /// Could process as interrupt to allow for changing the quantum mid cycle...
                         /// Actually just don't allow it, too much brain damage already...
                         /// interrupt it is
@@ -920,7 +969,7 @@ module TSOS {
 
                     /// Invalid Quantum
                     else {
-                        
+
                         _StdOut.putText(`Usage: quantum <int>  Please supply a positive, non-zero, decimal integer only.`);
                         _StdOut.advanceLine();
                     }/// else
@@ -940,11 +989,105 @@ module TSOS {
             }/// else
         }/// shellQuantum
 
-        /*************************************************************************************
-        TODO Implement iProject4 Commands: 
-            ...
-        ***************************************************************************************/
+        /*****************************************************************************************************
+        iProject4 Commands: 
+            Disk Operations
+                create <filename>: Create the file [filename] and display a message denoting success or failure
+                read <filename>: Read and display the contents of [filename] or display an error if something went wrong
+                write <filename> "data": Write data inside the quotes to [filename] and display a message denoting success or failure
+                delete <filename>: Remove [filename] from storage and display a message denoting success or failure
+                format: Initialize all blocks in all sectors in all tracks and display a message denoting success or failure
+                ls: List files currently stored on the disk
+                format -quick: initialize the first four bytes of every directory and data block
+                format -full: same as quick and also initializes bytes 4-63 in directory and data blocks too.
+                ls -l: kists all filenames [even hidden ones] as wella s their size and create date.
+            Scheduling
+                setSchedule <rr, fcfs, priority> - selects a CPU scheduling algorithm
+                getSchedule - returns the current CPU scheduling program
+        *****************************************************************************************************/
+        public shellFormat(args) {
+            /// No arguments === Normal Format
+            /// OR
+            /// 1 argument === -quick || -full format
+            if (args.length === 0) {
+                _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(DISK_IRQ, ['format', 'no-arg']));
+            }/// if
 
+            else if (args.length === 1) {
+                if (args[0] === '-full' || args[0] === '-quick') {
+                    _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(DISK_IRQ, ['format', args[0].toLowerCase()]));
+                }/// if
+
+                else {
+                    _StdOut.putText(`  Invalid argument: ${args[0]} try instead...`);
+                    _StdOut.advanceLine();
+                    _StdOut.putText(`    format`);
+                    _StdOut.advanceLine();
+                    _StdOut.putText(`    format -quick`);
+                    _StdOut.advanceLine();
+                    _StdOut.putText(`    format -full`);
+                    _StdOut.advanceLine();
+                }/// else
+            }/// else-if
+
+            /// Either negative arguments were (imposibly) given
+            /// OR more than 1 arg was given, so complain...
+            else {
+                _StdOut.putText(`Usage: format <string> Expected 0 or 1 arguments, but got ${args.length}`);
+                _StdOut.advanceLine();
+            }/// else
+        }/// shellFormat
+
+        public shellCreate(args) {
+            /// Make sure filename.length <= 60 Bytes
+            if (args.length === 1) {
+
+                /// Minus 4 Bytes of the block metadata (containing the pointer and what not)
+                if (args[0].length <= BLOCK_SIZE_LIMIT - 4) {
+                    _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(DISK_IRQ, ['create', args[0].toUpperCase()]));
+                }/// if
+
+                else {
+                    _StdOut.putText(`Usage: create <filename> Expected <= 60 Bytes, but got ${args.length} Bytes`);
+                    _StdOut.advanceLine();
+                }/// else
+            }/// if
+
+            /// More than one argument was given
+            else {
+                _StdOut.putText(`Usage: create <filename> Expected 1 arguments, but got ${args.length}`);
+                _StdOut.advanceLine();
+            }/// else
+        }/// shelCreate
+
+        public shellList(args) {
+            /// No arguments given so skip hidden files
+            if (args.length === 0) {
+                    /// TODO: create disk interrupt to list files
+                    /// _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(DISK_IRQ, ['list', 'no-arg']));
+            }/// if
+
+            /// Make sure only one argument is given
+            else if (args.length === 1) {
+
+                /// Make sure one arg is "-l" for hidden files
+                if (args[0] === "-l") {
+                    /// TODO: create disk interrupt to list files
+                    /// _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(DISK_IRQ, ['list', args[0]]));
+                }/// if
+
+                else {
+                    _StdOut.putText(`Usage: ls <-l> Expected 0 or 1 arguments, but got ${args.length}`);
+                    _StdOut.advanceLine();
+                }/// else
+            }/// if
+
+            /// More than one argument was given
+            else {
+                _StdOut.putText(`Usage: ls <-l> Expected 0 or 1 arguments, but got ${args.length}`);
+                _StdOut.advanceLine();
+            }/// else
+        }/// shellList
         /********************
          * ASCII art for BLM
          ********************/

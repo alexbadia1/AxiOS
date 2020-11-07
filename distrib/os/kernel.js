@@ -38,9 +38,17 @@ var TSOS;
             /// Call the driverEntry() initialization routine.
             _krnKeyboardDriver.driverEntry();
             this.krnTrace(_krnKeyboardDriver.status);
+            /// Load the Disk Device Driver
+            this.krnTrace("Loading the disk device driver");
+            /// "Construct" the "actual" DiskDevice Drives.
+            _krnDiskDriver = new TSOS.DeviceDriverDisk();
+            /// Call the driverEntry() initialization routine.
+            _krnDiskDriver.driverEntry();
+            this.krnTrace(_krnDiskDriver.status);
             //
             // ... more?
             //
+            _Disk = new TSOS.Disk();
             _MemoryManager = new TSOS.MemoryManager();
             /// Visualize Memory...
             TSOS.Control.initializeVisualMemory();
@@ -189,6 +197,10 @@ var TSOS;
                     // Kernel mode device driver
                     _krnKeyboardDriver.isr(params);
                     _StdIn.handleInput();
+                    break;
+                case DISK_IRQ:
+                    /// Kernel mode device driver
+                    this.diskISR(params);
                     break;
                 /// Read/Write Console Interrupts
                 case SYS_CALL_IRQ:
@@ -461,6 +473,24 @@ var TSOS;
                 _OsShell.putPrompt();
             } /// else
         } /// runAllProcessISR
+        diskISR(params) {
+            /// params[0] == disk operation
+            if (params[0] === 'format') {
+                /// params [1] == -quick || -full
+                _krnDiskDriver.format(params[1]);
+            } /// if
+            /// Only allow disk functions on formatted disks
+            else if (_krnDiskDriver.formatted) {
+                _krnDiskDriver.isr(params);
+            } /// if
+            /// Not formatted, don't do anyting
+            else {
+                this.krnTrace("Disk is not yet formatted!");
+                _StdOut.putText("Disk is not yet formatted!");
+                _StdOut.advanceLine();
+                _OsShell.putPrompt();
+            } /// else
+        } /// diskISR
         //
         // System Calls... that generate software interrupts via tha Application Programming Interface library routines.
         //

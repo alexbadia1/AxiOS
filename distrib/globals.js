@@ -20,6 +20,7 @@ const CPU_CLOCK_INTERVAL = .000000001;
 const TIMER_IRQ = 0;
 /// Hardware Interrupt
 const KEYBOARD_IRQ = 1;
+const DISK_IRQ = 13; /// uh oh, unlucky 13...
 /// Read/Write Console Interrupts
 const SYS_CALL_IRQ = 2;
 const PS_IRQ = 3;
@@ -42,6 +43,13 @@ const KILL_PROCESS_IRQ = 11;
 const KILL_ALL_PROCESSES_IRQ = 12;
 /// Priority Queue Constants
 const ROOT_NODE = 0;
+/// Disk Constants
+///
+/// 16KB limit means 4 tracks, 8 sectors, 8 blocks (each 64 Bytes)
+const TRACK_LIMIT = 4;
+const SECTOR_LIMIT = 8;
+const BLOCK_LIMIT = 8;
+const BLOCK_SIZE_LIMIT = 64;
 //
 // Global Variables
 // TODO: Make a global object and use that instead of the "_" naming convention in the global namespace.
@@ -55,6 +63,7 @@ var _Memory;
 var _MemoryAccessor;
 var _Dispatcher;
 var _Scheduler;
+var _Disk;
 /// Software (OS)
 var _MemoryManager = null;
 var _ResidentList;
@@ -88,6 +97,7 @@ var _OsShell;
 var _SarcasticMode = false;
 // Global Device Driver Objects - page 12
 var _krnKeyboardDriver = null;
+var _krnDiskDriver = null;
 var _hardwareClockID = null;
 // For testing (and enrichment)...
 var Glados = null; // This is the function Glados() in glados-ip*.js http://alanclasses.github.io/TSOS/test/ .

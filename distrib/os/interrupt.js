@@ -48,6 +48,9 @@ var TSOS;
                 case KILL_ALL_PROCESSES_IRQ:
                     this.priority = 1;
                     break;
+                case DISK_IRQ:
+                    this.priority = 1;
+                    break;
                 default:
                     this.priority = 1;
                     break;
