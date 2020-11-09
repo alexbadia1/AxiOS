@@ -8,19 +8,21 @@ module TSOS {
     // Extends DeviceDriver
     export class DeviceDriverDisk extends DeviceDriver {
         constructor(
-            public dirBlock = new Directory(
+            public hiddenFilePrefix: string = '.',
+            public swapFilePrefix: string = '!',
+            public dirBlock: Partition = new Partition(
                 'File Header', /// File Entries
                 0, 0, 1, /// base = (0, 0, 1)
                 0, 7, 7, /// limit = (0, 7, 7)
             ), /// new Directory
-            public fileDataBlock = new Directory(
+            public fileDataBlock: Partition = new Partition(
                 'File Body', /// File Data
                 1, 0, 0, /// base = (1, 0, 0)
                 3, 7, 7, /// limit = (3, 7, 7)
             ),/// new Block
-            public formatted = false,
-            public diskBase: string = "(0, 0, 0)",
-            public diskLimit: string = "(3, 7, 7)",
+            public formatted: boolean = false,
+            public diskBase: string = "000000",
+            public diskLimit: string = "030707",
         ) {
             /// Override the base method pointers
             /// The code below cannot run because "this" can only be accessed after calling super.
@@ -37,19 +39,24 @@ module TSOS {
         }/// krnDiskDriverEntry
 
         public krnDiskDispatchFunctions(params) {
-            var diskOperation = params[0];
+            var result: string = '';
+            var diskOperation: string = params[0];
             switch (diskOperation) {
                 case 'create':
                     /// params[1] = filename
-                    this.createFile(params[1]);
+                    result = this.create(params[1]);
                     break;
                 case 'write':
                     break;
                 case 'read':
+                    result = this.read(params[1]);
                     break;
                 case 'delete':
+                    result = this.deleteFile(params[1]);
                     break;
                 case 'list':
+                    /// params[1] = 'no-arg' || params[1] = '-l'
+                    this.list(params[1]);
                     break;
                 default:
                     _Kernel.krnTrace(`Failed to perform disk ${params[0]} operation`);
@@ -57,6 +64,12 @@ module TSOS {
                     break;
             }/// switch
 
+            /// Show results denoting the success or failure of the driver operation on disk
+            if (result !== '') {
+                _StdOut.putText(`${result}`);
+                _StdOut.advanceLine();
+                _OsShell.putPrompt();
+            }
         }/// krnDiskDispatchFunctions
 
         ///////////////////////////////
@@ -86,16 +99,16 @@ module TSOS {
             }/// switch 
 
             if (success) {
-                _StdOut.putText(`Hard drive successfully formatted (Type: ${type})`);
+                _StdOut.putText(`Hard drive successfully formatted!`);
                 _StdOut.advanceLine();
                 _OsShell.putPrompt();
             }/// if
 
-            else {
-                _StdOut.putText(`Failed to format (Type: ${type.replace('-', '').trim()})`);
-                _StdOut.advanceLine();
-                _OsShell.putPrompt();
-            }// else
+            // else {
+            //     _StdOut.putText(`Failed to format (Type: ${type.replace('-', '').trim()})`);
+            //     _StdOut.advanceLine();
+            //     _OsShell.putPrompt();
+            // }// else
         }/// format
 
         private fullFormat(): boolean {
@@ -104,7 +117,7 @@ module TSOS {
                 for (var trackNum: number = 0; trackNum < TRACK_LIMIT; ++trackNum) {
                     for (var sectorNum: number = 0; sectorNum < SECTOR_LIMIT; ++sectorNum) {
                         for (var blockNum: number = 0; blockNum < BLOCK_LIMIT; ++blockNum) {
-                            _Disk.createSessionBlock(`(${trackNum}, ${sectorNum}, ${blockNum})`);
+                            _Disk.createSessionBlock(trackNum, sectorNum, blockNum);
                         }/// for
                     }/// for
                 }/// for
@@ -114,6 +127,9 @@ module TSOS {
             }/// if
             else {
                 _Kernel.krnTrace(`Failed disk format (Type: Full Format), missing master boot record`);
+                _StdOut.putText(`Full Format can only be used to REFORMAT the drive, please initially format the drive.`);
+                _StdOut.advanceLine();
+                _OsShell.putPrompt();
                 return false;
             }/// else
         }/// fullFormat
@@ -126,8 +142,11 @@ module TSOS {
                 for (var trackNum: number = 0; trackNum < TRACK_LIMIT; ++trackNum) {
                     for (var sectorNum: number = 0; sectorNum < SECTOR_LIMIT; ++sectorNum) {
                         for (var blockNum: number = 0; blockNum < BLOCK_LIMIT; ++blockNum) {
+
+                            var currentKey: string = `${TSOS.Control.formatToHexWithPadding(trackNum)}${TSOS.Control.formatToHexWithPadding(sectorNum)}${TSOS.Control.formatToHexWithPadding(blockNum)}`;
+
                             /// Skip already quick formatted blocks
-                            if (sessionStorage.getItem(`(${trackNum}, ${sectorNum}, ${blockNum})`).substring(0, 8) === "00000000") {
+                            if (sessionStorage.getItem(currentKey).substring(0, 8) === "00000000") {
                                 continue;
                             }/// if
 
@@ -139,13 +158,13 @@ module TSOS {
                             /// Reset the first 8 nums to zero
                             else {
                                 /// Get session value
-                                var value: string = sessionStorage.getItem(`(${trackNum}, ${sectorNum}, ${blockNum})`);
+                                var value: string = sessionStorage.getItem(currentKey);
 
                                 /// Replace the first 4 bytes (8 characters) with 00's
-                                value = "00000000" + value.substring(4, value.length);
+                                value = "00000000" + value.substring(8, value.length);
 
                                 /// Write the change back to the list
-                                sessionStorage.setItem(`(${trackNum}, ${sectorNum}, ${blockNum})`, value);
+                                sessionStorage.setItem(currentKey, value);
                             }/// else
                         }/// for
                     }/// for
@@ -157,14 +176,19 @@ module TSOS {
 
             else {
                 _Kernel.krnTrace(`Failed disk format (Type: Quick Format), missing master boot record`);
+                _StdOut.putText(`Quick Format can only be used to REFORMAT the drive, please initially format the drive.`);
+                _StdOut.advanceLine();
+                _OsShell.putPrompt();
                 return false;
             }/// else
         }/// quickFormat
 
         /// Create File should be all or nothing...No partial creations of files
-        public createFile(fileName: string = ''): boolean {
-            // File does not exist
-            if (!this.filenameExists(fileName)) {
+        public create(fileName: string = ''): string {
+            var msg: string = 'File creation failed';
+
+            // File does NOT exist
+            if (this.fileNameExists(fileName) === '') {
 
                 /// Find a free space, null if there are no available blocks
                 var availableDirKey = this.getFirstAvailableBlock("File Header");
@@ -179,44 +203,59 @@ module TSOS {
                     if (availableFileDataKey != null) {
                         /// First 4 bytes (8 characters) are pointer to the free data block in the file data directory...
                         /// Remaining bytes are allocated for filename (in hex of course).
-                        var value = availableFileDataKey + this.englishToHex(fileName);
+                        /// Set is occupied to true
+                        var data: string = '';
+                        for (var byte = 0; byte < BLOCK_DATA_LIMIT; ++byte) {
+                            data += "00";
+                        }// for
+                        /// Replace the first 4 bytes (8 characters) with 00's
+                        data = this.englishToHex(fileName) + data.substring(fileName.length, data.length);
+
+                        var value = "01" + availableFileDataKey + data;
 
                         /// Write to the block
                         sessionStorage.setItem(availableDirKey, value);
 
                         _Kernel.krnTrace('File sucessfully created!');
-
-                        return true;
+                        msg = `C:\\AXIOS\\${fileName} sucessfully created!`;
 
                     }/// if
                     else {
-                        _Kernel.krnTrace('File creation failed, all file data blocks are in use!');
+                        _Kernel.krnTrace(`Cannot create C:\\AXIOS\\${fileName}, all file data blocks are in use!`);
+                        msg = `Cannot create C:\\AXIOS\\${fileName}, all file data blocks are in use!`;
                     }/// else
                 }/// if
                 else {
-                    _Kernel.krnTrace('File creation failed, all file header blocks are in use!');
+                    _Kernel.krnTrace(`Cannot create C:\\AXIOS\\${fileName}, all file header blocks are in use!`);
+                    msg = `Cannot create C:\\AXIOS\\${fileName}, all file header blocks are in use!`;
                 }/// else
             }/// if
 
-            return false;
+            else {
+                _Kernel.krnTrace(`Cannot create C:\\AXIOS\\${fileName}, filename is already in use!`);
+                msg = `Cannot create C:\\AXIOS\\${fileName}, filename already in use!`;
+            }/// else
+
+            return msg;
         }/// createFile
 
-        
         public list(type: string): void {
             var isEmpty: boolean = true;
+            _StdOut.advanceLine();
             /// Only need to search the "file header" portion of the disk
             for (var trackNum: number = this.dirBlock.baseTrack; trackNum <= this.dirBlock.limitTrack; ++trackNum) {
                 for (var sectorNum: number = this.dirBlock.baseSector; sectorNum <= this.dirBlock.limitSector; ++sectorNum) {
                     for (var blockNum: number = this.dirBlock.baseBlock; blockNum <= this.dirBlock.limitBlock; ++blockNum) {
-
+                        var currentKey: string = `${TSOS.Control.formatToHexWithPadding(trackNum)}${TSOS.Control.formatToHexWithPadding(sectorNum)}${TSOS.Control.formatToHexWithPadding(blockNum)}`;
                         /// Don't want to list deleted files (files that have data with a low availabiliy flag)
                         /// Availabiliy flag is high, meaning the block is in use and has data
-                        if (sessionStorage.getItem(`(${trackNum}, ${sectorNum}, ${blockNum})`).substring(0, 2) === "01") {
+                        if (this.getBlockFlag(sessionStorage.getItem(currentKey)) === "01") {
 
                             /// Not a hidden file
-                            if (sessionStorage.getItem(`(${trackNum}, ${sectorNum}, ${blockNum})`).substring(7, 8) !== ".") {
+                            if (!this.hexToEnglish(this.getBlockData(sessionStorage.getItem(currentKey))).startsWith('.')) {
                                 /// Print out file name
-                                _StdOut.putText(`  ${sessionStorage.getItem(`(${trackNum}, ${sectorNum}, ${blockNum})`).substring(7)}`);
+                                ///: _StdOut.putText(`${INDENT_STRING}${INDENT_STRING}${sessionStorage.getItem(currentKey).substring(8)}.txt`);
+                                _StdOut.putText(`${INDENT_STRING}${INDENT_STRING}${this.hexToEnglish(this.getBlockData(sessionStorage.getItem(currentKey)))}`);
                                 _StdOut.advanceLine();
                                 isEmpty = false;
                             }/// if
@@ -224,9 +263,12 @@ module TSOS {
                             /// Hidden file
                             else {
                                 /// Only show hidden file if "-l" argument was used
-                                if (type === '-l'){
-                                    /// Print out file name
-                                    _StdOut.putText(`  ${sessionStorage.getItem(`(${trackNum}, ${sectorNum}, ${blockNum})`).substring(7)}`);
+                                if (type === '-l') {
+                                    /// Print out file name, with proper file extension
+                                    ///sessionStorage.getItem(currentKey).substring(8).startsWith(".!") ?
+                                        ///_StdOut.putText(`${INDENT_STRING}${INDENT_STRING}${sessionStorage.getItem(currentKey).substring(8)}.swp`)
+                                        ///: _StdOut.putText(`${INDENT_STRING}${INDENT_STRING}${sessionStorage.getItem(currentKey).substring(8)}.txt`);
+                                    _StdOut.putText(`${INDENT_STRING}${INDENT_STRING}${this.hexToEnglish(this.getBlockData(sessionStorage.getItem(currentKey)))}`)
                                     _StdOut.advanceLine();
                                     isEmpty = false;
                                 }/// if
@@ -236,12 +278,161 @@ module TSOS {
                 }/// for
             }/// for
 
-            if (isEmpty){
+            if (isEmpty) {
                 _StdOut.putText(`  No files found`);
                 _StdOut.advanceLine();
             }/// if
             _OsShell.putPrompt();
         }/// list
+
+        public read(fileName: string): string {
+            var isSwapFile: boolean = this.isSwapFile(fileName);
+
+            /// Create the illusion of file names...
+            // fileName = isTxt ?fileName.replace(new RegExp('.txt' + '$'), '')
+            // : fileName.replace(new RegExp('.swp' + '$'), '');
+            /// See if file exists...
+            /// If Not:
+            ///     targetFileKey === ''
+            /// If Exists
+            ///     targetFileKey === the sessionStorage() Key
+            var targetFileKey = this.fileNameExists(fileName);
+
+            /// File found
+            if (targetFileKey !== '') {
+                var fileContents: string = '';
+                var currentPointer: string = this.getBlockNextPointer(sessionStorage.getItem(targetFileKey));
+
+                /// Keep following the links from block to block until the end of the file
+                while (currentPointer != BLOCK_NULL_POINTER) {
+                    /// Get block
+                    var currentBlockValue = sessionStorage.getItem(currentPointer);
+
+                    /// Translate non-swap files only
+                    fileContents += isSwapFile ? this.getBlockData(currentBlockValue) : this.hexToEnglish(this.getBlockData(currentBlockValue));
+
+                    /// get next block
+                    currentPointer = this.getBlockNextPointer(currentBlockValue);
+                }/// while
+
+                return fileContents;
+            }/// if
+
+            /// File does not exist
+            else {
+                return `Cannot access C:\\AXIOS\\${fileName}`;
+                /// return `Cannot access C:\\AXIOS\\${fileName}.${isSwapFile ? 'txt' : 'swp'}`;
+            }/// else 
+        }/// read
+
+        public write(fileName: string, data: string): string {
+            var dataInHex: string = data;
+
+            /// Translate non-swap files into hex
+            if (!this.isSwapFile(fileName)) {
+                dataInHex = this.englishToHex(data);
+            }/// if
+
+            /// See if file exists...
+            /// If Not:
+            ///     targetFileKey === ''
+            /// If Exists
+            ///     targetFileKey === the sessionStorage() Key
+            var targetFileKey = this.fileNameExists(fileName);
+
+            /// Delete file contents if already written too...
+            /// Hint: you'll need read and delete
+
+            if (targetFileKey !== '') {
+                /// Split the data up into groups of 60 Bytes or less
+                var chunks: string[] = dataInHex.match(new RegExp('.{1,' + BLOCK_DATA_LIMIT + '}', 'g'));
+
+                /// Find file in directory and write to it's first pointer
+                var targetFilePointerToFirstFreeBlock = this.getBlockNextPointer(sessionStorage.getItem(targetFileKey));
+
+                /// Write to the first free data block
+                sessionStorage.setItem(targetFilePointerToFirstFreeBlock, chunks.shift());
+
+
+                /// Find more free space
+                if (chunks.length > 0) {
+                    /// Find the required number of blocks needed
+                    var freeSpaceKeys: string[] = this.getAvailableBlocksFromDataPartition(chunks.length);
+                    var previousBlockKey = targetFilePointerToFirstFreeBlock;
+
+                    /// Enough available blocks were found
+                    if (freeSpaceKeys !== null) {
+
+                        for (var key: number = 0; key < freeSpaceKeys.length; ++key) {
+                            /// Grab next free block
+                            var currentBlockKey: string = freeSpaceKeys.shift();
+
+                            /// Fill the currentBlock with the user data
+                            /// Don't forget the current block is now "in use" as well
+                            var currentBlockValue: string = sessionStorage.getItem(currentBlockKey);
+                            currentBlockValue = "01" + this.getBlockNextPointer(currentBlockValue) + chunks.shift();
+                            sessionStorage.setItem(currentBlockKey, currentBlockValue);
+
+                            /// Set previous block to point to this current free block
+                            /// Don't forget the previous block is now "in use" as well
+                            var previousBlockValue: string = sessionStorage.getItem(previousBlockKey);
+                            previousBlockValue = "01" + currentBlockKey + previousBlockValue.substring(8);
+                            sessionStorage.setItem(previousBlockKey, previousBlockValue);
+
+                            /// Update the previous block
+                            previousBlockKey = currentBlockKey;
+                        }/// for
+                    }/// if
+
+                    /// Not enough room, fail to enforce Atomicity!
+                    else {
+                        return `Cannot write to C:\\AXIOS\\${fileName}, not enough file data blocks available!`;
+                    }/// else
+                }/// if
+            }/// if
+        }/// write
+
+        public deleteFile(fileName) {
+            var isSwapFile: boolean = this.isSwapFile(fileName);
+
+            /// See if file exists...
+            /// If Not:
+            ///     targetFileKey === ''
+            /// If Exists
+            ///     targetFileKey === the sessionStorage() Key
+            var targetFileKey = this.fileNameExists(fileName);
+
+            /// File found
+            if (targetFileKey !== '') {
+
+                /// "Delete" by making the directory block available, hopefully this will
+                /// make recovering the files easier or at least partial recovery...
+                this.setBlockFlag(targetFileKey, "00");
+
+                /// Find where file content starts...
+                var currentPointer: string = this.getBlockNextPointer(sessionStorage.getItem(targetFileKey));
+
+                /// Keep following the links from block to block until the end of the file
+                while (currentPointer != BLOCK_NULL_POINTER) {
+                    /// Get current block
+                    var currentBlockValue = sessionStorage.getItem(currentPointer);
+
+                    /// Make current block available
+                    this.setBlockFlag(currentPointer, "00");
+
+                    /// Get next block
+                    currentPointer = this.getBlockNextPointer(currentBlockValue);
+                }/// while
+
+                return `Deleted C:\\AXIOS\\${fileName}`;
+            }/// if
+
+            /// File NOT found
+            else {
+                _Kernel.krnTrace(`Cannot delete C:\\AXIOS\\${fileName}`);
+                return `Cannot delete C:\\AXIOS\\${fileName}`;
+            }/// else
+        }/// 
 
         public getFirstAvailableBlock(directory: string): string {
 
@@ -250,10 +441,11 @@ module TSOS {
                 for (var trackNum: number = this.fileDataBlock.baseTrack; trackNum <= this.fileDataBlock.limitTrack; ++trackNum) {
                     for (var sectorNum: number = this.fileDataBlock.baseSector; sectorNum <= this.fileDataBlock.limitSector; ++sectorNum) {
                         for (var blockNum: number = this.fileDataBlock.baseBlock; blockNum <= this.fileDataBlock.limitBlock; ++blockNum) {
+                            var currentKey: string = `${TSOS.Control.formatToHexWithPadding(trackNum)}${TSOS.Control.formatToHexWithPadding(sectorNum)}${TSOS.Control.formatToHexWithPadding(blockNum)}`;
                             /// Availabiliy flag is low, meaning the block is free
-                            if (sessionStorage.getItem(`(${trackNum}, ${sectorNum}, ${blockNum})`).substring(0, 2) === "00") {
+                            if (this.getBlockFlag(sessionStorage.getItem(currentKey)) === "00") {
                                 /// Return the location (the key) where the block is available
-                                return `(${trackNum}, ${sectorNum}, ${blockNum})`;
+                                return currentKey;
                             }/// if
                         }/// for
                     }/// for
@@ -265,10 +457,11 @@ module TSOS {
                 for (var trackNum: number = this.dirBlock.baseTrack; trackNum <= this.dirBlock.limitTrack; ++trackNum) {
                     for (var sectorNum: number = this.dirBlock.baseSector; sectorNum <= this.dirBlock.limitSector; ++sectorNum) {
                         for (var blockNum: number = this.dirBlock.baseBlock; blockNum <= this.dirBlock.limitBlock; ++blockNum) {
+                            var currentKey: string = `${TSOS.Control.formatToHexWithPadding(trackNum)}${TSOS.Control.formatToHexWithPadding(sectorNum)}${TSOS.Control.formatToHexWithPadding(blockNum)}`;
                             /// Availabiliy flag is low, meaning the block is free
-                            if (sessionStorage.getItem(`(${trackNum}, ${sectorNum}, ${blockNum})`).substring(0, 2) === "00") {
+                            if (this.getBlockFlag(sessionStorage.getItem(currentKey)) === "00") {
                                 /// Return the location (the key) where the block is available
-                                return `(${trackNum}, ${sectorNum}, ${blockNum})`;
+                                return currentKey;
                             }/// if
                         }/// for
                     }/// for
@@ -279,31 +472,102 @@ module TSOS {
             return null;
         }/// getFirstAvailableBlock
 
-        public filenameExists(targetFileNameInEnglish: string): boolean {
-            /// Only need to search the "file names" portion of the disk
+        public getAvailableBlocksFromDirectoryPartition(numBlocksNeeded: number): string[] {
+            var availableBlocks: string[] = [];
             for (var trackNum: number = this.dirBlock.baseTrack; trackNum <= this.dirBlock.limitTrack; ++trackNum) {
                 for (var sectorNum: number = this.dirBlock.baseSector; sectorNum <= this.dirBlock.limitSector; ++sectorNum) {
                     for (var blockNum: number = this.dirBlock.baseBlock; blockNum <= this.dirBlock.limitBlock; ++blockNum) {
-                        if (
-                            this.hexToEnglish(
-                                sessionStorage.getItem(
-                                    `(${trackNum}, ${sectorNum}, ${blockNum})`
-                                ).substring(7) /// Skip the first 8 bytes
-                            ) === targetFileNameInEnglish
-                        ) {
-                            return true;
+                        var currentKey: string = `${TSOS.Control.formatToHexWithPadding(trackNum)}${TSOS.Control.formatToHexWithPadding(sectorNum)}${TSOS.Control.formatToHexWithPadding(blockNum)}`;
+                        /// Availabiliy flag is low, meaning the block is free
+                        if (this.getBlockFlag(sessionStorage.getItem(currentKey)) === "00") {
+                            /// Block is free
+                            availableBlocks.push(currentKey);
                         }/// if
                     }/// for
                 }/// for
             }/// for
-            return false;
+
+            return availableBlocks.length >= numBlocksNeeded ? availableBlocks : null;
+        }/// getAvailableBlocksFromDirectoryPartition
+
+
+        public getAvailableBlocksFromDataPartition(numBlocksNeeded: number): string[] {
+            var availableBlocks: string[] = [];
+
+            /// Only need to search the "file data" portion of the disk
+            for (var trackNum: number = this.fileDataBlock.baseTrack; trackNum <= this.fileDataBlock.limitTrack; ++trackNum) {
+                for (var sectorNum: number = this.fileDataBlock.baseSector; sectorNum <= this.fileDataBlock.limitSector; ++sectorNum) {
+                    for (var blockNum: number = this.fileDataBlock.baseBlock; blockNum <= this.fileDataBlock.limitBlock; ++blockNum) {
+                        var currentKey: string = `${TSOS.Control.formatToHexWithPadding(trackNum)}${TSOS.Control.formatToHexWithPadding(sectorNum)}${TSOS.Control.formatToHexWithPadding(blockNum)}`;
+                        /// Block is free
+                        if (this.getBlockFlag(sessionStorage.getItem(currentKey)) === "00") {
+                            /// Return the location (the key) where the block is available
+                            availableBlocks.push(currentKey);
+                        }/// if
+                    }/// for
+                }/// for
+            }/// for
+
+            return availableBlocks.length >= numBlocksNeeded ? availableBlocks : null;
+        }/// getAvailableBlocksFromDataPartition
+
+        public fileNameExists(targetFileNameInEnglish: string): string {
+            /// Only need to search the "file names" portion of the disk
+            for (var trackNum: number = this.dirBlock.baseTrack; trackNum <= this.dirBlock.limitTrack; ++trackNum) {
+                for (var sectorNum: number = this.dirBlock.baseSector; sectorNum <= this.dirBlock.limitSector; ++sectorNum) {
+                    for (var blockNum: number = this.dirBlock.baseBlock; blockNum <= this.dirBlock.limitBlock; ++blockNum) {
+                        var currentKey: string = `${TSOS.Control.formatToHexWithPadding(trackNum)}${TSOS.Control.formatToHexWithPadding(sectorNum)}${TSOS.Control.formatToHexWithPadding(blockNum)}`;
+                        if (
+                            this.hexToEnglish(
+                                /// The data while stored in disk will be padded with 00's
+                                this.getBlockData(sessionStorage.getItem(currentKey))
+                            ) === targetFileNameInEnglish && this.getBlockFlag(sessionStorage.getItem(currentKey)) === '01'
+                        ) {
+                            return currentKey;
+                        }/// if
+                    }/// for
+                }/// for
+            }/// for
+            return '';
         }/// searchDirectory
+
+        private isSwapFile(fileName: string): boolean {
+            return fileName.startsWith('.!');
+        }/// isSwapFile
+
+        private setBlockFlag(sessionStorageKey: string, flag: string): void{
+            var sessionStorageValue: string = sessionStorage.getItem(sessionStorageKey);
+            sessionStorageValue = flag + sessionStorageValue.substring(2);
+            sessionStorage.setItem(sessionStorageKey, sessionStorageValue);
+        }/// setBlockFlag
+
+        private getBlockFlag(sessionStorageValue: string): string {
+            return sessionStorageValue.substring(0, 2);
+        }/// getBlockFlag
+
+        private getBlockNextPointer(sessionStorageValue: string): string {
+            return sessionStorageValue.substring(2, 8);
+        }/// getBlockNextPointer
+
+        private getBlockData(sessionStorageValue: string): string {
+            /// hmm...
+            /// How do you know when a program ends in memory...
+            /// return isSwapFile ? sessionStorageValue.substring(8) : sessionStorageValue.substring(8).replace('00', '');
+
+            /// Return this for now..
+            return sessionStorageValue.substring(8);
+        }/// getBlockData
 
         public englishToHex(englishWord: string): string {
             var englishWordInHex = '';
             for (var letter: number = 0; letter < englishWord.length; ++letter) {
+
+                /// Add left 0 padding
+                var paddedhexNumber: string = "00" + englishWord[letter].charCodeAt(0).toString(16);
+                paddedhexNumber = paddedhexNumber.substr(paddedhexNumber.length - 2).toUpperCase();
+
                 /// Get Ascii value from english letter and convert to a single hex character string
-                englishWordInHex += englishWord[letter].charCodeAt(0).toString(16);
+                englishWordInHex += paddedhexNumber;
             }/// for
 
             return englishWordInHex;
@@ -311,20 +575,25 @@ module TSOS {
 
         public hexToEnglish(hexWord: string): string {
             var englishWord = '';
-            for (var hexLetter: number = 0; hexLetter < hexWord.length; ++hexLetter) {
-                englishWord += String.fromCharCode(
-                    parseInt(
-                        /// Read hex digits in pairs
-                        hexWord.substr(hexLetter, 2),
-                        16 /// To decimal from base 16
-                    )/// parseInt
-                );/// String.fromCharCode
+            hexLoop: for (var hexLetterPair: number = 0; hexLetterPair < hexWord.length; hexLetterPair += 2) {
+                if (hexWord.substring(hexLetterPair, hexLetterPair + 2) === "00") {
+                    break hexLoop;
+                }///
+                else {
+                    englishWord += String.fromCharCode(
+                        parseInt(
+                            /// Read hex digits in pairs
+                            hexWord.substr(hexLetterPair, 2),
+                            16 /// To decimal from base 16
+                        )/// parseInt
+                    );/// String.fromCharCode
+                }/// else
             }/// for
             return englishWord;
         }/// hexToEnglish
     }/// class
 
-    export class Directory {
+    export class Partition {
         constructor(
             public name,
             public baseTrack,
@@ -336,3 +605,33 @@ module TSOS {
         ) { }/// constructor
     }
 }/// TSOS
+
+        // public updateFreeSpaceLinkedList() {
+        //     /// Start off at the MBR, to have it hold the pointer to the first free block
+        //     /// 
+        //     /// If the MBR points to a block in use, then we ran out of storage
+        //     var previousBlockKey: string = "000000";
+        //     var previousBlockValue: string = '';
+        //     var currentBlockKey: string = "000000";
+        //     var currentBlockValue: string = '';
+
+        //      for (var trackNum: number = this.fileDataBlock.baseTrack; trackNum <= this.fileDataBlock.limitTrack; ++trackNum) {
+        //         for (var sectorNum: number = this.fileDataBlock.baseSector; sectorNum <= this.fileDataBlock.limitSector; ++sectorNum) {
+        //             for (var blockNum: number = this.fileDataBlock.baseBlock; blockNum <= this.fileDataBlock.limitBlock; ++blockNum) {
+        //                 currentBlockKey = `${TSOS.Control.formatToHexWithPadding(trackNum)}${TSOS.Control.formatToHexWithPadding(sectorNum)}${TSOS.Control.formatToHexWithPadding(blockNum)}`;
+        //                 currentBlockValue = sessionStorage.getItem(currentBlockKey).substring(0, 2);
+
+        //                 /// Block is free
+        //                 if (currentBlockValue === "00") {
+
+        //                     /// Update previous blocks pointer to point to the current free block
+        //                     previousBlockValue = sessionStorage.getItem(previousBlockKey);
+        //                     previousBlockValue = "00" + currentBlockKey + previousBlockValue.substring(8, previousBlockValue.length);
+        //                     sessionStorage.setItem(previousBlockKey, previousBlockValue);
+
+        //                     previousBlockKey = currentBlockKey;
+        //                 }/// if
+        //             }/// for
+        //         }/// for
+        //     }/// for
+        // }/// updateFreeSpaceLinkedList

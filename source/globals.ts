@@ -15,6 +15,10 @@
 const APP_NAME: string    = "TSOS";
 const APP_VERSION: string = "0.07";
 
+/// Console Constants
+const INDENT_STRING = '  ';
+const INDENT_NUMBER = 16;
+
 // This is in ms (milliseconds) so 1000 = 1 second.
 const CPU_CLOCK_INTERVAL: number = .000000001;
 
@@ -62,6 +66,8 @@ const TRACK_LIMIT = 4;
 const SECTOR_LIMIT = 8;
 const BLOCK_LIMIT = 8;
 const BLOCK_SIZE_LIMIT = 64;
+const BLOCK_DATA_LIMIT = 60;
+const BLOCK_NULL_POINTER = 'FFFFFF';
 
 //
 // Global Variables

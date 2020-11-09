@@ -31,44 +31,53 @@ var TSOS;
             for (var trackNum = 0; trackNum < TRACK_LIMIT; ++trackNum) {
                 for (var sectorNum = 0; sectorNum < SECTOR_LIMIT; ++sectorNum) {
                     for (var blockNum = 0; blockNum < BLOCK_LIMIT; ++blockNum) {
-                        this.createSessionBlock(`(${trackNum}, ${sectorNum}, ${blockNum})`);
+                        this.createSessionBlock(trackNum, sectorNum, blockNum);
                     } /// for
                 } /// for
             } /// for
             this.createMasterBootRecord();
         } /// init
-        createSessionBlock(key) {
+        createSessionBlock(newTrackNum, newSectorNum, newBlockNum) {
+            var key = `${TSOS.Control.formatToHexWithPadding(newTrackNum)}${TSOS.Control.formatToHexWithPadding(newSectorNum)}${TSOS.Control.formatToHexWithPadding(newBlockNum)}`;
+            var forwardPointer = BLOCK_NULL_POINTER;
             /// First byte = availability flag
             ///     1 means available
             ///     0 means NOT available because 0 is falsey
-            var inUseFlag = "00";
-            /// Second Bytes = nextTrack,
-            /// Third Byte = nextSector,
-            /// Fourth Bytes = nextBlock,
-            /// Initiliizing to 0 points to the master boot record, 
-            /// ff's is techninally could be an address, so... maybe "--"?
-            var nextBlockPointer = "------";
+            var isOccupied = "00";
             /// Remaining 60 Bytes are for the raw data
-            var data;
-            for (var byte = 0; byte < BLOCK_SIZE_LIMIT; ++byte) {
+            ///
+            /// Be careful with "+=", you don't want to append strings to null, make sure data is initialized to ''.
+            /// You'll end up getting [flag][pointer]undefined00000000000000000000...
+            var data = '';
+            for (var byte = 0; byte < BLOCK_DATA_LIMIT; ++byte) {
                 data += "00";
             } // for
             /// Value part of key|value in session storage
-            var value = [inUseFlag, nextBlockPointer, data];
+            var value = isOccupied + forwardPointer + data;
             /// Actually "create" the block, by saving in Key|Value storage
-            /// _krnFileSystemDriver.krnFsdWrite(key, value);
-        }
+            sessionStorage.setItem(key, value);
+        } /// createSessionBlock
         createMasterBootRecord() {
-            var availabilityFlag = "00";
-            var nextBlockPointer = "------";
+            var key = "000000";
+            var isOccupied = "01";
+            var nextBlockPointer = BLOCK_NULL_POINTER;
             /// Remaining 60 Bytes are for the raw data
-            var data = "Master Partition Table, Master Signature, Master Boot Code";
+            var data = _krnDiskDriver.englishToHex("Master Partition Table, Master Signature, Master Boot Code");
             /// Value part of key|value in session storage
-            var value = [availabilityFlag, nextBlockPointer, data];
+            var value = isOccupied + nextBlockPointer + data;
             /// Actually "create" the first master boot block, by saving in Key|Value storage
-            /// _krnFileSystemDriver.krnFsdWrite("(0, 0, 0)", value);
+            sessionStorage.setItem(key, value);
         } /// createMasterBootRecord
-    }
+    } /// class
     TSOS.Disk = Disk;
-})(TSOS || (TSOS = {}));
+})(TSOS || (TSOS = {})); /// module
+/// Alternative default pointer, to have a linkecd list of available blocks...
+///
+/// var forwardPointer = `${TSOS.Control.formatToHexWithPadding(newTrackNum + 1)}${TSOS.Control.formatToHexWithPadding(newSectorNum + 1)}${TSOS.Control.formatToHexWithPadding(newBlockNum + 1)}`;   
+/// if (newTrackNum === TRACK_LIMIT - 1 && newSectorNum === SECTOR_LIMIT - 1 && newBlockNum === BLOCK_LIMIT - 1) {
+/// forwardPointer = `
+/// ${TSOS.Control.formatToHexWithPadding(newTrackNum)}
+/// ${TSOS.Control.formatToHexWithPadding(newSectorNum)}
+/// ${TSOS.Control.formatToHexWithPadding(newBlockNum)}`;
+/// }/// if
 //# sourceMappingURL=disk.js.map

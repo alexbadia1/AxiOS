@@ -49,6 +49,7 @@ var TSOS;
             // ... more?
             //
             _Disk = new TSOS.Disk();
+            _Disk.init();
             _MemoryManager = new TSOS.MemoryManager();
             /// Visualize Memory...
             TSOS.Control.initializeVisualMemory();
@@ -59,6 +60,9 @@ var TSOS;
             this.krnTrace("Creating and Launching the shell.");
             _OsShell = new TSOS.Shell();
             _OsShell.init();
+            _StdOut.putText("New Volume does not contain a recognized file system. Please format disk before use!");
+            _StdOut.advanceLine();
+            _OsShell.putPrompt();
             /// Finally, initiate student testing protocol.
             if (_GLaDOS) {
                 _GLaDOS.afterStartup();
@@ -486,7 +490,7 @@ var TSOS;
             /// Not formatted, don't do anyting
             else {
                 this.krnTrace("Disk is not yet formatted!");
-                _StdOut.putText("Disk is not yet formatted!");
+                _StdOut.putText("You must format the drive disk before use!");
                 _StdOut.advanceLine();
                 _OsShell.putPrompt();
             } /// else

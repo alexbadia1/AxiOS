@@ -23,7 +23,7 @@
 module TSOS {
     export class Shell {
         /// Properties
-        public promptStr = ">";
+        public promptStr = "C:\\AxiOS>"; /// Ohhhh [*lightbulb* ], to bad we don't have a multi-level file system...
         public commandList = [];
         public curses = "[fuvg],[cvff],[shpx],[phag],[pbpxfhpxre],[zbgureshpxre],[gvgf]";
         public apologies = "[sorry]";
@@ -249,12 +249,36 @@ module TSOS {
                 'Initialize blocks, sectors and tracks in disk');
             this.commandList[this.commandList.length] = sc;
 
+            /// create <filename>: Create the file [filename] and display a message denoting success or failure
+            sc = new ShellCommand(this.shellCreate,
+                'create',
+                'Create the file [filename]');
+            this.commandList[this.commandList.length] = sc;
+
             /// ls - List files currently stored on the disk
             /// Optional parameters: 
             ///     ls -l: lists all filenames [even hidden ones] as well as their size and create date.
             sc = new ShellCommand(this.shellList,
                 'ls',
                 'List files currently stored on the disk');
+            this.commandList[this.commandList.length] = sc;
+
+            /// read <filename>: Read and display the contents of [filename] or display an error if something went wrong
+            sc = new ShellCommand(this.shellRead,
+                'read',
+                'Read and display the contents of [filename]');
+            this.commandList[this.commandList.length] = sc;
+
+            /// write <filename> "data": Write data inside the quotes to [filename] and display a message denoting success or failure
+            sc = new ShellCommand(this.shellWrite,
+                'write',
+                'Write data inside the quotes to [filename]');
+            this.commandList[this.commandList.length] = sc;
+
+            /// delete <filename>: Remove [filename] from storage and display a message denoting success or failure
+            sc = new ShellCommand(this.shellDelete,
+                'delete',
+                'Remove [filename] from storage');
             this.commandList[this.commandList.length] = sc;
 
 
@@ -569,8 +593,20 @@ module TSOS {
                     case "format":
                         _StdOut.putText("format <-quick|-full> - Initialize all blocks in all sectors in all tracks in disk.");
                         break;
+                    case "create":
+                        _StdOut.putText("create <filename>: Create the file [filename] in disk");
+                        break;
                     case "ls":
                         _StdOut.putText("ls <-l> - List files currently stored on the disk.");
+                        break;
+                    case "read":
+                        _StdOut.putText("read <filename>: Read and display the contents of [filename].");
+                        break;
+                    case "write":
+                        _StdOut.putText("write <filename> 'data': Write data inside the quotes to [filename].");
+                        break;
+                    case "delete":
+                        _StdOut.putText("delete <filename>: Remove [filename] from storage.");
                         break;
                     default:
                         _StdOut.putText("No manual entry for " + args[0] + ".");
@@ -1005,6 +1041,8 @@ module TSOS {
                 setSchedule <rr, fcfs, priority> - selects a CPU scheduling algorithm
                 getSchedule - returns the current CPU scheduling program
         *****************************************************************************************************/
+
+        /// format -full: same as quick and also initializes bytes 4-63 in directory and data blocks too.
         public shellFormat(args) {
             /// No arguments === Normal Format
             /// OR
@@ -1038,18 +1076,34 @@ module TSOS {
             }/// else
         }/// shellFormat
 
-        public shellCreate(args) {
+        /// create <filename>: Create the file [filename] and display a message denoting success or failure
+        public shellCreate(args: string[]) {
             /// Make sure filename.length <= 60 Bytes
             if (args.length === 1) {
 
-                /// Minus 4 Bytes of the block metadata (containing the pointer and what not)
-                if (args[0].length <= BLOCK_SIZE_LIMIT - 4) {
-                    _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(DISK_IRQ, ['create', args[0].toUpperCase()]));
+                /// no empty file names
+                if (args[0].trim().replace(" ", "").length === 0) {
+                    _StdOut.putText(`Usage: create <filename> Expected 1 arguments, but got 0`);
                 }/// if
 
                 else {
-                    _StdOut.putText(`Usage: create <filename> Expected <= 60 Bytes, but got ${args.length} Bytes`);
-                    _StdOut.advanceLine();
+                    /// Prevent swap file names and hidden file names from being used
+                    if (!args[0].startsWith(_krnDiskDriver.swapFilePrefix)) {
+                        /// Minus 4 Bytes of the block metadata (containing the pointer and what not)
+                        if (args[0].length <= BLOCK_SIZE_LIMIT - 4) {
+                            _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(DISK_IRQ, ['create', args[0]]));
+                        }/// if
+
+                        else {
+                            _StdOut.putText(`Usage: create <filename> Expected <= 60 Bytes, but got ${args.length} Bytes`);
+                            _StdOut.advanceLine();
+                        }/// else
+                    }/// if
+
+                    else {
+                        _StdOut.putText(`  Usage: <filename> cannot start with "." or "!"`);
+                        _StdOut.advanceLine();
+                    }/// else
                 }/// else
             }/// if
 
@@ -1060,11 +1114,12 @@ module TSOS {
             }/// else
         }/// shelCreate
 
+        /// ls: List files currently stored on the disk
         public shellList(args) {
             /// No arguments given so skip hidden files
             if (args.length === 0) {
-                    /// TODO: create disk interrupt to list files
-                    /// _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(DISK_IRQ, ['list', 'no-arg']));
+                /// TODO: create disk interrupt to list files
+                _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(DISK_IRQ, ['list', 'no-arg']));
             }/// if
 
             /// Make sure only one argument is given
@@ -1073,7 +1128,7 @@ module TSOS {
                 /// Make sure one arg is "-l" for hidden files
                 if (args[0] === "-l") {
                     /// TODO: create disk interrupt to list files
-                    /// _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(DISK_IRQ, ['list', args[0]]));
+                    _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(DISK_IRQ, ['list', args[0]]));
                 }/// if
 
                 else {
@@ -1088,9 +1143,56 @@ module TSOS {
                 _StdOut.advanceLine();
             }/// else
         }/// shellList
+
+        /// read <filename>: Read and display the contents of [filename] or display an error if something went wrong
+        public shellRead(args) {
+
+            /// Make sure only one argument is given
+            if (args.length === 1) {
+                
+                /// Create read interrupt
+                _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(DISK_IRQ, ['read', args[0]]));
+            }/// if
+
+            /// More than or less than one argument was given
+            else {
+                _StdOut.putText(`Usage: read <filename> Expected 1 argument, but got ${args.length}`);
+                _StdOut.advanceLine();
+            }/// else
+        }/// read
+
+        public shellWrite(args) {
+
+        }/// shellWrite
+
+        /// delete <filename>: Remove [filename] from storage
+        public shellDelete(args: string[]) {
+            /// Make sure only one argument is given
+            if (args.length === 1) {
+
+                /// Not a swap file, safe to delete
+                if (!args[0].startsWith('.!')) {
+                    /// Create delete interrupt
+                    _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(DISK_IRQ, ['delete', args[0]]));
+                }/// if
+
+                /// Swap file
+                else {
+                    /// TODO: kill process on disk
+                }/// else
+            }/// if
+
+            /// More than or less than one argument was given
+            else {
+                _StdOut.putText(`Usage: delete <filename> Expected 1 argument, but got ${args.length}`);
+                _StdOut.advanceLine();
+            }/// else
+        }/// shellDelete
         /********************
          * ASCII art for BLM
          ********************/
+
+
         public blackLivesMatter() {
             /// I may be a computer scientist... but I'm also a progressive!
             ///

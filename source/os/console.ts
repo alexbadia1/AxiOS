@@ -216,7 +216,9 @@ module TSOS {
                 ///
                 /// This prevents me from deleting the last letter on the line but the X position is still not
                 /// of the canvas yet.
-                if (this.currentXPosition <= 4) {
+                ///
+                /// Length of a space is...
+                if (this.currentXPosition <= 4 + INDENT_NUMBER) {
                     this.reverseLineWrap();
                 }/// if
 
@@ -254,7 +256,7 @@ module TSOS {
             this.buffer = "";
         }
 
-        public putText(text: String, indent: number = 0): void {
+        public putText(text: String, indent: number = INDENT_NUMBER): void {
             /*  My first inclination here was to write two functions: putChar() and putString().
                 Then I remembered that JavaScript is (sadly) untyped and it won't differentiate
                 between the two. (Although TypeScript would. But we're compiling to JavaScipt anyway.)
@@ -325,10 +327,10 @@ module TSOS {
             /// Resetting the X postion moves us to the beiginning of the left side of the screen.
             ///
             /// We COULD add an abstracted version of an indent, but our master MS DOS doesn't so why should I?
-            /// 
             this.currentXPosition = myIndent;
 
             /// Drawing the remaining letters after the line-wrap.
+            /// this.putText("  ");
             _DrawingContext.drawText(this.currentFont, this.currentFontSize, this.currentXPosition, this.currentYPosition, myText);
 
             /// Move the current X position (copy-pasted).
