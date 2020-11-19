@@ -17,7 +17,7 @@ const APP_VERSION = "0.07";
 const INDENT_STRING = '  ';
 const INDENT_NUMBER = 16;
 // This is in ms (milliseconds) so 1000 = 1 second.
-const CPU_CLOCK_INTERVAL = .000000001;
+const CPU_CLOCK_INTERVAL = .00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001;
 // Pages 23 (timer), 9 (interrupts), and 561 (interrupt priority).
 // NOTE: The timer is different from hardware/host clock pulses. Don't confuse these.
 const TIMER_IRQ = 0;
@@ -54,7 +54,7 @@ const SECTOR_LIMIT = 8;
 const BLOCK_LIMIT = 8;
 const BLOCK_SIZE_LIMIT = 64;
 const BLOCK_DATA_LIMIT = 60;
-const BLOCK_NULL_POINTER = 'FFFFFF';
+const BLOCK_NULL_POINTER = "FFFFFF";
 //
 // Global Variables
 // TODO: Make a global object and use that instead of the "_" naming convention in the global namespace.

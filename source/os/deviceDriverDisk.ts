@@ -47,11 +47,16 @@ module TSOS {
                     result = this.create(params[1]);
                     break;
                 case 'write':
+                    /// params[1][0] = filename
+                    /// params[1][1] = file text
+                    this.write(params[1][0], params[1][1]);
                     break;
                 case 'read':
+                    /// params[1] = filename
                     result = this.read(params[1]);
                     break;
                 case 'delete':
+                    /// params[1] = filename
                     result = this.deleteFile(params[1]);
                     break;
                 case 'list':
@@ -205,16 +210,24 @@ module TSOS {
                         /// Remaining bytes are allocated for filename (in hex of course).
                         /// Set is occupied to true
                         var data: string = '';
+                        var zeros: string = '';
                         for (var byte = 0; byte < BLOCK_DATA_LIMIT; ++byte) {
                             data += "00";
+                            zeros += "00"
                         }// for
                         /// Replace the first 4 bytes (8 characters) with 00's
                         data = this.englishToHex(fileName) + data.substring(fileName.length, data.length);
 
                         var value = "01" + availableFileDataKey + data;
 
-                        /// Write to the block
+                        /// Write to the directory block
                         sessionStorage.setItem(availableDirKey, value);
+
+                        /// Update the first data block to be in use so all new files won't point to the same first directory block
+                        this.setBlockFlag(availableFileDataKey, "01");
+
+                        /// Reset the data back to zero's
+                        this.setBlockData(availableFileDataKey, zeros);
 
                         _Kernel.krnTrace('File sucessfully created!');
                         msg = `C:\\AXIOS\\${fileName} sucessfully created!`;
@@ -266,8 +279,8 @@ module TSOS {
                                 if (type === '-l') {
                                     /// Print out file name, with proper file extension
                                     ///sessionStorage.getItem(currentKey).substring(8).startsWith(".!") ?
-                                        ///_StdOut.putText(`${INDENT_STRING}${INDENT_STRING}${sessionStorage.getItem(currentKey).substring(8)}.swp`)
-                                        ///: _StdOut.putText(`${INDENT_STRING}${INDENT_STRING}${sessionStorage.getItem(currentKey).substring(8)}.txt`);
+                                    ///_StdOut.putText(`${INDENT_STRING}${INDENT_STRING}${sessionStorage.getItem(currentKey).substring(8)}.swp`)
+                                    ///: _StdOut.putText(`${INDENT_STRING}${INDENT_STRING}${sessionStorage.getItem(currentKey).substring(8)}.txt`);
                                     _StdOut.putText(`${INDENT_STRING}${INDENT_STRING}${this.hexToEnglish(this.getBlockData(sessionStorage.getItem(currentKey)))}`)
                                     _StdOut.advanceLine();
                                     isEmpty = false;
@@ -301,10 +314,19 @@ module TSOS {
             /// File found
             if (targetFileKey !== '') {
                 var fileContents: string = '';
+
+                /// Start at first file block
                 var currentPointer: string = this.getBlockNextPointer(sessionStorage.getItem(targetFileKey));
 
                 /// Keep following the links from block to block until the end of the file
-                while (currentPointer != BLOCK_NULL_POINTER) {
+                while (currentPointer !== BLOCK_NULL_POINTER) {
+                    /// Since i haven't made the table yet...
+                     _StdOut.advanceLine();
+                     _StdOut.putText(`Pointer: ${currentPointer}`);
+                     _StdOut.advanceLine();
+                     _StdOut.putText(`Session Storage: ${sessionStorage.getItem(currentPointer)}`);
+                     _StdOut.advanceLine();
+
                     /// Get block
                     var currentBlockValue = sessionStorage.getItem(currentPointer);
 
@@ -333,26 +355,46 @@ module TSOS {
                 dataInHex = this.englishToHex(data);
             }/// if
 
-            /// See if file exists...
-            /// If Not:
-            ///     targetFileKey === ''
-            /// If Exists
-            ///     targetFileKey === the sessionStorage() Key
+            /// See if file exists again...
             var targetFileKey = this.fileNameExists(fileName);
 
-            /// Delete file contents if already written too...
-            /// Hint: you'll need read and delete
-
             if (targetFileKey !== '') {
-                /// Split the data up into groups of 60 Bytes or less
-                var chunks: string[] = dataInHex.match(new RegExp('.{1,' + BLOCK_DATA_LIMIT + '}', 'g'));
+                /// Delete file contents if already written too...
+                /// Start from the first file block...
+                var currentPointer: string = this.getBlockNextPointer(sessionStorage.getItem(targetFileKey));
 
-                /// Find file in directory and write to it's first pointer
-                var targetFilePointerToFirstFreeBlock = this.getBlockNextPointer(sessionStorage.getItem(targetFileKey));
+                /// Delete all following blocks
+                while (currentPointer != BLOCK_NULL_POINTER) {
+                    /// Get current block value
+                    var currentBlockValue = sessionStorage.getItem(currentPointer);
+
+                    var blockData: string = '00';
+                    for (var byte = 0; byte < BLOCK_DATA_LIMIT - 1; ++byte) {
+                        blockData += "00";
+                    }// for
+        
+                    /// Value part of key|value in session storage
+                    /// Actually "create" the block, by saving in Key|Value storage
+                    sessionStorage.setItem(currentPointer, (`${"00"}${BLOCK_NULL_POINTER}${blockData}`));
+
+                    /// Get next block by using pointer from current block
+                    currentPointer = this.getBlockNextPointer(currentBlockValue);
+                }/// while
+
+                /// Begin writing to the file
+                ///
+                /// Split the data up into groups of 60 Bytes or less...
+                /// It's Bytes * 2 since a byte is a pair of 00's
+                var chunks: string[] = dataInHex.match(new RegExp('.{1,' + (2 * BLOCK_DATA_LIMIT) + '}', 'g'));
+
+                /// Start at first file block again
+                var targetFilePointerToFirstFreeBlock: string = this.getBlockNextPointer(sessionStorage.getItem(targetFileKey));
 
                 /// Write to the first free data block
-                sessionStorage.setItem(targetFilePointerToFirstFreeBlock, chunks.shift());
-
+                var firstChunk: string = chunks.shift();
+                var firstBlockValue: string = sessionStorage.getItem(targetFilePointerToFirstFreeBlock);
+                firstBlockValue = "01" + this.getBlockNextPointer(firstBlockValue) + firstChunk + firstBlockValue.substring((7 + firstChunk.length));
+                sessionStorage.setItem(targetFilePointerToFirstFreeBlock, firstBlockValue);
 
                 /// Find more free space
                 if (chunks.length > 0) {
@@ -363,25 +405,30 @@ module TSOS {
                     /// Enough available blocks were found
                     if (freeSpaceKeys !== null) {
 
-                        for (var key: number = 0; key < freeSpaceKeys.length; ++key) {
+                        while (chunks.length > 0) {
                             /// Grab next free block
                             var currentBlockKey: string = freeSpaceKeys.shift();
 
-                            /// Fill the currentBlock with the user data
-                            /// Don't forget the current block is now "in use" as well
-                            var currentBlockValue: string = sessionStorage.getItem(currentBlockKey);
-                            currentBlockValue = "01" + this.getBlockNextPointer(currentBlockValue) + chunks.shift();
-                            sessionStorage.setItem(currentBlockKey, currentBlockValue);
+                            /// Grab next free chunk
+                            var currentChuck: string = chunks.shift();
 
                             /// Set previous block to point to this current free block
                             /// Don't forget the previous block is now "in use" as well
                             var previousBlockValue: string = sessionStorage.getItem(previousBlockKey);
-                            previousBlockValue = "01" + currentBlockKey + previousBlockValue.substring(8);
+                            previousBlockValue = "01" + currentBlockKey + this.getBlockData(previousBlockValue);
                             sessionStorage.setItem(previousBlockKey, previousBlockValue);
+
+                            /// Fill the currentBlock with the user data
+                            /// Don't forget the current block is now "in use" as well
+                            var currentBlockValue: string = sessionStorage.getItem(currentBlockKey);
+                            currentBlockValue = "01" + this.getBlockNextPointer(currentBlockValue) + currentChuck + currentBlockValue.substring((7 + currentChuck.length + 1));
+                            sessionStorage.setItem(currentBlockKey, currentBlockValue);
 
                             /// Update the previous block
                             previousBlockKey = currentBlockKey;
-                        }/// for
+                        }/// while
+
+                        return (`Wrote to: C:\\AXIOS\\${fileName}`);
                     }/// if
 
                     /// Not enough room, fail to enforce Atomicity!
@@ -390,6 +437,11 @@ module TSOS {
                     }/// else
                 }/// if
             }/// if
+
+            /// File not found
+            else {
+                return `Cannot write to C:\\AXIOS\\${fileName}, file not found!`;
+            }/// else
         }/// write
 
         public deleteFile(fileName) {
@@ -432,7 +484,9 @@ module TSOS {
                 _Kernel.krnTrace(`Cannot delete C:\\AXIOS\\${fileName}`);
                 return `Cannot delete C:\\AXIOS\\${fileName}`;
             }/// else
-        }/// 
+        }/// delete
+
+
 
         public getFirstAvailableBlock(directory: string): string {
 
@@ -535,7 +589,7 @@ module TSOS {
             return fileName.startsWith('.!');
         }/// isSwapFile
 
-        private setBlockFlag(sessionStorageKey: string, flag: string): void{
+        private setBlockFlag(sessionStorageKey: string, flag: string): void {
             var sessionStorageValue: string = sessionStorage.getItem(sessionStorageKey);
             sessionStorageValue = flag + sessionStorageValue.substring(2);
             sessionStorage.setItem(sessionStorageKey, sessionStorageValue);
@@ -558,6 +612,17 @@ module TSOS {
             return sessionStorageValue.substring(8);
         }/// getBlockData
 
+        private setBlockData(sessionStorageKey: string, newBlockData: string): boolean {
+            /// .substring(8);
+            if (newBlockData.length <= BLOCK_DATA_LIMIT*2) {
+                var sessionStorageValue = sessionStorage.getItem(sessionStorageKey);
+                sessionStorageValue = sessionStorageValue.substring(0, 8) + newBlockData;
+                sessionStorage.setItem(sessionStorageKey, sessionStorageValue);
+                return true;
+            }/// if
+            return false;
+        }/// getBlockData
+
         public englishToHex(englishWord: string): string {
             var englishWordInHex = '';
             for (var letter: number = 0; letter < englishWord.length; ++letter) {
@@ -575,9 +640,9 @@ module TSOS {
 
         public hexToEnglish(hexWord: string): string {
             var englishWord = '';
-            hexLoop: for (var hexLetterPair: number = 0; hexLetterPair < hexWord.length; hexLetterPair += 2) {
+            for (var hexLetterPair: number = 0; hexLetterPair < hexWord.length; hexLetterPair += 2) {
                 if (hexWord.substring(hexLetterPair, hexLetterPair + 2) === "00") {
-                    break hexLoop;
+                    break;
                 }///
                 else {
                     englishWord += String.fromCharCode(

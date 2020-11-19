@@ -48,8 +48,8 @@ var TSOS;
             ///
             /// Be careful with "+=", you don't want to append strings to null, make sure data is initialized to ''.
             /// You'll end up getting [flag][pointer]undefined00000000000000000000...
-            var data = '';
-            for (var byte = 0; byte < BLOCK_DATA_LIMIT; ++byte) {
+            var data = '00';
+            for (var byte = 0; byte < BLOCK_DATA_LIMIT - 1; ++byte) {
                 data += "00";
             } // for
             /// Value part of key|value in session storage

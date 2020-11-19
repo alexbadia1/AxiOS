@@ -971,6 +971,34 @@ var TSOS;
             } /// else
         } /// read
         shellWrite(args) {
+            /// At least two args were given...
+            if (args.length > 1) {
+                var fileName = args.shift();
+                /// Concatenate list of args into one string separated by spaces...
+                var formattedArgs = args.join(' ');
+                /// Make sure more than one arg was given
+                if (formattedArgs.startsWith('"') && formattedArgs.endsWith('"')) {
+                    /// Not a swap file, safe to write too
+                    if (!formattedArgs.startsWith('.!')) {
+                        /// Create write interrupt
+                        _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(DISK_IRQ, ['write', [fileName, formattedArgs.replace(/["]/g, "").trim()]]));
+                    } /// if
+                    /// Swap file
+                    else {
+                        _StdOut.putText("Cannot write to a swap file!");
+                    } /// else
+                } /// if
+                /// Text must be in quotes
+                else {
+                    _StdOut.putText(`Usage: write <filename> <"[text]"> Expected 2 arguments, but got ${args.length}`);
+                    _StdOut.advanceLine();
+                } /// else
+            } /// if
+            /// More than or less than one argument was given
+            else {
+                _StdOut.putText(`Usage: write <filename> <"[text]"> Expected 2 arguments, but got ${args.length}`);
+                _StdOut.advanceLine();
+            } /// else
         } /// shellWrite
         /// delete <filename>: Remove [filename] from storage
         shellDelete(args) {
