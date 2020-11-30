@@ -74,7 +74,9 @@ module TSOS {
                 _StdOut.putText(`${result}`);
                 _StdOut.advanceLine();
                 _OsShell.putPrompt();
-            }
+            }/// if
+
+            return result;
         }/// krnDiskDispatchFunctions
 
         ///////////////////////////////
@@ -321,11 +323,11 @@ module TSOS {
                 /// Keep following the links from block to block until the end of the file
                 while (currentPointer !== BLOCK_NULL_POINTER) {
                     /// Since i haven't made the table yet...
-                     _StdOut.advanceLine();
-                     _StdOut.putText(`Pointer: ${currentPointer}`);
-                     _StdOut.advanceLine();
-                     _StdOut.putText(`Session Storage: ${sessionStorage.getItem(currentPointer)}`);
-                     _StdOut.advanceLine();
+                    //  _StdOut.advanceLine();
+                    //  _StdOut.putText(`Pointer: ${currentPointer}`);
+                    //  _StdOut.advanceLine();
+                    //  _StdOut.putText(`Session Storage: ${sessionStorage.getItem(currentPointer)}`);
+                    //  _StdOut.advanceLine();
 
                     /// Get block
                     var currentBlockValue = sessionStorage.getItem(currentPointer);
@@ -393,7 +395,7 @@ module TSOS {
                 /// Write to the first free data block
                 var firstChunk: string = chunks.shift();
                 var firstBlockValue: string = sessionStorage.getItem(targetFilePointerToFirstFreeBlock);
-                firstBlockValue = "01" + this.getBlockNextPointer(firstBlockValue) + firstChunk + firstBlockValue.substring((7 + firstChunk.length));
+                firstBlockValue = "01" + this.getBlockNextPointer(firstBlockValue) + firstChunk + firstBlockValue.substring((7 + firstChunk.length + 1));/// Off by one error again, lol
                 sessionStorage.setItem(targetFilePointerToFirstFreeBlock, firstBlockValue);
 
                 /// Find more free space
@@ -444,9 +446,7 @@ module TSOS {
             }/// else
         }/// write
 
-        public deleteFile(fileName) {
-            var isSwapFile: boolean = this.isSwapFile(fileName);
-
+        public deleteFile(fileName): string {
             /// See if file exists...
             /// If Not:
             ///     targetFileKey === ''

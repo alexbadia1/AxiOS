@@ -9,162 +9,297 @@
  * Implementing a priority queue may not be fully necessary, but it'll make project 4 
  * a little bit easier...
  * 
+ * Turns out heapify, heap-sort or whatever you want to call it is not stable...
+ * Hmm... 
+ * 
+ *      My first inclination is to add a time inserted attribute to break ties... but what if
+ *      two processes are scheduled at the exact same time? 
+ *      
+ *      Maybe a priority queue of queues?
+ *      
+ *      Should I honestly even care about order at that time?
+ * 
+ *      I will be damned if this works...
+ * 
  */
 module TSOS {
 
     export class PriorityQueue {
         constructor(
-            public nodes: any[] = [],
+            public queues: Queue[] = [],
         ) { }
 
         public getSize(): number {
-            return this.nodes.length;
+            return this.queues.length;
         }/// getSize
 
-        /// TODO: Add protection
-        public getIndex(index: number = 0) {
-            return this.nodes[index];
+        public getIndex(index: number): Queue {
+            return this.queues[index];
         }/// getIndex
 
-        /// Put on end of queue and bubble it up to correct spot
-        public enqueue(newValue: any): void {
+        public getMin(): Queue {
+            return this.queues[ROOT_NODE];
+        }/// getMin
+
+        private getParentQueueIndex(current: number): number {
+            return Math.floor(current / 2);
+        }/// getParentNode
+
+        /// Swaps 2 queues in the min-heap implementation of this priority queue
+        private swapQueues(index1, index2): void {
+            var temp = this.queues[index1];
+            this.queues[index1] = this.queues[index2];
+            this.queues[index2] = temp;
+        }/// swapNode
+
+        /**
+         * Usually a Min-Heap insertion is O(log n)... Accepting duplicate priorities complicates this...
+         *      1. Could nest a queue inside, but kind of defeats the purpose...
+         */
+        public enqueueInterruptOrPcb(newInterruptOrPcb: any) {
+            /// if (queue with matching priority already exists)
+            ///     - find the queue with a matching priority
+            ///     - enqueue the Interrupt or Pcb
+            /// else 
+            ///     - create a new queue with a new priority matching the pcb or interrupt
+            ///     - enqueue the Interrupt or Pcb
+            ///
             /// Put value on the "bottom-left" most part of the heap...
-            this.nodes.push(newValue)
-
-            /// Bubble to proper spot
-            this.bubbleUp();
-        }/// enqueue
-
-        /// Remove the highest priority (the root node)
-        public dequeue(): any {
-
-            /// Swap the root node with the bottom most left node (last node)
-            this.swapNodes(ROOT_NODE, this.nodes.length - 1);
-
-            /// Remove the last node, that is now the highest priority node
-            var node = this.nodes.pop();
-
-            /// Now bubble down the root node (that is most likely not the highest priority node)
-            if (this.nodes.length > 1) {
-                this.bubbleDown();
-            }/// if
-
-            return node;
-        }/// dequeue
-
-        private bubbleDown(): void {
-            var swapsNeeded: boolean = true;
-            var parentIndex: number = ROOT_NODE;
-            var nodePriority: number = this.nodes[ROOT_NODE].priority;
-            //loop breaks if no swaps are needed
-            while (swapsNeeded) {
-                /// Work our way to the "top"/"front" of the list, while we 
-                /// keep swapping.
-                ///
-                /// Note we are indexing from 0, so account for offset by 1:
-                ///     LEFT Child of Parent Node at Index, parentIndex:
-                ///         lChildIndex = 2(parentiIndex) + 1
-                ///
-                ///     RIGHT Child of Parent Node at Index, parentIndex:
-                ///         rChildIndex = 2(parentiIndex) + 2
-                ///     
-                ///     Parent Index location relative to both children indexes is:
-                ///         parentIndex = floor( (lChildIndex-1) / 2 );
-                ///         parentIndex = floor( (rChildIndex - 1) / 2 );
-                var lChildIndex: number = (2 * parentIndex) + 1;
-                var rChildIndex: number = (2 * parentIndex) + 2;
-                var indexToSwap: number = -1;
-
-                /// Left child exists?
-                if (lChildIndex < this.nodes.length) {
-
-                    /// Set swap to bubble down left
-                    if (this.nodes[lChildIndex].priority <= nodePriority) {
-                        indexToSwap = lChildIndex;
-                    }/// if
+            var foundQueueWithMatchingPriority: boolean = false;
+            var pos = 0;
+            while (pos < this.queues.length && !foundQueueWithMatchingPriority) {
+                if (this.queues[pos].priority === newInterruptOrPcb.priority) {
+                    foundQueueWithMatchingPriority = true;
+                    this.queues[pos].enqueue(newInterruptOrPcb);
                 }/// if
-
-                /// Right child exists?
-                if (rChildIndex < this.nodes.length) {
-
-                    /// Left child was not a candidate
-                    /// Check if the right child has a lower priority
-                    /// and if so bubble down right child
-                    if (indexToSwap === -1) {
-                        if (this.nodes[rChildIndex].priority <= nodePriority) {
-                            indexToSwap = rChildIndex;
-                        }/// if
-
-                        /// Left Child Index was a potential candidate
-                        /// Swap to right if the difference in priority is bigger
-                        if (this.nodes[rChildIndex].priority <= this.nodes[lChildIndex].priority) {
-                            indexToSwap = rChildIndex;
-                        }/// if
-                    }/// if
-                }/// if
-
-                if (indexToSwap === -1) {
-                    swapsNeeded = false;
-                }/// else
-
-                if (swapsNeeded) {
-                    /// Actually bubble/swap down the chosen child side
-                    this.swapNodes(parentIndex, indexToSwap);
-
-                    /// Update parent index in order to keep bubbling down
-                    parentIndex = indexToSwap;
-                }/// if
-            }/// while
-        }/// bubbleDown
-
-        /// New element must be bubbled up into a correct position
-        private bubbleUp(): void {
-            /// Variable to signify to stop bubbling
-            var inPlace: boolean = false;
-
-            /// Grab last element index
-            var childIndex = this.nodes.length - 1;
-
-            /// Work our way to the "top"/"front" of the list, while we 
-            /// keep swapping.
-            ///
-            /// Note we are indexing from 0, so account for offset by 1:
-            ///     LEFT Child of Parent Node at Index, parentIndex:
-            ///         lChildIndex = 2(parentiIndex) + 1
-            ///
-            ///     RIGHT Child of Parent Node at Index, parentIndex:
-            ///         rChildIndex = 2(parentiIndex) + 2
-            ///     
-            ///     Parent Index location relative to both children indexes is:
-            ///         parentIndex = floor( (lChildIndex-1) / 2 );
-            ///         parentIndex = floor( (rChildIndex - 1) / 2 );
-            while (childIndex > 0 && !inPlace) {
-                /// Parent index location based off of child
-                var parentIndex = Math.floor((childIndex - 1) / 2);
-
-                /// If the childs priority is greater than the parents priority, keep bubbling
-                /// (remember lower number for priority is higher priority)
-                if (this.nodes[childIndex].priority < this.nodes[parentIndex].priority) {
-
-                    /// Swap child with parent
-                    this.swapNodes(childIndex, parentIndex);
-
-                    /// Child is now parent, which is technically a child of the parent's parent...
-                    childIndex = parentIndex;
-                }/// if 
-
-                /// Parent has a higher priority than the child, so stop
                 else {
-                    inPlace = true;
+                    pos++;
                 }/// else
             }/// while
+
+            /// No queues with a matching priority exist...
+            if (!foundQueueWithMatchingPriority) {
+                /// Create a new Queue
+                /// Give the new queue a matching priority!
+                /// Actually enqueue the data!
+
+                /// Follow normal min heap insertion logic
+                this.queues.push(new Queue([newInterruptOrPcb], newInterruptOrPcb.priority));
+
+                /// Bubble to proper spot
+                this.bubbleUp();
+            }/// if
+        }/// enequeueInterruptOrPcb
+
+        /// Change the bubble method to default to a timestamp in the event of ties in priority...
+        /// In the event of a double tie, chose one at random.
+        private bubbleUp() {
+            /// Bubbling up not necessary if the list has only one element
+            if (this.queues.length > 1) {
+
+                /// Start at bottom of the heap (which is technically at the end of the list)
+                var currentQueueIndex = this.queues.length - 1;
+
+                /// Bubble swap with parent until the queues priority is no longer less than the parents
+                while (currentQueueIndex > 0 && this.queues[this.getParentQueueIndex(currentQueueIndex)].priority >= this.queues[currentQueueIndex].priority) {
+                    this.swapQueues(this.getParentQueueIndex(currentQueueIndex), currentQueueIndex);
+                    currentQueueIndex = this.getParentQueueIndex(currentQueueIndex);
+                }/// while
+            }/// if
         }/// bubbleUp
 
-        /// Swaps 2 nodes in the Max/Min-Heap Implementation of this priority queue
-        private swapNodes(index1, index2): void {
-            var temp = this.nodes[index1];
-            this.nodes[index1] = this.nodes[index2];
-            this.nodes[index2] = temp;
-        }/// swapNode
+        /// In our case we'll be returning a process control block or interrupt
+        public dequeueInterruptOrPcb(): any {
+            /// Strategy: Peek the root node / queue / whatever you want to call it
+            ///     if (root queue has more that one element) 
+            ///         - just dequeue from the nested queue without modifying the min-heap
+            ///     else (root queue has one element left)
+            ///         - follow normal min-heap dequeue procedure
+            var processControlBlockOrInterrupt = null;
+
+            if (this.queues.length === 0) {
+                return;
+            }/// if
+
+            if (this.queues[ROOT_NODE].q.length > 1) {
+                Control.hostLog('Peeking priority queue');
+                processControlBlockOrInterrupt = this.queues[ROOT_NODE].dequeue();
+            }/// if
+
+            else if (this.queues[ROOT_NODE].q.length === 1) {
+                Control.hostLog('Removing a queue');
+                /// Swap the root node with the bottom most left node (last node)
+                /// Put value on the "bottom-left" most part of the heap...
+                this.swapQueues(ROOT_NODE, this.queues.length - 1);
+
+                /// Remove the last queue, that is now the highest priority node
+                processControlBlockOrInterrupt = this.queues.pop().dequeue();
+
+                /// Now bubble down the root queue (that is most likely not the highest priority queue)
+                if (this.queues.length > 1) {
+                    this.bubbleDown(this.queues.length, ROOT_NODE);
+                }/// if
+            }/// else-if
+
+            /// I would prefer overloaded methods because, well, yah...
+            try {
+                if (processControlBlockOrInterrupt instanceof ProcessControlBlock) {
+                    Control.hostLog(`Dequeued Pcb: ${processControlBlockOrInterrupt.processID}`);
+                }/// if
+                else if (processControlBlockOrInterrupt instanceof Interrupt) {
+                    Control.hostLog(`Dequeued Interrupt: ${processControlBlockOrInterrupt.irq}`);
+                }/// else
+            }/// try
+            catch (e) { }
+
+            return processControlBlockOrInterrupt;
+        }/// dequeue
+
+        public bubbleDown(size, root) {
+            /// Start from top of the heap for minimimum
+            var smallest = root;
+
+            /// LEFT Child of Parent Node at Index, parentIndex:
+            ///     lChildIndex = 2(parentIndex) + 1
+            ///
+            /// RIGHT Child of Parent Node at Index, parentIndex:
+            ///     rChildIndex = 2(parentIndex) + 2
+            var leftChildIndex = smallest * 2 + 1;
+            var rightChildIndex = smallest * 2 + 2;
+
+            // Left child is smaller than root, swap
+            if (leftChildIndex < size) {
+                if (this.queues[leftChildIndex].priority < this.queues[smallest].priority) {
+                    smallest = leftChildIndex;
+                }/// if
+            }/// if
+
+            // Right child is smaller than smallest, swap again 
+            if (rightChildIndex < size) {
+                if (this.queues[rightChildIndex].priority < this.queues[smallest].priority) {
+                    smallest = rightChildIndex;
+                }/// if
+            }/// if
+
+            // Smallest is not root, swap 
+            if (smallest != root) {
+                this.swapQueues(smallest, root);
+
+                // Recursively bubble down
+                this.bubbleDown(size, smallest);
+            }/// if
+        }/// bubbleDown
+
+        /// So ya want to change the priority of a process?
+        /// I'll be damned if this works...
+        public changePriority(pcb: ProcessControlBlock, newPriority: number) {
+            /**
+             * Here's the strategy...
+             *      1.) Dequeue the process
+             *      2.) Change the priority
+             *      3.) Enqueue the process
+             */
+
+            var processControlBlockOrInterrupt = null;
+
+            if (newPriority = pcb.priority) {
+                return;
+            }/// if
+
+            /// min-heap should be a sorted array
+            if (this.queues[pcb.priority].getSize() > 1) {
+                /// Base case
+                if (pcb.priority === 0) {
+                    processControlBlockOrInterrupt = this.queues[pcb.priority].dequeue();
+                }/// if
+
+                /// Remove non-root node 
+                else {
+                    /// 1. Find queue with matching priority
+                    var foundQueueWithMatchingPriority: boolean = false;
+                    var pos = 0;
+                    while (pos < this.queues.length && !foundQueueWithMatchingPriority) {
+
+                        /// Found queue with matching priority
+                        if (this.queues[pos].priority === pcb.priority) {
+                            foundQueueWithMatchingPriority = true;
+
+                            /// Search for pcb in nested queue
+                            var nestedPos = 0;
+                            while (nestedPos < this.queues[pos].getSize()) {
+                                if (this.queues[pos].getIndex(nestedPos).processID === pcb.processID) {
+                                    processControlBlockOrInterrupt = this.queues[pos].q.splice(nestedPos, 0);
+                                    break;
+                                }/// if
+                                else {
+                                    nestedPos++;
+                                }/// else
+                            }/// while
+                        }/// if
+                    }/// while
+                }/// else
+            }/// if
+
+            else {
+                /// Swap the root node with the bottom most left node (last node)
+                /// Put value on the "bottom-left" most part of the heap...
+                this.swapQueues(pcb.priority, this.queues.length - 1);
+
+                /// Remove the last queue, that is now the highest priority node
+                processControlBlockOrInterrupt = this.queues.pop().dequeue();
+
+                /// To bubble up or to bubble down?
+                if (this.queues.length > 1) {
+                    this.bubbleDown(this.queues.length, pcb.priority);
+                }/// if
+            }/// else
+
+            /// 2. Change Priority
+            pcb.priority = newPriority;
+
+            /// 3. Re-enque with new priority
+            this.enqueueInterruptOrPcb(pcb);
+
+        }/// changePriority
     }/// class
 }/// module
+
+// /**
+//          * Usually a Min-Heap insertion is O(log n)... Accepting duplicate priorities complicates this...
+//          *      1. Could add a secondary attribute to compare to... but what if they are equal?
+//          *      2. Could nest a queue inside 
+//          */
+//         public enqueueInterruptOrPcb(newInterruptOrPcb: any) {
+//             /// if (queue with matching priority already exists)
+//             ///     - find the queue with a matching priority
+//             ///     - enqueue the Interrupt or Pcb
+//             /// else 
+//             ///     - create a new queue with a new priority matching the pcb or interrupt
+//             ///     - enqueue the Interrupt or Pcb
+//             ///
+//             /// Put value on the "bottom-left" most part of the heap...
+//             var foundQueueWithMatchingPriority: boolean = false;
+//             var pos = 0;
+//             while (pos < this.queues.length && !foundQueueWithMatchingPriority) {
+//                 if (this.queues[pos].priority === newInterruptOrPcb.priority) {
+//                     foundQueueWithMatchingPriority = true;
+//                     this.queues[pos].enqueue(newInterruptOrPcb);
+//                 }/// if
+//                 else {
+//                     pos++;
+//                 }/// else
+//             }/// while
+
+//             /// No queues with a matching priority exist...
+//             if (!foundQueueWithMatchingPriority) {
+//                 /// Create a new Queue
+//                 /// Give the new queue a matching priority!
+//                 /// Actually enqueue the data!
+
+//                 /// Follow normal min heap insertion logic
+//                 this.queues.push(new Queue([newInterruptOrPcb], newInterruptOrPcb.priority));
+
+//                 /// Bubble to proper spot
+//                 this.bubbleUp();
+//             }/// if
+//         }/// enequeueInterruptOrPcb

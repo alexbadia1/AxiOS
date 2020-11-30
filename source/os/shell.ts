@@ -670,7 +670,9 @@ module TSOS {
             }/// else
         }/// shellStatus
 
-        /// load [<priority>] - Loads the specified user program 
+        /// load [<priority>] - Loads the specified user program
+        ///
+        /// In hindsight, creating the process and all should not be in the shell...
         public shellLoad() {
             ///Regular expressions, smh.
             ///
@@ -685,45 +687,100 @@ module TSOS {
 
                 /// Making sure there are no incomplete hex data pairs
                 if (userInput.length % 2 === 0) {
-                    /// Find a free simple volume
-                    ///
-                    /// May as well use first fit since the volumes are all the same fixed size...
+
+                    /// Memory is full...
                     if (_MemoryManager.firstFit() === -1) {
-                        /// Memory is full
-                        _StdOut.putText("Memory is full!");
-                        _StdOut.advanceLine();
+
+                        /// Try to write to the disk instead, remember it must be formatted first!
+                        if (_krnDiskDriver.formatted) {
+                            /// Create a Process Control Block
+                            var newProcessControlBlock: ProcessControlBlock = new ProcessControlBlock();
+
+                            /// Assign continuosly growing list of process id's and add to list of processes
+                            ///
+                            /// This is TEMPORARY and may need to be rolled back if no room on the disk
+                            /// Thus we will wait to actually push the pcb onto the resident list
+                            newProcessControlBlock.processID = _ResidentList.size;
+                            _ResidentList.size++;
+
+                            /// Create a swap file for said pcb
+                            newProcessControlBlock.swapFileName = `${_krnDiskDriver.hiddenFilePrefix}${_krnDiskDriver.swapFilePrefix}${newProcessControlBlock.processID}`;
+
+                            /// Now try to actually create the swap file and write to it if there's enough room
+                            ///
+                            /// Asyncronously...
+                            ///     Future<void> shellLoad() async {
+                            ///         Future<boolean> result = await _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(DISK_IRQ, ['create', args[0]]));
+                            ///         return result;
+                            ///     }/// shellLoad
+                            /// 
+                            /// Ya know, I might actually try to re do this in an asyncronous fashion in Dart and create a fultter app for it...
+                            var diskDriverResult: string = '';
+                            diskDriverResult = _krnDiskDriver.create(newProcessControlBlock.swapFileName);
+                            _StdOut.putText(`  ${diskDriverResult}`);
+                            _StdOut.advanceLine();
+                            /// File created for program
+                            if (!diskDriverResult.startsWith('Cannot create')) {
+                                diskDriverResult = _krnDiskDriver.write(newProcessControlBlock.swapFileName, userInput);
+                                _StdOut.putText(`  Program Succesfully ${diskDriverResult}`);
+                                _StdOut.advanceLine();
+
+                                /// Program succesfully written to file
+                                if (!diskDriverResult.startsWith('Cannot write')) {
+                                    newProcessControlBlock.volumeIndex = -1;
+
+                                    /// Can safely add process to the resident queue
+                                    _ResidentList.residentList.push(newProcessControlBlock);
+
+                                    /// Update pcb state to resident as the process is now in the resident list
+                                    newProcessControlBlock.processState = "Resident";
+                                }/// if
+
+                                /// Not enough room to write to the file so roll back process control block changes
+                                else {
+                                    /// Undo the increase to resident list size
+                                    _ResidentList.size--;
+                                }/// else
+                            }/// if
+
+                            /// Not enough room to create the file so roll back process control block changes
+                            else {
+                                /// Undo the increase to resident list size
+                                _ResidentList.size--;
+                            }
+                        }/// if
+
+                        /// Disk ain't formatted doofus!
+                        else {
+                            _Kernel.krnTrace("Disk is not yet formatted!");
+                            _StdOut.putText("You must format the drive disk before use!");
+                        }/// else
                     } ///if
+
+                    /// Memory not full...
                     else {
                         /// Free Simple Volume was found
                         var freeSpot: number = _MemoryManager.firstFit();
                         var freeSimpleVolume: SimpleVolume = _MemoryManager.simpleVolumes[freeSpot];
 
-                        /// Create a Process Control BLock
+                        /// Create a Process Control Block
+                        /// State is "New" until put in resident list
                         var newProcessControlBlock: ProcessControlBlock = new ProcessControlBlock();
-
-                        /// Set state to new process as new until it is a resident
                         newProcessControlBlock.processState = "New";
 
                         /// Set location of the new process in memory segment
                         newProcessControlBlock.volumeIndex = freeSpot;
 
-                        /// Assign continuosly growing list of process id's
+                        /// Assign continuosly growing list of process id's and add to list of processes
                         newProcessControlBlock.processID = _ResidentList.size;
                         _ResidentList.size++;
-
-                        /// Add to list of processes
                         _ResidentList.residentList.push(newProcessControlBlock);
 
                         /// Show user said process id...
-                        ///
-                        /// What's this?! Temperate Literals? fancy... eh?
-                        /// (*whispers* Wow, I'm actually learning...)
                         _StdOut.putText(`Process ID: ${newProcessControlBlock.processID}`);
                         _StdOut.advanceLine();
 
-                        /// Load user input into free memory segment
-                        ///
-                        /// Split the input into pairs of 2
+                        /// Load user input into free memory segment, by first splitting the input into pairs of 2
                         for (var pos: number = 0; pos < userInput.length; pos += 2) {
                             /// List splits into pairs nicely
                             hexPairList.push("" + userInput[pos] + userInput[pos + 1]);
@@ -731,7 +788,6 @@ module TSOS {
 
 
                         for (var logicalAddress = 0; logicalAddress < hexPairList.length; ++logicalAddress) {
-
                             /// Write to memory from hex pair list
                             if (_MemoryAccessor.write(freeSimpleVolume, logicalAddress, hexPairList[logicalAddress])) {
                                 Control.hostLog(`Command ${hexPairList[logicalAddress]}: SUCCESSFUL WRITE to logical memory location: ${logicalAddress}!`);
@@ -744,13 +800,10 @@ module TSOS {
                         }/// for
 
                         /// Protect volumes from being written into by accident...
-                        ///
                         /// Each individual address at the memory level will be locked to to prevent such overflow issues
                         freeSimpleVolume.writeLock();
 
-                        ///
-                        /// If the program is properly loaded into memory... 
-                        /// Update the process control block state to show it is loaded in memory
+                        /// Nothing went wrong, update pcb state to resident as the process is now in the resident list
                         newProcessControlBlock.processState = "Resident";
                     } ///else
                 }/// if 
@@ -774,9 +827,6 @@ module TSOS {
             }/// else
 
             /// Update Visual Memory
-            ///
-            /// Regardless of success or fail, just cause I want to be able to make sure memory
-            /// ain't doin anything funky...
             TSOS.Control.updateVisualMemory();
         }/// shellLoad
 
@@ -858,7 +908,7 @@ module TSOS {
                         ///     > run 1
                         /// No matter what order, should still schedule the processes in round robin fashion...
                         /// Use Single Step to see what's "really" happening...
-                        _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(RUN_PROCESS_IRQ, [curr, args[0]]));
+                        _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(RUN_PROCESS_IRQ, [curr, args[0]]));
                     }/// else
                 }/// try
                 catch (e) {
@@ -932,13 +982,13 @@ module TSOS {
                 ///     > runall
                 /// No matter what order, should still schedule the processes in round robin fashion...
                 /// Use Single Step to see what's "really" happening...
-                _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(RUN_ALL_PROCESSES_IRQ, []));
+                _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(RUN_ALL_PROCESSES_IRQ, []));
             }/// else
         }/// runall
 
         /// ps - display the PID and state of all processes
         public shellPs() {
-            _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(PS_IRQ, []));
+            _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(PS_IRQ, []));
         }///ps
 
         /// kill <pid> - kills one process (specified by process ID)
@@ -958,7 +1008,7 @@ module TSOS {
                     ///     > killall
                     /// No matter what order, should still kill the processes
                     /// Use Single Step to see what's "really" happening...
-                    _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(KILL_PROCESS_IRQ, [args]));
+                    _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(KILL_PROCESS_IRQ, [args]));
                 }/// else
             }/// if
 
@@ -971,7 +1021,7 @@ module TSOS {
 
         /// killall - kill all processes
         public shellKillAll() {
-            _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(KILL_ALL_PROCESSES_IRQ, []));
+            _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(KILL_ALL_PROCESSES_IRQ, []));
         }/// kill all processes
 
         /// quantum <int> - let the user set the Round Robin Quantum (measured in CPU cycles)
@@ -1000,7 +1050,7 @@ module TSOS {
                         /// Could process as interrupt to allow for changing the quantum mid cycle...
                         /// Actually just don't allow it, too much brain damage already...
                         /// interrupt it is
-                        _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(CHANGE_QUANTUM_IRQ, [oldDecimalQuanta, parseInt(trimmedStringQuanta, 10)]));
+                        _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(CHANGE_QUANTUM_IRQ, [oldDecimalQuanta, parseInt(trimmedStringQuanta, 10)]));
                     }/// else-if
 
                     /// Invalid Quantum
@@ -1048,12 +1098,12 @@ module TSOS {
             /// OR
             /// 1 argument === -quick || -full format
             if (args.length === 0) {
-                _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(DISK_IRQ, ['format', 'no-arg']));
+                _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(DISK_IRQ, ['format', 'no-arg']));
             }/// if
 
             else if (args.length === 1) {
                 if (args[0] === '-full' || args[0] === '-quick') {
-                    _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(DISK_IRQ, ['format', args[0].toLowerCase()]));
+                    _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(DISK_IRQ, ['format', args[0].toLowerCase()]));
                 }/// if
 
                 else {
@@ -1091,7 +1141,7 @@ module TSOS {
                     if (!args[0].startsWith(_krnDiskDriver.swapFilePrefix)) {
                         /// Minus 4 Bytes of the block metadata (containing the pointer and what not)
                         if (args[0].length <= BLOCK_SIZE_LIMIT - 4) {
-                            _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(DISK_IRQ, ['create', args[0]]));
+                            _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(DISK_IRQ, ['create', args[0]]));
                         }/// if
 
                         else {
@@ -1119,7 +1169,7 @@ module TSOS {
             /// No arguments given so skip hidden files
             if (args.length === 0) {
                 /// TODO: create disk interrupt to list files
-                _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(DISK_IRQ, ['list', 'no-arg']));
+                _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(DISK_IRQ, ['list', 'no-arg']));
             }/// if
 
             /// Make sure only one argument is given
@@ -1128,7 +1178,7 @@ module TSOS {
                 /// Make sure one arg is "-l" for hidden files
                 if (args[0] === "-l") {
                     /// TODO: create disk interrupt to list files
-                    _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(DISK_IRQ, ['list', args[0]]));
+                    _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(DISK_IRQ, ['list', args[0]]));
                 }/// if
 
                 else {
@@ -1151,7 +1201,7 @@ module TSOS {
             if (args.length === 1) {
 
                 /// Create read interrupt
-                _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(DISK_IRQ, ['read', args[0]]));
+                _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(DISK_IRQ, ['read', args[0]]));
             }/// if
 
             /// More than or less than one argument was given
@@ -1176,7 +1226,7 @@ module TSOS {
                     /// Not a swap file, safe to write too
                     if (!formattedArgs.startsWith('.!')) {
                         /// Create write interrupt
-                        _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(DISK_IRQ, ['write', [fileName, formattedArgs.replace(/["]/g, "").trim()]]));
+                        _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(DISK_IRQ, ['write', [fileName, formattedArgs.replace(/["]/g, "").trim()]]));
                     }/// if
 
                     /// Swap file
@@ -1206,7 +1256,7 @@ module TSOS {
                 /// Not a swap file, safe to delete
                 if (!args[0].startsWith('.!')) {
                     /// Create delete interrupt
-                    _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(DISK_IRQ, ['delete', args[0]]));
+                    _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(DISK_IRQ, ['delete', args[0]]));
                 }/// if
 
                 /// Swap file
@@ -1514,6 +1564,27 @@ module TSOS {
             /// OKAY, so now to the ACTUAL porgram
             _StdOut.advanceLine();
             _StdOut.advanceLine();
+
+            // var q = new PriorityQueue();
+
+            // _StdOut.putText("Testing the priority queue");
+            // _StdOut.advanceLine();
+
+            // var z = 10;
+            // for (var j = 0; j < 10; ++j) {
+            //     q.enqueueInterruptOrPcb({data: `Node: ${j.toString()} | Priority: ${z}`, priority: z});
+            //     z--;
+            // }/// for
+
+            // _StdOut.putText(`${q.print()}`);
+            // _StdOut.advanceLine();
+
+            // for (var g = 0; g < 10; ++g) {
+            //     _StdOut.putText(`${q.print()}`);
+            // _StdOut.advanceLine();
+            //     _StdOut.putText(q.dequeueInterruptOrPcb().data);
+            //     _StdOut.advanceLine();
+            // }/// for
             /// Onwards to putPrompt();!
         }/// blackLivesMatter
     }/// class

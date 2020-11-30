@@ -22,9 +22,11 @@ var TSOS;
             this.readyQueue = readyQueue;
             this.currentProcess = currentProcess;
             this.schedulingMethod = schedulingMethod;
+            /// this.readyQueue = this.schedulingMethod === 'Round Robin'? new Queue() : new PriorityQueue();
         } /// constructor
         init() {
             this.startBurst = 0;
+            /// this.readyQueue = this.schedulingMethod === 'Round Robin'? new Queue() : new PriorityQueue();
             this.readyQueue = new TSOS.PriorityQueue();
             this.currentProcess = null;
             this.processesMetaData = [];
@@ -124,7 +126,8 @@ var TSOS;
                     /// Round Robin Scheduling allows us to just keep enqueueing processes
                     newProcess.processState = "Ready";
                     _Kernel.krnTrace(`Process ${newProcess.processID} added to ready queue`);
-                    this.readyQueue.enqueue(newProcess);
+                    this.readyQueue.enqueueInterruptOrPcb(newProcess);
+                    /// this.readyQueue.enqueue(newProcess);
                 } /// else
                 /// Process scheduled successfully
                 success = true;
@@ -143,7 +146,7 @@ var TSOS;
                 if (this.readyQueue.getSize() > 0) {
                     _Kernel.krnTrace(`Another process was found in Ready Queue, issuing context switch...`);
                     /// Queue interrupt for context switch
-                    _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(CONTEXT_SWITCH_IRQ, []));
+                    _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(CONTEXT_SWITCH_IRQ, []));
                     /// Grab the procress' output, time spent executing, time spent waiting, turnaround time
                     _Kernel.krnTrace(`Collecting process ${this.currentProcess.processID} metadata before context switch.`);
                     var turnAroundTime = (this.currentProcess.timeSpentExecuting + this.currentProcess.waitTime);
@@ -196,7 +199,7 @@ var TSOS;
                 if (this.readyQueue.getSize() > 0) {
                     _Kernel.krnTrace(`Process ${this.currentProcess.processID} quantum reached, issuing context switch...`);
                     /// Queue interrupt for context switch
-                    _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(CONTEXT_SWITCH_IRQ, []));
+                    _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(CONTEXT_SWITCH_IRQ, []));
                     /// Reset the starting burst for the next new process
                     this.startBurst = _CPU_BURST;
                 } /// if

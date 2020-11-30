@@ -95,6 +95,8 @@ var TSOS;
             _ResidentList.init();
             /// ... Create and initialize Dispatcher
             _Dispatcher = new TSOS.Dispatcher();
+            /// ... Create and initialixe Swapper
+            _Swapper = new TSOS.Swapper();
             /// ... Create and initialize Scheduler
             _Scheduler = new TSOS.Scheduler();
             // ... then set the host clock pulse ...
@@ -150,11 +152,11 @@ var TSOS;
                 /// Visually show user that single step mode is OFF
                 document.getElementById("btnSingleStepMode").value = "Single Step ON";
             } /// else
-            _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(SINGLE_STEP_IRQ, []));
+            _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(SINGLE_STEP_IRQ, []));
         } /// hostBtnSingleStep_click
         static hostBtnNextStep_click(btn) {
             /// Process single step interrupt
-            _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(NEXT_STEP_IRQ, []));
+            _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(NEXT_STEP_IRQ, []));
         } /// hostBtnNextStep_click
         static initializeVisualMemory() {
             /// Increment by 8 on order to create a row every 8 bytes
@@ -403,15 +405,18 @@ var TSOS;
             /// Obviously on the first iteration there will be no pre-existing tables, so just catch the error
             /// and continue building the table.
             try {
-                document.getElementById("tempTable").parentNode.removeChild(document.getElementById("tempTable"));
-                document.getElementById("tempTable").parentNode.removeChild(document.getElementById("tempTable"));
+                for (var i = 0; i < _ResidentList.size - 1; ++i) {
+                    document.getElementById("tempTable").parentNode.removeChild(document.getElementById("tempTable"));
+                } /// for
             } /// try
             catch (e) {
                 _Kernel.krnTrace(e);
                 _Kernel.krnTrace("No resident list to delete.");
             } /// catch
             for (var index = 0; index < _Scheduler.readyQueue.getSize(); ++index) {
-                this.createVisualResidentList(_Scheduler.readyQueue.getIndex(index));
+                for (var nestedIndex = 0; nestedIndex < _Scheduler.readyQueue.queues[index].getSize(); ++nestedIndex) {
+                    this.createVisualResidentList(_Scheduler.readyQueue.queues[index].q[nestedIndex]);
+                } /// for
             } /// for
         } /// visualizeResidentList
     } /// class

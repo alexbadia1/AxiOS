@@ -26,7 +26,7 @@ module TSOS {
 
     export class Dispatcher {
 
-        constructor() {}/// constructor
+        constructor() { }/// constructor
 
         public contextSwitch() {
             _Kernel.krnTrace("Switching context...");
@@ -46,7 +46,7 @@ module TSOS {
 
                 /// Enqueue the current process to end of Ready Queue
                 _Scheduler.currentProcess.processState = "Ready";
-                _Scheduler.readyQueue.enqueue(_Scheduler.currentProcess);
+                _Scheduler.readyQueue.enqueueInterruptOrPcb(_Scheduler.currentProcess);
             }/// if
 
             /// if (there are more processes)
@@ -57,7 +57,7 @@ module TSOS {
             ///     process keep running until termination.
             if (_Scheduler.readyQueue.getSize() > 0) {
                 /// Dequeue process from front of ready queue
-                _Scheduler.currentProcess = _Scheduler.readyQueue.dequeue();
+                _Scheduler.currentProcess = _Scheduler.readyQueue.dequeueInterruptOrPcb();
 
                 /// Load CPU context with new process context
                 if (_Scheduler.currentProcess.processState !== "Terminated") {
@@ -68,6 +68,56 @@ module TSOS {
         }/// contextSwitch
 
         public setNewProcessToCPU(newPcb) {
+            var segment: number = -1;
+
+            /// Make sure the process is in memory
+            /// I wonder how many people actually write out (pseudocode for) their ideas before programming away...
+            /// if (current process is on disk)
+            ///     if (ready queue length > 1)
+            ///         roll out the process at the end of the ready queue (ready queue length - 1)
+            ///     else if (this is the last process)
+            ///         roll out any terminated process in memory... maybe automatically roll out processes they terminate?
+            ///     Roll in process to memory segment that was rolled out
+            if (newPcb.volumeIndex === -1) {
+                if (_Scheduler.readyQueue.getSize() > 1) {
+                    /// Of the three processes on the disk, choose the one that is closest to the end of the ready queue
+                    segment = _Swapper.rollOut(this.victim());
+                    /// _StdOut.putText(`Roll Out Segment number: ${segment}`);
+                }/// if
+                else {
+                    var pos: number = 0;
+                    var found: boolean = false;
+                    while (pos < _ResidentList.residentList.length && !found) {
+                        if (_ResidentList.residentList[pos].volumeIndex !== -1 && _ResidentList.residentList[pos].processState === "Terminated") {
+                            found = true;
+                            segment = _Swapper.rollOut(_ResidentList.residentList[pos]);
+                            ///_StdOut.putText(`Roll Out Segment number: ${segment}`);
+                        }/// if
+                        else {
+                            pos++;
+                        }/// else
+                    }/// while
+
+                    /// If no terminated processes, roll out the first segment
+                    if (!found) {
+                        var i: number = 0;
+                        var firstProcessFound: boolean = false;
+                        while (i < _ResidentList.residentList.length && !firstProcessFound) {
+                            if (_ResidentList.residentList[i].volumeIndex === 1) {
+                                firstProcessFound = true;
+                                segment = _Swapper.rollOut(_ResidentList.residentList[i]);
+                                ///_StdOut.putText(`Roll Out Segment number: ${segment}`);
+                            }/// if
+                            else {
+                                i++;
+                            }/// else
+                        }/// while
+                    }/// if
+                }/// else
+                _Swapper.rollIn(newPcb, segment);
+                _Swapper.init();
+            }/// if
+
             _Kernel.krnTrace(`Attaching process ${newPcb.processID} to cpu.`);
             _CPU.PC = newPcb.programCounter;
             _CPU.IR = newPcb.instructionRegister;
@@ -87,5 +137,23 @@ module TSOS {
             pcb.yRegister = _CPU.Yreg;
             pcb.zFlag = _CPU.Zflag;
         }/// saveContextFromCPU
+
+        public victim(): ProcessControlBlock {
+            var pos: number = _Scheduler.readyQueue.getSize() - 1;
+            
+            while (pos > 0) {
+                var nestedPos = _Scheduler.readyQueue.queues[pos].getSize() - 1;
+                while (nestedPos > 0) {
+                    if (_Scheduler.readyQueue.queues[pos][nestedPos].volumeIndex != -1) {
+                        return _Scheduler.readyQueue.queues[pos][nestedPos];
+                    }/// if
+                    else {
+                        nestedPos--;
+                    }/// else
+                }/// while
+                pos--;
+            }/// while
+            return null;
+        }/// victim
     }/// class
 }/// module

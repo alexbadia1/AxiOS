@@ -17,7 +17,7 @@ const APP_VERSION = "0.07";
 const INDENT_STRING = '  ';
 const INDENT_NUMBER = 16;
 // This is in ms (milliseconds) so 1000 = 1 second.
-const CPU_CLOCK_INTERVAL = .00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001;
+const CPU_CLOCK_INTERVAL = .00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001;
 // Pages 23 (timer), 9 (interrupts), and 561 (interrupt priority).
 // NOTE: The timer is different from hardware/host clock pulses. Don't confuse these.
 const TIMER_IRQ = 0;
@@ -67,6 +67,7 @@ var _CPU_BURST; /// Keep track of the number of bursts the CPU has performed
 var _Memory;
 var _MemoryAccessor;
 var _Dispatcher;
+var _Swapper;
 var _Scheduler;
 var _Disk;
 /// Software (OS)

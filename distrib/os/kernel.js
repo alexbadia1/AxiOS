@@ -90,8 +90,8 @@ var TSOS;
             /// Check for an interrupt, if there are any. Page 560
             if (_KernelInterruptPriorityQueue.getSize() > 0) {
                 // Process the first interrupt on the interrupt queue.
-                /// TODO (maybe): Implement a priority queue based on the IRQ number/id to enforce interrupt priority.
-                var interrupt = _KernelInterruptPriorityQueue.dequeue();
+                /// Implemented a priority queue of queues (not the most efficient I know)
+                var interrupt = _KernelInterruptPriorityQueue.dequeueInterruptOrPcb();
                 this.krnInterruptHandler(interrupt.irq, interrupt.params);
             } /// if
             /// _CPU.isExecuting: controls if the cpu will try to read an instruction from memory
@@ -152,7 +152,9 @@ var TSOS;
             /// Wait time is time spent in the ready queue soo...
             /// Loop through Ready Queue and increment each pcb's wait time by 1 cycle
             for (var i = 0; i < _Scheduler.readyQueue.getSize(); ++i) {
-                _Scheduler.readyQueue.getIndex(i).waitTime += 1;
+                for (var h = 0; h < _Scheduler.readyQueue.queues[i].getSize(); ++h) {
+                    _Scheduler.readyQueue.queues[i].q[h].waitTime += 1;
+                } /// for
             } /// for
             /// Turnaround Time is time running and in waiting queue...
             /// So track nummber of cpu cycles used per process and add cpu cycles used and wait time for turnaround time
@@ -382,25 +384,30 @@ var TSOS;
             _Scheduler.runSchedule(processWasLoaded);
         } /// runAllProcessISR
         terminateProcessISR() {
-            /// Set current process state to "Terminated" for clean up
-            _Scheduler.currentProcess.processState === "Terminated";
-            if (_Scheduler.currentProcess.processState === "Terminated" && _Scheduler.readyQueue.getSize() === 0) {
-                /// Remove the last process from the Ready Queue
-                /// by removing the last process from current process
-                _Scheduler.currentProcess = null;
-                /// "Turn Off" CPU
-                _CPU.isExecuting = false;
-                /// Turn "off Single Step"
-                _SingleStepMode = false;
-                _NextStep = false;
-                /// Reset visuals for Single Step
-                document.getElementById("btnNextStep").disabled = true;
-                document.getElementById("btnSingleStepMode").value = "Single Step ON";
-                /// Prompt for more input
-                _StdOut.advanceLine();
-                _OsShell.putPrompt();
-                TSOS.Control.updateVisualPcb();
-            } /// if
+            try {
+                /// Set current process state to "Terminated" for clean up
+                _Scheduler.currentProcess.processState === "Terminated";
+                if (_Scheduler.currentProcess.processState === "Terminated" && _Scheduler.readyQueue.getSize() === 0) {
+                    /// Remove the last process from the Ready Queue
+                    /// by removing the last process from current process
+                    _Scheduler.currentProcess = null;
+                    /// "Turn Off" CPU
+                    _CPU.isExecuting = false;
+                    /// Turn "off Single Step"
+                    _SingleStepMode = false;
+                    _NextStep = false;
+                    /// Reset visuals for Single Step
+                    document.getElementById("btnNextStep").disabled = true;
+                    document.getElementById("btnSingleStepMode").value = "Single Step ON";
+                    /// Prompt for more input
+                    _StdOut.advanceLine();
+                    _OsShell.putPrompt();
+                    TSOS.Control.updateVisualPcb();
+                } /// if
+            } /// try
+            catch (e) {
+                _Kernel.krnTrace(e);
+            } /// catch
         } /// terminateProcessISR
         killProcessISR(params) {
             /// Apparently Javascripts tolerance of NaN completly defeats the purpose of using this 
@@ -466,7 +473,9 @@ var TSOS;
                 /// Mark all process in the schedule queue as terminated
                 _Scheduler.currentProcess.processState = "Terminated";
                 for (var i = 0; i < _Scheduler.readyQueue.getSize(); ++i) {
-                    _Scheduler.readyQueue.getIndex(i).processState = "Terminated";
+                    for (var h = 0; h < _Scheduler.readyQueue.queues[i].getSize(); ++h) {
+                        _Scheduler.readyQueue.getIndex(i).getIndex(h).processState = "Terminated";
+                    } /// for
                 } /// for
                 // _Scheduler.terminatedAllProcess();
             } /// if

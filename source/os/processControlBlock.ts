@@ -24,15 +24,20 @@ module TSOS {
             public yRegister: string = "00",
             public zFlag: number = 0,
             public priority: number = 1,
+            private roundRobinPriority = 1,
             public processState: string = 'New',
             public volumeIndex: number = -1,
             public outputBuffer: string = "",
             public timeSpentExecuting: number = 0,
             public waitTime: number = 0,
+            public swapFileName: string = null,
         ) { }
 
         public init(): void {} /// init
 
+        public getRoundRobinPriority() {
+            return this.roundRobinPriority;
+        }/// getRoundRobinPriority
         // public getVolumeLocation() {
         //     if (this.volumeIndex !== -1){
         //         var locations: string[] = ["Simple Volume 1", "Simple Volume 2", "Simple Volume 3"];

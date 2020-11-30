@@ -125,6 +125,9 @@ module TSOS {
             /// ... Create and initialize Dispatcher
             _Dispatcher = new Dispatcher();
 
+            /// ... Create and initialixe Swapper
+            _Swapper = new Swapper();
+
             /// ... Create and initialize Scheduler
             _Scheduler = new Scheduler();
 
@@ -191,12 +194,12 @@ module TSOS {
                 /// Visually show user that single step mode is OFF
                 (<HTMLButtonElement>document.getElementById("btnSingleStepMode")).value = "Single Step ON";
             }/// else
-            _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(SINGLE_STEP_IRQ, []));
+            _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(SINGLE_STEP_IRQ, []));
         }/// hostBtnSingleStep_click
 
         public static hostBtnNextStep_click(btn): void {
             /// Process single step interrupt
-            _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(NEXT_STEP_IRQ, []));
+            _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(NEXT_STEP_IRQ, []));
         }/// hostBtnNextStep_click
 
         public static initializeVisualMemory() {
@@ -491,15 +494,18 @@ module TSOS {
             /// Obviously on the first iteration there will be no pre-existing tables, so just catch the error
             /// and continue building the table.
             try {
-                document.getElementById("tempTable").parentNode.removeChild(document.getElementById("tempTable"));
-                document.getElementById("tempTable").parentNode.removeChild(document.getElementById("tempTable"));
+                for (var i = 0; i < _ResidentList.size - 1; ++i) {
+                    document.getElementById("tempTable").parentNode.removeChild(document.getElementById("tempTable"));
+                }/// for
             }/// try
             catch (e) {
                 _Kernel.krnTrace(e);
                 _Kernel.krnTrace("No resident list to delete.");
             }/// catch
             for (var index: number = 0; index < _Scheduler.readyQueue.getSize(); ++index) {
-                this.createVisualResidentList(_Scheduler.readyQueue.getIndex(index));
+                for (var nestedIndex = 0; nestedIndex < _Scheduler.readyQueue.queues[index].getSize(); ++nestedIndex) {
+                    this.createVisualResidentList( _Scheduler.readyQueue.queues[index].q[nestedIndex]);
+                }/// for
             }/// for
         }/// visualizeResidentList
 

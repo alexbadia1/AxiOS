@@ -20,7 +20,7 @@ const INDENT_STRING = '  ';
 const INDENT_NUMBER = 16;
 
 // This is in ms (milliseconds) so 1000 = 1 second.
-const CPU_CLOCK_INTERVAL: number = .00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001;
+const CPU_CLOCK_INTERVAL: number = .00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001;
 
 // Pages 23 (timer), 9 (interrupts), and 561 (interrupt priority).
 // NOTE: The timer is different from hardware/host clock pulses. Don't confuse these.
@@ -83,7 +83,7 @@ var _Memory: TSOS.Memory;
 var _MemoryAccessor: TSOS.MemoryAccessor;
 
 var _Dispatcher: TSOS.Dispatcher;
-
+var _Swapper: TSOS.Swapper;
 var _Scheduler: TSOS.Scheduler;
 
 var _Disk: TSOS.Disk;
