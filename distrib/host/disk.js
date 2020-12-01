@@ -3,11 +3,6 @@
  * Our disk filesystem is implemented with a Key|Value pairs...
  *
  * Quick Notes on Disk:
- *      Structure
- *          Tracks > Sectors > Blocks
- *          In analogy think of an olympic track...
- *              Each "lane" = track
- *              Every say 100 meters = section
  *      - Ours will be 16 KB so...
  *          - 4 Tracks
  *          - 8 Sectors
@@ -41,15 +36,14 @@ var TSOS;
             var key = `${TSOS.Control.formatToHexWithPadding(newTrackNum)}${TSOS.Control.formatToHexWithPadding(newSectorNum)}${TSOS.Control.formatToHexWithPadding(newBlockNum)}`;
             var forwardPointer = BLOCK_NULL_POINTER;
             /// First byte = availability flag
-            ///     1 means available
-            ///     0 means NOT available because 0 is falsey
-            var isOccupied = "00";
+            ///     0000 means free
+            var isOccupied = "0000";
             /// Remaining 60 Bytes are for the raw data
             ///
             /// Be careful with "+=", you don't want to append strings to null, make sure data is initialized to ''.
             /// You'll end up getting [flag][pointer]undefined00000000000000000000...
             var data = '00';
-            for (var byte = 0; byte < BLOCK_DATA_LIMIT - 1; ++byte) {
+            for (var byte = 0; byte < DATA_BLOCK_DATA_LIMIT - 1; ++byte) {
                 data += "00";
             } // for
             /// Value part of key|value in session storage
@@ -59,7 +53,7 @@ var TSOS;
         } /// createSessionBlock
         createMasterBootRecord() {
             var key = "000000";
-            var isOccupied = "01";
+            var isOccupied = "0001";
             var nextBlockPointer = BLOCK_NULL_POINTER;
             /// Remaining 60 Bytes are for the raw data
             var data = _krnDiskDriver.englishToHex("Master Partition Table, Master Signature, Master Boot Code");

@@ -53,7 +53,15 @@ const TRACK_LIMIT = 4;
 const SECTOR_LIMIT = 8;
 const BLOCK_LIMIT = 8;
 const BLOCK_SIZE_LIMIT = 64;
-const BLOCK_DATA_LIMIT = 60;
+const DATA_BLOCK_DATA_LIMIT = 59;
+const DIRECTORY_BLOCK_DATA_LIMIT = 50;
+const METADATA_BYTE_SIZE = 13;
+const FLAG_INDEXES = { start: 0, end: 3 };
+const POINTER_INDEXES = { start: 4, end: 9 };
+const DATE_INDEXES = { start: 10, end: 23 };
+const FILE_SIZE_INDEXES = { start: 24, end: 27 };
+const DIRECTORY_DATA_INDEXES = { start: 28, end: 128 };
+const DATA_DATA_INDEXES = { start: 10, end: 128 };
 const BLOCK_NULL_POINTER = "FFFFFF";
 //
 // Global Variables
@@ -101,6 +109,7 @@ var _Console;
 var _OsShell;
 // At least this OS is not trying to kill you. (Yet.)
 var _SarcasticMode = false;
+var _TwentyFourHourClock = false;
 // Global Device Driver Objects - page 12
 var _krnKeyboardDriver = null;
 var _krnDiskDriver = null;

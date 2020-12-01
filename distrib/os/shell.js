@@ -588,7 +588,7 @@ var TSOS;
                             /// 
                             /// Ya know, I might actually try to re do this in an asyncronous fashion in Dart and create a fultter app for it...
                             var diskDriverResult = '';
-                            diskDriverResult = _krnDiskDriver.create(newProcessControlBlock.swapFileName);
+                            diskDriverResult = _krnDiskDriver.createLite(newProcessControlBlock.swapFileName);
                             _StdOut.putText(`  ${diskDriverResult}`);
                             _StdOut.advanceLine();
                             /// File created for program

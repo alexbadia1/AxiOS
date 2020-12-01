@@ -291,6 +291,26 @@ module TSOS {
             return paddedhexNumber;
         }/// formatToHexWithPadding
 
+        public static formatToHexWithPaddingTwoBytes(decimalNum: number) {
+            var hexNumber: string = decimalNum.toString(16);
+
+            /// Add left 0 padding
+            var paddedhexNumber: string = "0000" + hexNumber;
+            paddedhexNumber = paddedhexNumber.substr(paddedhexNumber.length - 4).toUpperCase();
+
+            return paddedhexNumber;
+        }/// formatToHexWithPadding
+
+        public static formatToHexWithPaddingSevenBytes(date: string) {
+            var monthInHex = parseInt(date.substring(0, 2)).toString(16).padStart(2, '0'); /// Month
+            var dayInHex = parseInt(date.substring(2, 4)).toString(16).padStart(2, '0'); /// Day
+            var yearInHex = parseInt(date.substring(4, 8)).toString(16).padStart(4, '0'); /// Year
+            var hoursInHex = parseInt(date.substring(8, 10)).toString(16).padStart(2, '0'); /// Hours
+            var minutesInHex = parseInt(date.substring(10, 12)).toString(16).padStart(2, '0');/// Minutes
+            var secondsInHex = parseInt(date.substring(12, 14)).toString(16).padStart(2, '0'); /// Seconds
+            return monthInHex + dayInHex + yearInHex + hoursInHex + minutesInHex + secondsInHex;
+        }/// formatToHexWithPadding
+
         /*************************************************************************************
         iProject3 Display: 
             calculateAvergeWaitTime()

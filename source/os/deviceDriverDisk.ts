@@ -2,6 +2,16 @@
    DeviceDriverDisk.ts
 
    The Kernel Disk Device Driver.
+
+   Few Questions:
+        1.) How many bytes should we reserve for"
+            ~ The flag?
+                -
+            ~ The file name?
+            ~ File creation date?
+            ~ File size?
+                - Our disk is 16,000 Bytes or 16 KB, so 2Bytes?
+            ~
    ---------------------------------- */
 
 module TSOS {
@@ -10,6 +20,7 @@ module TSOS {
         constructor(
             public hiddenFilePrefix: string = '.',
             public swapFilePrefix: string = '!',
+            public idAllocator: IdAllocator = new IdAllocator(),
             public dirBlock: Partition = new Partition(
                 'File Header', /// File Entries
                 0, 0, 1, /// base = (0, 0, 1)
@@ -44,7 +55,7 @@ module TSOS {
             switch (diskOperation) {
                 case 'create':
                     /// params[1] = filename
-                    result = this.create(params[1]);
+                    result = this.createLite(params[1]);
                     break;
                 case 'write':
                     /// params[1][0] = filename
@@ -150,7 +161,8 @@ module TSOS {
                     for (var sectorNum: number = 0; sectorNum < SECTOR_LIMIT; ++sectorNum) {
                         for (var blockNum: number = 0; blockNum < BLOCK_LIMIT; ++blockNum) {
 
-                            var currentKey: string = `${TSOS.Control.formatToHexWithPadding(trackNum)}${TSOS.Control.formatToHexWithPadding(sectorNum)}${TSOS.Control.formatToHexWithPadding(blockNum)}`;
+                            var currentKey: string =
+                                `${TSOS.Control.formatToHexWithPadding(trackNum)}${TSOS.Control.formatToHexWithPadding(sectorNum)}${TSOS.Control.formatToHexWithPadding(blockNum)}`;
 
                             /// Skip already quick formatted blocks
                             if (sessionStorage.getItem(currentKey).substring(0, 8) === "00000000") {
@@ -190,69 +202,87 @@ module TSOS {
             }/// else
         }/// quickFormat
 
-        /// Create File should be all or nothing...No partial creations of files
-        public create(fileName: string = ''): string {
+        /**
+         * Creating files should be quick
+         *      0. Make sure file does not exist
+         *      1. Request a unique one byte ID from the ID manager
+         *      2. if (file does not exist and id request is successfull) try to create a file
+         *      3. Create the file
+         *          - Get creation date 
+         *          - Set the file size to 128 Bytes (1 Byte for file entry, 1 byte for first reserved data block)
+         *          - 
+         *      4. 
+         */
+        public createLite(fileName: string = ''): string {
             var msg: string = 'File creation failed';
 
-            // File does NOT exist
+            /// File does not exist, nice...
             if (this.fileNameExists(fileName) === '') {
 
-                /// Find a free space, null if there are no available blocks
-                var availableDirKey = this.getFirstAvailableBlock("File Header");
+                /// Request a unique ID from the ID manager
+                var newFileID = this.idAllocator.allocateID();
 
-                /// Find a free space, null if there are no available blocks
-                var availableFileDataKey = this.getFirstAvailableBlock("File Body");
+                /// File ID request successful, okay we're getting somwhere
+                if (newFileID != -1) {
 
-                /// Free space found in both file header and file data directories
-                ///
-                /// Split into multiple "if" statements for "clearer" error detection
-                if (availableDirKey != null) {
-                    if (availableFileDataKey != null) {
-                        /// First 4 bytes (8 characters) are pointer to the free data block in the file data directory...
-                        /// Remaining bytes are allocated for filename (in hex of course).
-                        /// Set is occupied to true
-                        var data: string = '';
-                        var zeros: string = '';
-                        for (var byte = 0; byte < BLOCK_DATA_LIMIT; ++byte) {
-                            data += "00";
-                            zeros += "00"
-                        }// for
-                        /// Replace the first 4 bytes (8 characters) with 00's
-                        data = this.englishToHex(fileName) + data.substring(fileName.length, data.length);
+                    /// Find a free space, null if there are no available blocks O(n)
+                    var availableDirKey = this.getFirstAvailableBlockFromDirectoryPartition();
 
-                        var value = "01" + availableFileDataKey + data;
+                    /// Free space found in directory
+                    if (availableDirKey != null) {
 
-                        /// Write to the directory block
-                        sessionStorage.setItem(availableDirKey, value);
+                        /// Find a free space, null if there are no available blocks O(n)
+                        var availableFileDataKey = this.getFirstAvailableBlockFromDataPartition();
 
-                        /// Update the first data block to be in use so all new files won't point to the same first directory block
-                        this.setBlockFlag(availableFileDataKey, "01");
+                        /// Free space found in data partition
+                        if (availableFileDataKey != null) {
+                            /// Write a directory entry for file
+                            var fileNameInHex: string = this.englishToHex(fileName);
+                            var paddedFileNameInHex = fileNameInHex + this.dirBlock.defaultDirectoryBlockZeros.substring(fileNameInHex.length);
+                            var newFileIDString: string = Control.formatToHexWithPaddingTwoBytes(newFileID);
+                            this.setBlockFlag(availableDirKey, newFileIDString);
+                            this.setBlockForwardPointer(availableDirKey, availableFileDataKey);
+                            this.setBlockDate(availableDirKey, Control.formatToHexWithPaddingSevenBytes(_Kernel.getCurrentDateTime()));
+                            this.setBlockSize(availableDirKey, '0080'); /// 128 in hexadecimal
+                            this.setDirectoryBlockData(availableDirKey, paddedFileNameInHex);
 
-                        /// Reset the data back to zero's
-                        this.setBlockData(availableFileDataKey, zeros);
+                            /// Reserve the first data block for file and overwrite with 00's
+                            this.setBlockFlag(availableFileDataKey, newFileIDString);
+                            this.setDataBlockData(availableFileDataKey, this.dirBlock.defaultDataBlockZeros);
 
-                        _Kernel.krnTrace('File sucessfully created!');
-                        msg = `C:\\AXIOS\\${fileName} sucessfully created!`;
+                            _Kernel.krnTrace('File sucessfully created!');
+                            msg = `C:\\AXIOS\\${fileName} sucessfully created!`;
+                        }/// if
 
+                        /// No space in data partition
+                        else {
+                            _Kernel.krnTrace(`Cannot create C:\\AXIOS\\${fileName}, all file data blocks are in use!`);
+                            msg = `Cannot create C:\\AXIOS\\${fileName}, all file data blocks are in use!`;
+                        }/// else
                     }/// if
+
+                    /// No space in directory
                     else {
-                        _Kernel.krnTrace(`Cannot create C:\\AXIOS\\${fileName}, all file data blocks are in use!`);
-                        msg = `Cannot create C:\\AXIOS\\${fileName}, all file data blocks are in use!`;
+                        _Kernel.krnTrace(`Cannot create C:\\AXIOS\\${fileName}, all file header blocks are in use!`);
+                        msg = `Cannot create C:\\AXIOS\\${fileName}, all file header blocks are in use!`;
                     }/// else
                 }/// if
+
+                /// Ran out of file ID's
                 else {
-                    _Kernel.krnTrace(`Cannot create C:\\AXIOS\\${fileName}, all file header blocks are in use!`);
-                    msg = `Cannot create C:\\AXIOS\\${fileName}, all file header blocks are in use!`;
+                    _Kernel.krnTrace(`Cannot create C:\\AXIOS\\${fileName}, ran out of ID's to allocate!`);
+                    msg = `Cannot create C:\\AXIOS\\${fileName}, ran out of ID's to allocate!`;
                 }/// else
             }/// if
 
+            /// File already exists
             else {
                 _Kernel.krnTrace(`Cannot create C:\\AXIOS\\${fileName}, filename is already in use!`);
                 msg = `Cannot create C:\\AXIOS\\${fileName}, filename already in use!`;
             }/// else
 
             return msg;
-        }/// createFile
+        }/// createLite
 
         public list(type: string): void {
             var isEmpty: boolean = true;
@@ -264,13 +294,63 @@ module TSOS {
                         var currentKey: string = `${TSOS.Control.formatToHexWithPadding(trackNum)}${TSOS.Control.formatToHexWithPadding(sectorNum)}${TSOS.Control.formatToHexWithPadding(blockNum)}`;
                         /// Don't want to list deleted files (files that have data with a low availabiliy flag)
                         /// Availabiliy flag is high, meaning the block is in use and has data
-                        if (this.getBlockFlag(sessionStorage.getItem(currentKey)) === "01") {
+                        if (!this.isAvailable(currentKey)) {
+                            var fileName: string = this.hexToEnglish(this.getDirectoryBlockData(currentKey));
+                            var fileSize: number = parseInt(this.getBlockSize(currentKey), 16);
+                            var fileSizeSuffix = '';
+                            var fileDate: string = this.getBlockDate(currentKey);
+                            var hours: string = '01';
+                            var suffix: string = '';
+
+                            /// Formatting the date
+                            if (!_TwentyFourHourClock) {
+                                hours = parseInt(fileDate.substring(8, 10), 16) === 24 ?
+                                    (parseInt(fileDate.substring(8, 10), 16) / 24).toString()
+                                    : (parseInt(fileDate.substring(8, 10), 16) % 12).toString();
+                                suffix = parseInt(fileDate.substring(8, 10), 16) > 12 ? ' PM' : ' AM';
+                            }/// if
+
+                            else {
+                                hours = parseInt(fileDate.substring(8, 10), 16).toString();
+                            }/// else
+                            fileDate =
+                                parseInt(fileDate.substring(0, 2), 16).toString().padStart(2, '0') + /// Month
+                                "/" + parseInt(fileDate.substring(2, 4), 16).toString() + /// Day
+                                "/" + parseInt(fileDate.substring(4, 8), 16).toString() + /// year
+                                " " + hours + /// hours
+                                ":" + parseInt(fileDate.substring(10, 12), 16).toString().padStart(2, '0') + /// Minutes
+                                ":" + parseInt(fileDate.substring(12, 14), 16).toString().padStart(2, '0') + /// seconds
+                                suffix;
+
+                            /// Formatting file size
+                            if (fileSize < 1_000) {
+                                fileSizeSuffix = ' Bytes';
+                            }/// if
+
+                            else if (fileSize < 1_000_000) {
+                                fileSizeSuffix = ' KB'
+                            }/// else if
+
+                            else if (fileSize < 1_000_000_000) {
+                                fileSizeSuffix = ' MB';
+                            }/// else-if
+
+                            else if (fileSize < 1_000_000_000_000) {
+                                fileSizeSuffix = ' GB';
+                            }/// else-if
+
+                            else {
+                                fileSizeSuffix = ' TB';
+
+                                /// More...? PB?
+                            }/// else
+
 
                             /// Not a hidden file
-                            if (!this.hexToEnglish(this.getBlockData(sessionStorage.getItem(currentKey))).startsWith('.')) {
+                            if (!fileName.startsWith('.')) {
                                 /// Print out file name
                                 ///: _StdOut.putText(`${INDENT_STRING}${INDENT_STRING}${sessionStorage.getItem(currentKey).substring(8)}.txt`);
-                                _StdOut.putText(`${INDENT_STRING}${INDENT_STRING}${this.hexToEnglish(this.getBlockData(sessionStorage.getItem(currentKey)))}`);
+                                _StdOut.putText(`${INDENT_STRING}${INDENT_STRING}${fileName}${INDENT_STRING}${fileDate}${INDENT_STRING}${fileSize}${fileSizeSuffix}`);
                                 _StdOut.advanceLine();
                                 isEmpty = false;
                             }/// if
@@ -283,7 +363,7 @@ module TSOS {
                                     ///sessionStorage.getItem(currentKey).substring(8).startsWith(".!") ?
                                     ///_StdOut.putText(`${INDENT_STRING}${INDENT_STRING}${sessionStorage.getItem(currentKey).substring(8)}.swp`)
                                     ///: _StdOut.putText(`${INDENT_STRING}${INDENT_STRING}${sessionStorage.getItem(currentKey).substring(8)}.txt`);
-                                    _StdOut.putText(`${INDENT_STRING}${INDENT_STRING}${this.hexToEnglish(this.getBlockData(sessionStorage.getItem(currentKey)))}`)
+                                    _StdOut.putText(`${INDENT_STRING}${INDENT_STRING}${fileName}${INDENT_STRING}${fileDate}${INDENT_STRING}${fileSize}${fileSizeSuffix}`)
                                     _StdOut.advanceLine();
                                     isEmpty = false;
                                 }/// if
@@ -302,41 +382,35 @@ module TSOS {
 
         public read(fileName: string): string {
             var isSwapFile: boolean = this.isSwapFile(fileName);
-
-            /// Create the illusion of file names...
-            // fileName = isTxt ?fileName.replace(new RegExp('.txt' + '$'), '')
-            // : fileName.replace(new RegExp('.swp' + '$'), '');
-            /// See if file exists...
-            /// If Not:
-            ///     targetFileKey === ''
-            /// If Exists
-            ///     targetFileKey === the sessionStorage() Key
             var targetFileKey = this.fileNameExists(fileName);
 
             /// File found
             if (targetFileKey !== '') {
+                _StdOut.advanceLine();
+                _StdOut.putText(`File Header Data: ${sessionStorage.getItem(targetFileKey)}`);
+                _StdOut.advanceLine();
                 var fileContents: string = '';
 
                 /// Start at first file block
-                var currentPointer: string = this.getBlockNextPointer(sessionStorage.getItem(targetFileKey));
+                var currentPointer: string = this.getBlockForwardPointer(targetFileKey);
 
                 /// Keep following the links from block to block until the end of the file
                 while (currentPointer !== BLOCK_NULL_POINTER) {
                     /// Since i haven't made the table yet...
-                    //  _StdOut.advanceLine();
-                    //  _StdOut.putText(`Pointer: ${currentPointer}`);
-                    //  _StdOut.advanceLine();
-                    //  _StdOut.putText(`Session Storage: ${sessionStorage.getItem(currentPointer)}`);
-                    //  _StdOut.advanceLine();
-
-                    /// Get block
-                    var currentBlockValue = sessionStorage.getItem(currentPointer);
+                    _StdOut.advanceLine();
+                    _StdOut.putText(`Location: ${currentPointer}`);
+                    _StdOut.advanceLine();
+                    _StdOut.putText(`Session Storage: ${sessionStorage.getItem(currentPointer)}`);
+                    _StdOut.advanceLine();
+                    _StdOut.putText(`Forward Pointer: ${this.getBlockForwardPointer(currentPointer)}`);
+                    _StdOut.advanceLine();
+                    _OsShell.putPrompt();
 
                     /// Translate non-swap files only
-                    fileContents += isSwapFile ? this.getBlockData(currentBlockValue) : this.hexToEnglish(this.getBlockData(currentBlockValue));
+                    fileContents += isSwapFile ? this.getDataBlockData(currentPointer) : this.hexToEnglish(this.getDataBlockData(currentPointer));
 
                     /// get next block
-                    currentPointer = this.getBlockNextPointer(currentBlockValue);
+                    currentPointer = this.getBlockForwardPointer(currentPointer);
                 }/// while
 
                 return fileContents;
@@ -361,83 +435,116 @@ module TSOS {
             var targetFileKey = this.fileNameExists(fileName);
 
             if (targetFileKey !== '') {
-                /// Delete file contents if already written too...
-                /// Start from the first file block...
-                var currentPointer: string = this.getBlockNextPointer(sessionStorage.getItem(targetFileKey));
-
-                /// Delete all following blocks
-                while (currentPointer != BLOCK_NULL_POINTER) {
-                    /// Get current block value
-                    var currentBlockValue = sessionStorage.getItem(currentPointer);
-
-                    var blockData: string = '00';
-                    for (var byte = 0; byte < BLOCK_DATA_LIMIT - 1; ++byte) {
-                        blockData += "00";
-                    }// for
-        
-                    /// Value part of key|value in session storage
-                    /// Actually "create" the block, by saving in Key|Value storage
-                    sessionStorage.setItem(currentPointer, (`${"00"}${BLOCK_NULL_POINTER}${blockData}`));
-
-                    /// Get next block by using pointer from current block
-                    currentPointer = this.getBlockNextPointer(currentBlockValue);
-                }/// while
-
-                /// Begin writing to the file
-                ///
-                /// Split the data up into groups of 60 Bytes or less...
-                /// It's Bytes * 2 since a byte is a pair of 00's
-                var chunks: string[] = dataInHex.match(new RegExp('.{1,' + (2 * BLOCK_DATA_LIMIT) + '}', 'g'));
-
-                /// Start at first file block again
-                var targetFilePointerToFirstFreeBlock: string = this.getBlockNextPointer(sessionStorage.getItem(targetFileKey));
-
-                /// Write to the first free data block
-                var firstChunk: string = chunks.shift();
-                var firstBlockValue: string = sessionStorage.getItem(targetFilePointerToFirstFreeBlock);
-                firstBlockValue = "01" + this.getBlockNextPointer(firstBlockValue) + firstChunk + firstBlockValue.substring((7 + firstChunk.length + 1));/// Off by one error again, lol
-                sessionStorage.setItem(targetFilePointerToFirstFreeBlock, firstBlockValue);
-
-                /// Find more free space
-                if (chunks.length > 0) {
-                    /// Find the required number of blocks needed
-                    var freeSpaceKeys: string[] = this.getAvailableBlocksFromDataPartition(chunks.length);
-                    var previousBlockKey = targetFilePointerToFirstFreeBlock;
-
-                    /// Enough available blocks were found
-                    if (freeSpaceKeys !== null) {
-
-                        while (chunks.length > 0) {
-                            /// Grab next free block
-                            var currentBlockKey: string = freeSpaceKeys.shift();
-
-                            /// Grab next free chunk
-                            var currentChuck: string = chunks.shift();
-
-                            /// Set previous block to point to this current free block
-                            /// Don't forget the previous block is now "in use" as well
-                            var previousBlockValue: string = sessionStorage.getItem(previousBlockKey);
-                            previousBlockValue = "01" + currentBlockKey + this.getBlockData(previousBlockValue);
-                            sessionStorage.setItem(previousBlockKey, previousBlockValue);
-
-                            /// Fill the currentBlock with the user data
-                            /// Don't forget the current block is now "in use" as well
-                            var currentBlockValue: string = sessionStorage.getItem(currentBlockKey);
-                            currentBlockValue = "01" + this.getBlockNextPointer(currentBlockValue) + currentChuck + currentBlockValue.substring((7 + currentChuck.length + 1));
-                            sessionStorage.setItem(currentBlockKey, currentBlockValue);
-
-                            /// Update the previous block
-                            previousBlockKey = currentBlockKey;
-                        }/// while
-
-                        return (`Wrote to: C:\\AXIOS\\${fileName}`);
-                    }/// if
-
-                    /// Not enough room, fail to enforce Atomicity!
-                    else {
-                        return `Cannot write to C:\\AXIOS\\${fileName}, not enough file data blocks available!`;
-                    }/// else
+                var freeSpaceKeys: string[] = [];
+                var moreSpaceFound: boolean = false;
+                var fileID = this.getBlockFlag(targetFileKey);
+                var currentSize = 0;
+                var fileSize = parseInt(this.getBlockSize(targetFileKey), 16);
+                var chunks: string[] = dataInHex.match(new RegExp('.{1,' + (2 * DATA_BLOCK_DATA_LIMIT) + '}', 'g'));
+                var needMoreSpace: boolean = false;
+                
+                if ((fileSize - 64) / 64 < chunks.length) {
+                    needMoreSpace = true;
                 }/// if
+                _StdOut.putText(`Need more space: ${(fileSize - 64) / 64 >= chunks.length}`);
+                if (needMoreSpace) {
+                    freeSpaceKeys = this.getAvailableBlocksFromDataPartition(chunks.length);
+                    if (freeSpaceKeys != null) {
+                        moreSpaceFound = true;
+                    }/// if
+                }/// if
+
+                /// Set previous key to first data block in file
+                var currentOverwriteBlockKey = '';
+
+                if (!needMoreSpace || (needMoreSpace && moreSpaceFound)) {
+                    /// Begin overwritting the document
+                    /// Set previous key to first data block in file
+                    var previousBlockKey = targetFileKey;
+
+                    while (chunks.length > 0 && currentSize < fileSize - 64) {
+                        /// Grab next free block
+                        currentOverwriteBlockKey = this.getBlockForwardPointer(previousBlockKey);
+
+                        /// Grab next free chunk and add right hand padding
+                        var currentPaddedChunk: string = chunks.shift().padEnd(DATA_BLOCK_DATA_LIMIT * 2, '0');
+
+                        /// Set previous block to point to this current free block
+                        /// Don't forget the previous block is now "in use" as well
+                        this.setBlockForwardPointer(previousBlockKey, currentOverwriteBlockKey);
+                        this.setBlockFlag(previousBlockKey, fileID)
+
+                        /// Fill the currentBlock with the user data
+                        /// Don't forget the current block is now "in use" as well
+                        this.setDataBlockData(currentOverwriteBlockKey, this.dirBlock.defaultDataBlockZeros);
+                        this.setDataBlockData(currentOverwriteBlockKey, currentPaddedChunk);
+                        this.setBlockFlag(currentOverwriteBlockKey, fileID);
+
+                        /// Update the previous block
+                        previousBlockKey = currentOverwriteBlockKey;
+
+                        currentSize += 64;
+
+                        if (chunks.length === 0) {
+                            this.setBlockForwardPointer(currentOverwriteBlockKey, BLOCK_NULL_POINTER);
+                            this.setBlockSize(targetFileKey, Control.formatToHexWithPaddingTwoBytes(currentSize + 64));
+                            return (`Wrote to: C:\\AXIOS\\${fileName}`);
+                        }/// if
+                    }/// while
+
+                    /// Pick up where I left off overwritting the file and mark the rest of the file as available
+                    var previousBlockKeyContinued = currentOverwriteBlockKey;
+                    var temp = currentSize;
+                    while (temp < fileSize - 64) {
+                        /// Grab next free block
+                        var currentOverwriteBlockKey = this.getBlockForwardPointer(previousBlockKeyContinued);
+
+                        /// I will be damned if this works...
+                        this.setBlockFlag(previousBlockKey, fileID + 32_000);
+                        this.setBlockFlag(currentOverwriteBlockKey, fileID + 32_000);
+
+                        previousBlockKeyContinued = currentOverwriteBlockKey;
+
+                        temp += 64;
+                    }/// while
+                }/// if
+
+                if (moreSpaceFound) {
+                    /// Find the required number of blocks needed
+                    var previousBlockKey = currentOverwriteBlockKey;
+
+                    while (chunks.length > 0) {
+                        /// Grab next free block
+                        var currentBlockKey: string = freeSpaceKeys.shift();
+
+                        /// Grab next free chunk
+                        /// Add right hand padding
+                        var currentPaddedChunk: string = chunks.shift().padEnd(DATA_BLOCK_DATA_LIMIT * 2, '0');
+
+                        /// Set previous block to point to this current free block
+                        /// Don't forget the previous block is now "in use" as well
+                        this.setBlockForwardPointer(previousBlockKey, currentBlockKey);
+                        this.setBlockFlag(previousBlockKey, fileID)
+
+                        /// Fill the currentBlock with the user data
+                        /// Don't forget the current block is now "in use" as well
+                        this.setDataBlockData(currentBlockKey, this.dirBlock.defaultDataBlockZeros);
+                        this.setDataBlockData(currentBlockKey, currentPaddedChunk);
+                        this.setBlockFlag(currentBlockKey, fileID);
+
+                        /// Update the previous block
+                        previousBlockKey = currentBlockKey;
+
+                        currentSize += 64;
+
+                        if (chunks.length === 0) {
+                            this.setBlockForwardPointer(currentBlockKey, BLOCK_NULL_POINTER);
+                            this.setBlockSize(targetFileKey, Control.formatToHexWithPaddingTwoBytes(currentSize + 64));
+                            return (`Wrote to: C:\\AXIOS\\${fileName}`);
+                        }/// if
+                    }/// while
+                }/// if
+                return `Cannot write to C:\\AXIOS\\${fileName}, not enough file data blocks available!`;
             }/// if
 
             /// File not found
@@ -462,7 +569,7 @@ module TSOS {
                 this.setBlockFlag(targetFileKey, "00");
 
                 /// Find where file content starts...
-                var currentPointer: string = this.getBlockNextPointer(sessionStorage.getItem(targetFileKey));
+                var currentPointer: string = this.getBlockForwardPointer(sessionStorage.getItem(targetFileKey));
 
                 /// Keep following the links from block to block until the end of the file
                 while (currentPointer != BLOCK_NULL_POINTER) {
@@ -473,7 +580,7 @@ module TSOS {
                     this.setBlockFlag(currentPointer, "00");
 
                     /// Get next block
-                    currentPointer = this.getBlockNextPointer(currentBlockValue);
+                    currentPointer = this.getBlockForwardPointer(currentBlockValue);
                 }/// while
 
                 return `Deleted C:\\AXIOS\\${fileName}`;
@@ -486,45 +593,35 @@ module TSOS {
             }/// else
         }/// delete
 
-
-
-        public getFirstAvailableBlock(directory: string): string {
-
-            if (directory === "File Body") {
-                /// Only need to search the "file data" portion of the disk
-                for (var trackNum: number = this.fileDataBlock.baseTrack; trackNum <= this.fileDataBlock.limitTrack; ++trackNum) {
-                    for (var sectorNum: number = this.fileDataBlock.baseSector; sectorNum <= this.fileDataBlock.limitSector; ++sectorNum) {
-                        for (var blockNum: number = this.fileDataBlock.baseBlock; blockNum <= this.fileDataBlock.limitBlock; ++blockNum) {
-                            var currentKey: string = `${TSOS.Control.formatToHexWithPadding(trackNum)}${TSOS.Control.formatToHexWithPadding(sectorNum)}${TSOS.Control.formatToHexWithPadding(blockNum)}`;
-                            /// Availabiliy flag is low, meaning the block is free
-                            if (this.getBlockFlag(sessionStorage.getItem(currentKey)) === "00") {
-                                /// Return the location (the key) where the block is available
-                                return currentKey;
-                            }/// if
-                        }/// for
+        public getFirstAvailableBlockFromDataPartition() {
+            /// Only need to search the "file data" portion of the disk
+            for (var trackNum: number = this.fileDataBlock.baseTrack; trackNum <= this.fileDataBlock.limitTrack; ++trackNum) {
+                for (var sectorNum: number = this.fileDataBlock.baseSector; sectorNum <= this.fileDataBlock.limitSector; ++sectorNum) {
+                    for (var blockNum: number = this.fileDataBlock.baseBlock; blockNum <= this.fileDataBlock.limitBlock; ++blockNum) {
+                        var currentKey: string = `${TSOS.Control.formatToHexWithPadding(trackNum)}${TSOS.Control.formatToHexWithPadding(sectorNum)}${TSOS.Control.formatToHexWithPadding(blockNum)}`;
+                        if (this.isAvailable(currentKey)) {
+                            return currentKey;
+                        }/// if
                     }/// for
                 }/// for
-            }/// if
-
-            else if (directory === "File Header") {
-                /// Only need to search the "file header" portion of the disk
-                for (var trackNum: number = this.dirBlock.baseTrack; trackNum <= this.dirBlock.limitTrack; ++trackNum) {
-                    for (var sectorNum: number = this.dirBlock.baseSector; sectorNum <= this.dirBlock.limitSector; ++sectorNum) {
-                        for (var blockNum: number = this.dirBlock.baseBlock; blockNum <= this.dirBlock.limitBlock; ++blockNum) {
-                            var currentKey: string = `${TSOS.Control.formatToHexWithPadding(trackNum)}${TSOS.Control.formatToHexWithPadding(sectorNum)}${TSOS.Control.formatToHexWithPadding(blockNum)}`;
-                            /// Availabiliy flag is low, meaning the block is free
-                            if (this.getBlockFlag(sessionStorage.getItem(currentKey)) === "00") {
-                                /// Return the location (the key) where the block is available
-                                return currentKey;
-                            }/// if
-                        }/// for
-                    }/// for
-                }/// for
-            }/// if
-
-            /// No available blocks were found
+            }/// for
             return null;
-        }/// getFirstAvailableBlock
+        }/// getFirstAvailableBlockFromDataPartition
+
+        public getFirstAvailableBlockFromDirectoryPartition() {
+            /// Only need to search the "file header" portion of the disk
+            for (var trackNum: number = this.dirBlock.baseTrack; trackNum <= this.dirBlock.limitTrack; ++trackNum) {
+                for (var sectorNum: number = this.dirBlock.baseSector; sectorNum <= this.dirBlock.limitSector; ++sectorNum) {
+                    for (var blockNum: number = this.dirBlock.baseBlock; blockNum <= this.dirBlock.limitBlock; ++blockNum) {
+                        var currentKey: string = `${TSOS.Control.formatToHexWithPadding(trackNum)}${TSOS.Control.formatToHexWithPadding(sectorNum)}${TSOS.Control.formatToHexWithPadding(blockNum)}`;
+                        if (this.isAvailable(currentKey)) {
+                            return currentKey;
+                        }/// if
+                    }/// for
+                }/// for
+            }/// for
+            return null;
+        }/// getFirstAvailableBlockFromDirectoryPartition
 
         public getAvailableBlocksFromDirectoryPartition(numBlocksNeeded: number): string[] {
             var availableBlocks: string[] = [];
@@ -532,9 +629,7 @@ module TSOS {
                 for (var sectorNum: number = this.dirBlock.baseSector; sectorNum <= this.dirBlock.limitSector; ++sectorNum) {
                     for (var blockNum: number = this.dirBlock.baseBlock; blockNum <= this.dirBlock.limitBlock; ++blockNum) {
                         var currentKey: string = `${TSOS.Control.formatToHexWithPadding(trackNum)}${TSOS.Control.formatToHexWithPadding(sectorNum)}${TSOS.Control.formatToHexWithPadding(blockNum)}`;
-                        /// Availabiliy flag is low, meaning the block is free
-                        if (this.getBlockFlag(sessionStorage.getItem(currentKey)) === "00") {
-                            /// Block is free
+                        if (this.isAvailable(currentKey)) {
                             availableBlocks.push(currentKey);
                         }/// if
                     }/// for
@@ -554,7 +649,7 @@ module TSOS {
                     for (var blockNum: number = this.fileDataBlock.baseBlock; blockNum <= this.fileDataBlock.limitBlock; ++blockNum) {
                         var currentKey: string = `${TSOS.Control.formatToHexWithPadding(trackNum)}${TSOS.Control.formatToHexWithPadding(sectorNum)}${TSOS.Control.formatToHexWithPadding(blockNum)}`;
                         /// Block is free
-                        if (this.getBlockFlag(sessionStorage.getItem(currentKey)) === "00") {
+                        if (this.isAvailable(currentKey)) {
                             /// Return the location (the key) where the block is available
                             availableBlocks.push(currentKey);
                         }/// if
@@ -571,12 +666,7 @@ module TSOS {
                 for (var sectorNum: number = this.dirBlock.baseSector; sectorNum <= this.dirBlock.limitSector; ++sectorNum) {
                     for (var blockNum: number = this.dirBlock.baseBlock; blockNum <= this.dirBlock.limitBlock; ++blockNum) {
                         var currentKey: string = `${TSOS.Control.formatToHexWithPadding(trackNum)}${TSOS.Control.formatToHexWithPadding(sectorNum)}${TSOS.Control.formatToHexWithPadding(blockNum)}`;
-                        if (
-                            this.hexToEnglish(
-                                /// The data while stored in disk will be padded with 00's
-                                this.getBlockData(sessionStorage.getItem(currentKey))
-                            ) === targetFileNameInEnglish && this.getBlockFlag(sessionStorage.getItem(currentKey)) === '01'
-                        ) {
+                        if (this.hexToEnglish(this.getDirectoryBlockData(currentKey)) === targetFileNameInEnglish && !this.isAvailable(currentKey)) {
                             return currentKey;
                         }/// if
                     }/// for
@@ -589,39 +679,119 @@ module TSOS {
             return fileName.startsWith('.!');
         }/// isSwapFile
 
-        private setBlockFlag(sessionStorageKey: string, flag: string): void {
-            var sessionStorageValue: string = sessionStorage.getItem(sessionStorageKey);
-            sessionStorageValue = flag + sessionStorageValue.substring(2);
-            sessionStorage.setItem(sessionStorageKey, sessionStorageValue);
+        private isAvailable(sessionStorageKey: string): boolean {
+            return this.getBlockFlag(sessionStorageKey) === '0000';
+        }/// isAvailable
+
+        private setBlockFlag(sessionStorageKey: string, flag: string): boolean {
+            var success = false;
+            /// Make sure flag is two bytes, so 4 string characters
+            if (flag.length <= 4) {
+                var sessionStorageValue: string = sessionStorage.getItem(sessionStorageKey);
+                sessionStorageValue = flag + sessionStorageValue.substring(FLAG_INDEXES.end + 1);
+                sessionStorage.setItem(sessionStorageKey, sessionStorageValue);
+                success = true;
+            }/// if
+
+            return success;
         }/// setBlockFlag
 
-        private getBlockFlag(sessionStorageValue: string): string {
-            return sessionStorageValue.substring(0, 2);
-        }/// getBlockFlag
+        private setBlockForwardPointer(sessionStorageKey: string, pointer: string) {
+            var success = false;
+            /// Make sure forward pointer is 3 bytes, so 6 string characters
+            if (pointer.length <= 6) {
+                var sessionStorageValue: string = sessionStorage.getItem(sessionStorageKey);
+                sessionStorageValue = sessionStorageValue.substring(FLAG_INDEXES.start, FLAG_INDEXES.end + 1) + pointer + sessionStorageValue.substring(POINTER_INDEXES.end + 1);
+                sessionStorage.setItem(sessionStorageKey, sessionStorageValue);
+                success = true;
+            }/// if
 
-        private getBlockNextPointer(sessionStorageValue: string): string {
-            return sessionStorageValue.substring(2, 8);
-        }/// getBlockNextPointer
+            return success;
+        }/// setBlockPointer
 
-        private getBlockData(sessionStorageValue: string): string {
-            /// hmm...
-            /// How do you know when a program ends in memory...
-            /// return isSwapFile ? sessionStorageValue.substring(8) : sessionStorageValue.substring(8).replace('00', '');
+        private setBlockDate(sessionStorageKey: string, date: string) {
+            var success = false;
+            /// Make sure date is 8 bytes, so 16 string characters
+            if (date.length <= 16) {
+                var sessionStorageValue: string = sessionStorage.getItem(sessionStorageKey);
+                sessionStorageValue = sessionStorageValue.substring(0, DATE_INDEXES.start) +
+                    date + sessionStorageValue.substring(DATE_INDEXES.end + 1);
+                sessionStorage.setItem(sessionStorageKey, sessionStorageValue);
+                success = true;
+            }/// if
+            return success;
+        }/// setBlockDate
 
-            /// Return this for now..
-            return sessionStorageValue.substring(8);
+        private setBlockSize(sessionStorageKey: string, size: string) {
+            var success = false;
+            /// Make sure size is 2 bytes, so 4 string characters
+            if (size.length <= 4) {
+                var sessionStorageValue: string = sessionStorage.getItem(sessionStorageKey);
+                sessionStorageValue = sessionStorageValue.substring(0, FILE_SIZE_INDEXES.start) +
+                    size + sessionStorageValue.substring(FILE_SIZE_INDEXES.end + 1);
+                sessionStorage.setItem(sessionStorageKey, sessionStorageValue);
+                success = true;
+            }/// if
+            return success;
+        }/// setBlockDate
+
+        private setDirectoryBlockData(sessionStorageKey: string, newBlockData: string): boolean {
+            /// Make sure data is  only 50 Bytes, so 100 string characters
+            if (newBlockData.length <= 100) {
+                var sessionStorageValue = sessionStorage.getItem(sessionStorageKey);
+                sessionStorageValue = sessionStorageValue.substring(0, DIRECTORY_DATA_INDEXES.start) + newBlockData;
+                sessionStorage.setItem(sessionStorageKey, sessionStorageValue);
+                _StdOut.putText('Trues');
+                return true;
+            }/// if
+            _StdOut.putText('False');
+            return false;
         }/// getBlockData
 
-        private setBlockData(sessionStorageKey: string, newBlockData: string): boolean {
-            /// .substring(8);
-            if (newBlockData.length <= BLOCK_DATA_LIMIT*2) {
+        private setDataBlockData(sessionStorageKey: string, newBlockData: string): boolean {
+            /// Make sure data is  only 59 Bytes, so 118 string characters
+            if (newBlockData.length <= 118) {
                 var sessionStorageValue = sessionStorage.getItem(sessionStorageKey);
-                sessionStorageValue = sessionStorageValue.substring(0, 8) + newBlockData;
+                sessionStorageValue = sessionStorageValue.substring(0, DATA_DATA_INDEXES.start) + newBlockData;
                 sessionStorage.setItem(sessionStorageKey, sessionStorageValue);
                 return true;
             }/// if
             return false;
         }/// getBlockData
+
+        private getBlockFlag(sessionStorageKey: string): string {
+            return sessionStorage.getItem(sessionStorageKey).substring(FLAG_INDEXES.start, FLAG_INDEXES.end + 1);
+        }/// getBlockFlag
+
+        private getBlockForwardPointer(sessionStorageKey: string): string {
+            return sessionStorage.getItem(sessionStorageKey).substring(POINTER_INDEXES.start, POINTER_INDEXES.end + 1);
+        }/// getBlockNextPointer
+
+        private getBlockDate(sessionStorageKey: string) {
+            return sessionStorage.getItem(sessionStorageKey).substring(DATE_INDEXES.start, DATE_INDEXES.end + 1);
+        }/// getBlockDate
+
+        private getBlockSize(sessionStorageKey: string) {
+            return sessionStorage.getItem(sessionStorageKey).substring(FILE_SIZE_INDEXES.start, FILE_SIZE_INDEXES.end + 1);
+        }/// getBlockSize
+
+        private getDirectoryBlockData(sessionStorageKey: string): string {
+            /// hmm...
+            /// How do you know when a program ends in memory...
+            /// return isSwapFile ? sessionStorageValue.substring(8) : sessionStorageValue.substring(8).replace('00', '');
+
+            /// Return this for now..
+            return sessionStorage.getItem(sessionStorageKey).substring(DIRECTORY_DATA_INDEXES.start, DIRECTORY_DATA_INDEXES.end + 1);
+        }/// getDirectoryBlockData
+
+        private getDataBlockData(sessionStorageKey: string): string {
+            /// hmm...
+            /// How do you know when a program ends in memory...
+            /// return isSwapFile ? sessionStorageValue.substring(8) : sessionStorageValue.substring(8).replace('00', '');
+
+            /// Return this for now..
+            return sessionStorage.getItem(sessionStorageKey).substring(DATA_DATA_INDEXES.start, DATA_DATA_INDEXES.end + 1);
+        }/// getDirectoryBlockData
 
         public englishToHex(englishWord: string): string {
             var englishWordInHex = '';
@@ -667,9 +837,132 @@ module TSOS {
             public limitTrack,
             public limitSector,
             public limitBlock,
-        ) { }/// constructor
-    }
+            public defaultDataBlockZeros: string = '',
+            public defaultDirectoryBlockZeros: string = '',
+        ) {
+            for (var byte: number = 0; byte < DATA_BLOCK_DATA_LIMIT; ++byte) {
+                this.defaultDataBlockZeros += "00";
+            }// for
+
+            for (var bytes: number = 0; bytes < DIRECTORY_BLOCK_DATA_LIMIT; ++bytes) {
+                this.defaultDirectoryBlockZeros += "00";
+            }// for
+        }/// constructor
+    }/// Partition
+
+    export class IdAllocator {
+        /// Not very memory efficient, but I need an id allocator that can Quickly allocate and deallocate id's
+        constructor(
+            private usedFileID: number[] = [],
+            private availableFileID: number[] = [],
+        ) {
+            /// Allocate 2 Bytes of ID's
+            /// ID 1 is reserved for the master boot record
+            for (var i: number = 1; i <= 512; ++i) {
+                this.availableFileID.push(i);
+            }/// for
+        }/// constructor
+
+        /**
+         * Must be fast, since this will be called on every file creation (even swap files...)
+         * Name: allocateID
+         * Paramaters: none
+         * Returns: 
+         *      1.) id ranging from 1-256
+         *      2.) -1 if no id is available
+         */
+        public allocateID() {
+            var id = this.availableFileID.pop();
+            this.usedFileID.push(id);
+            return id === undefined ? -1 : id;
+        }/// allocateID
+
+        /**
+         * Can be slower as this will be called in deletions and check disk operations...
+         * Name: deallocateID
+         * Paramaters: id (that will be able to be re-used)
+         * Returns: 
+         *      1.) true
+         *      2.) false
+         */
+        public deallocateID(idToRenew: number): boolean {
+            var i: number = 0;
+            var found: boolean = false;
+            while (i < this.usedFileID.length && !found) {
+                if (idToRenew === this.usedFileID[i]) {
+                    found = true;
+                    this.availableFileID.push(this.usedFileID[i]);
+                    this.usedFileID.splice(i, 1);
+                }/// if
+            }/// while
+
+            return found;
+        }/// deallocateID
+    }/// fileIdGenerator
 }/// TSOS
+
+// /// Create File should be all or nothing...No partial creations of files
+        // public create(fileName: string = ''): string {
+        //     var msg: string = 'File creation failed';
+
+        //     // File does NOT exist
+        //     if (this.fileNameExists(fileName) === '') {
+        //         /// Find a free space, null if there are no available blocks
+        //         var availableDirKey = this.getFirstAvailableBlock("File Header");
+
+        //         /// Find a free space, null if there are no available blocks
+        //         var availableFileDataKey = this.getFirstAvailableBlock("File Body");
+
+        //         /// Free space found in both file header and file data directories
+        //         ///
+        //         /// Split into multiple "if" statements for "clearer" error detection
+        //         if (availableDirKey != null) {
+        //             if (availableFileDataKey != null) {
+        //                 /// First 4 bytes (8 characters) are pointer to the free data block in the file data directory...
+        //                 /// Remaining bytes are allocated for filename (in hex of course).
+        //                 /// Set is occupied to true
+        //                 var data: string = '';
+        //                 var zeros: string = '';
+        //                 for (var byte = 0; byte < BLOCK_DATA_LIMIT; ++byte) {
+        //                     data += "00";
+        //                     zeros += "00"
+        //                 }// for
+        //                 /// Replace the first 4 bytes (8 characters) with 00's
+        //                 data = this.englishToHex(fileName) + data.substring(fileName.length, data.length);
+
+        //                 var value = "01" + availableFileDataKey + data;
+
+        //                 /// Write to the directory block
+        //                 sessionStorage.setItem(availableDirKey, value);
+
+        //                 /// Update the first data block to be in use so all new files won't point to the same first directory block
+        //                 this.setBlockFlag(availableFileDataKey, "01");
+
+        //                 /// Reset the data back to zero's
+        //                 this.setBlockData(availableFileDataKey, zeros);
+
+        //                 _Kernel.krnTrace('File sucessfully created!');
+        //                 msg = `C:\\AXIOS\\${fileName} sucessfully created!`;
+
+        //             }/// if
+        //             else {
+        //                 _Kernel.krnTrace(`Cannot create C:\\AXIOS\\${fileName}, all file data blocks are in use!`);
+        //                 msg = `Cannot create C:\\AXIOS\\${fileName}, all file data blocks are in use!`;
+        //             }/// else
+        //         }/// if
+        //         else {
+        //             _Kernel.krnTrace(`Cannot create C:\\AXIOS\\${fileName}, all file header blocks are in use!`);
+        //             msg = `Cannot create C:\\AXIOS\\${fileName}, all file header blocks are in use!`;
+        //         }/// else
+        //     }/// if
+
+        //     else {
+        //         _Kernel.krnTrace(`Cannot create C:\\AXIOS\\${fileName}, filename is already in use!`);
+        //         msg = `Cannot create C:\\AXIOS\\${fileName}, filename already in use!`;
+        //     }/// else
+
+        //     return msg;
+        // }/// createFile
 
         // public updateFreeSpaceLinkedList() {
         //     /// Start off at the MBR, to have it hold the pointer to the first free block

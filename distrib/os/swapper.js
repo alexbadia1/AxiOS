@@ -1,7 +1,3 @@
-/**
- * The Schwartz programmer in me wants the Swapper as it's own file for modularity...
- * Maybe, I'll just declare an instance of this in the memory manager... or not...
- */
 var TSOS;
 (function (TSOS) {
     class Swapper {
@@ -61,7 +57,7 @@ var TSOS;
                 this.programRolledOutFromMemory += _MemoryAccessor.read(_MemoryManager.simpleVolumes[programFromMemory.volumeIndex], logicalAddress);
             } /// for
             /// Try to create a swap file
-            if (!_krnDiskDriver.create(`${_krnDiskDriver.hiddenFilePrefix}${_krnDiskDriver.swapFilePrefix}${programFromMemory.processID}`).startsWith('Cannot create')) {
+            if (!_krnDiskDriver.createLite(`${_krnDiskDriver.hiddenFilePrefix}${_krnDiskDriver.swapFilePrefix}${programFromMemory.processID}`).startsWith('Cannot create')) {
                 /// Try to write to the swap file
                 if (!_krnDiskDriver.write(`${_krnDiskDriver.hiddenFilePrefix}${_krnDiskDriver.swapFilePrefix}${programFromMemory.processID}`, this.programRolledOutFromMemory).startsWith('Cannot write')) {
                     /// File successfully rolled out

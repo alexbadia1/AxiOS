@@ -164,13 +164,14 @@ var TSOS;
         getCurrentDateTime() {
             var current = new Date();
             var day = String(current.getDate()).padStart(2, '0');
-            var month = String(current.getMonth()).padStart(2, '0');
+            var month = String(current.getMonth() + 1).padStart(2, '0'); /// Well shit, months are 0 based
             var year = String(current.getFullYear()).padStart(2, '0');
             var hours = String(current.getHours()).padStart(2, '0');
             var minutes = String(current.getMinutes()).padStart(2, '0');
             var seconds = String(current.getSeconds()).padStart(2, '0');
             document.getElementById('divLog--date').innerText = `${month}/${day}/${year}`;
             document.getElementById('divLog--time').innerText = `${hours}:${minutes}:${seconds}`;
+            return `${month}${day}${year}${hours}${minutes}${seconds}`;
         } /// getCurrentDateTime
         //////////////////////////
         /// Interrupt Handling ///
