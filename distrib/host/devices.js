@@ -54,26 +54,6 @@ var TSOS;
                 _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(KEYBOARD_IRQ, params));
             }
         }
-        /// 
-        /// Mouse Interrupt, a HARDWARE Interrupt Request (Oh boy, here we go...)
-        ///
-        /// Not sure if it's "wheel" or "scroll." Still gotta do some googling...
-        static hostEnabledMouseInterrupt(event) {
-            /// Listen for mouse scroll (scroll up, scroll down) events in the Document
-            /// and call the simultation processor, which will in turn call the
-            /// OS interrupt handler... (Real original... I know).
-            document.addEventListener('wheel', Devices.hostOnMouseScroll, false);
-        }
-        static hostDisableMouseInterrupt() {
-            document.removeEventListener("wheel", Devices.hostOnKeypress, false);
-        }
-        static hostOnMouseScroll(event) {
-            /// So, uh, copy what Alan did but look for mouse actions on the document, specifically on the canvas...
-            if (event.target.id === "display") {
-                event.preventDefault();
-                /// Lemme do some more googling...
-            }
-        }
     }
     TSOS.Devices = Devices;
 })(TSOS || (TSOS = {}));

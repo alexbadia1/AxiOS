@@ -55,12 +55,12 @@ module TSOS {
             switch (diskOperation) {
                 case 'create':
                     /// params[1] = filename
-                    result = this.createLite(params[1]);
+                    result = this.create(params[1]);
                     break;
                 case 'write':
                     /// params[1][0] = filename
                     /// params[1][1] = file text
-                    this.write(params[1][0], params[1][1]);
+                    result = this.write(params[1][0], params[1][1]);
                     break;
                 case 'read':
                     /// params[1] = filename
@@ -73,6 +73,10 @@ module TSOS {
                 case 'list':
                     /// params[1] = 'no-arg' || params[1] = '-l'
                     this.list(params[1]);
+                    break;
+                case 'defrag':
+                    /// no params
+                    result = this.defrag();
                     break;
                 default:
                     _Kernel.krnTrace(`Failed to perform disk ${params[0]} operation`);
@@ -121,7 +125,7 @@ module TSOS {
                 _StdOut.advanceLine();
                 _OsShell.putPrompt();
             }/// if
-
+            TSOS.Control.updateVisualDisk();
             // else {
             //     _StdOut.putText(`Failed to format (Type: ${type.replace('-', '').trim()})`);
             //     _StdOut.advanceLine();
@@ -213,14 +217,14 @@ module TSOS {
          *          - 
          *      4. 
          */
-        public createLite(fileName: string = ''): string {
+        public create(fileName: string = ''): string {
             var msg: string = 'File creation failed';
 
             /// File does not exist, nice...
             if (this.fileNameExists(fileName) === '') {
 
                 /// Request a unique ID from the ID manager
-                var newFileID = this.idAllocator.allocateID();
+                var newFileID = this.idAllocator.allocatePositiveID();
 
                 /// File ID request successful, okay we're getting somwhere
                 if (newFileID != -1) {
@@ -236,8 +240,18 @@ module TSOS {
 
                         /// Free space found in data partition
                         if (availableFileDataKey != null) {
+
+                            /// Preserve and deleted files being overwritten for later recovery
+                            if (parseInt(this.getBlockFlag(availableDirKey), 16) > NEGATIVE_ZERO) {
+                                this.preserveFileIntegrity(availableDirKey);
+                            }/// if
+
+                            if (parseInt(this.getBlockFlag(availableDirKey), 16) > NEGATIVE_ZERO) {
+                                this.preserveFileIntegrity(availableFileDataKey);
+                            }/// if
+
                             /// Write a directory entry for file
-                            var fileNameInHex: string = this.englishToHex(fileName);
+                            var fileNameInHex: string = this.englishToHex(fileName).toUpperCase();
                             var paddedFileNameInHex = fileNameInHex + this.dirBlock.defaultDirectoryBlockZeros.substring(fileNameInHex.length);
                             var newFileIDString: string = Control.formatToHexWithPaddingTwoBytes(newFileID);
                             this.setBlockFlag(availableDirKey, newFileIDString);
@@ -249,8 +263,10 @@ module TSOS {
                             /// Reserve the first data block for file and overwrite with 00's
                             this.setBlockFlag(availableFileDataKey, newFileIDString);
                             this.setDataBlockData(availableFileDataKey, this.dirBlock.defaultDataBlockZeros);
+                            this.setBlockForwardPointer(availableFileDataKey, availableDirKey);
 
                             _Kernel.krnTrace('File sucessfully created!');
+                            TSOS.Control.updateVisualDisk();
                             msg = `C:\\AXIOS\\${fileName} sucessfully created!`;
                         }/// if
 
@@ -287,15 +303,14 @@ module TSOS {
         public list(type: string): void {
             var isEmpty: boolean = true;
             _StdOut.advanceLine();
-            /// Only need to search the "file header" portion of the disk
+            /// Iterate through the directory portion of the list and print out based on the argument passed
             for (var trackNum: number = this.dirBlock.baseTrack; trackNum <= this.dirBlock.limitTrack; ++trackNum) {
                 for (var sectorNum: number = this.dirBlock.baseSector; sectorNum <= this.dirBlock.limitSector; ++sectorNum) {
                     for (var blockNum: number = this.dirBlock.baseBlock; blockNum <= this.dirBlock.limitBlock; ++blockNum) {
                         var currentKey: string = `${TSOS.Control.formatToHexWithPadding(trackNum)}${TSOS.Control.formatToHexWithPadding(sectorNum)}${TSOS.Control.formatToHexWithPadding(blockNum)}`;
-                        /// Don't want to list deleted files (files that have data with a low availabiliy flag)
-                        /// Availabiliy flag is high, meaning the block is in use and has data
                         if (!this.isAvailable(currentKey)) {
                             var fileName: string = this.hexToEnglish(this.getDirectoryBlockData(currentKey));
+                            var fileFlag: number = parseInt(this.getBlockFlag(currentKey));
                             var fileSize: number = parseInt(this.getBlockSize(currentKey), 16);
                             var fileSizeSuffix = '';
                             var fileDate: string = this.getBlockDate(currentKey);
@@ -346,8 +361,8 @@ module TSOS {
                             }/// else
 
 
-                            /// Not a hidden file
-                            if (!fileName.startsWith('.')) {
+                            /// Only print out hidden file if type is '-l'
+                            if (fileName.startsWith(`${this.hiddenFilePrefix}`) && type === '-l' && fileFlag < NEGATIVE_ZERO) {
                                 /// Print out file name
                                 ///: _StdOut.putText(`${INDENT_STRING}${INDENT_STRING}${sessionStorage.getItem(currentKey).substring(8)}.txt`);
                                 _StdOut.putText(`${INDENT_STRING}${INDENT_STRING}${fileName}${INDENT_STRING}${fileDate}${INDENT_STRING}${fileSize}${fileSizeSuffix}`);
@@ -355,19 +370,11 @@ module TSOS {
                                 isEmpty = false;
                             }/// if
 
-                            /// Hidden file
-                            else {
-                                /// Only show hidden file if "-l" argument was used
-                                if (type === '-l') {
-                                    /// Print out file name, with proper file extension
-                                    ///sessionStorage.getItem(currentKey).substring(8).startsWith(".!") ?
-                                    ///_StdOut.putText(`${INDENT_STRING}${INDENT_STRING}${sessionStorage.getItem(currentKey).substring(8)}.swp`)
-                                    ///: _StdOut.putText(`${INDENT_STRING}${INDENT_STRING}${sessionStorage.getItem(currentKey).substring(8)}.txt`);
-                                    _StdOut.putText(`${INDENT_STRING}${INDENT_STRING}${fileName}${INDENT_STRING}${fileDate}${INDENT_STRING}${fileSize}${fileSizeSuffix}`)
-                                    _StdOut.advanceLine();
-                                    isEmpty = false;
-                                }/// if
-                            }/// else
+                            else if (!fileName.startsWith(`${this.hiddenFilePrefix}`) && fileFlag < NEGATIVE_ZERO) {
+                                _StdOut.putText(`${INDENT_STRING}${INDENT_STRING}${fileName}${INDENT_STRING}${fileDate}${INDENT_STRING}${fileSize}${fileSizeSuffix}`);
+                                _StdOut.advanceLine();
+                                isEmpty = false;
+                            }/// if
                         }/// if
                     }/// for
                 }/// for
@@ -386,25 +393,29 @@ module TSOS {
 
             /// File found
             if (targetFileKey !== '') {
-                _StdOut.advanceLine();
-                _StdOut.putText(`File Header Data: ${sessionStorage.getItem(targetFileKey)}`);
-                _StdOut.advanceLine();
+                // _StdOut.advanceLine();
+                // _StdOut.putText(`File Location: ${targetFileKey}`);
+                // _StdOut.advanceLine();
+                // _StdOut.putText(`File Flag/ID: ${parseInt(this.getBlockFlag(targetFileKey), 16)}`);
+                // _StdOut.advanceLine();
+                // _StdOut.putText(`File Header Data: ${sessionStorage.getItem(targetFileKey)}`);
+                // _StdOut.advanceLine();
                 var fileContents: string = '';
 
                 /// Start at first file block
                 var currentPointer: string = this.getBlockForwardPointer(targetFileKey);
 
                 /// Keep following the links from block to block until the end of the file
-                while (currentPointer !== BLOCK_NULL_POINTER) {
+                while (currentPointer !== targetFileKey) {
                     /// Since i haven't made the table yet...
-                    _StdOut.advanceLine();
-                    _StdOut.putText(`Location: ${currentPointer}`);
-                    _StdOut.advanceLine();
-                    _StdOut.putText(`Session Storage: ${sessionStorage.getItem(currentPointer)}`);
-                    _StdOut.advanceLine();
-                    _StdOut.putText(`Forward Pointer: ${this.getBlockForwardPointer(currentPointer)}`);
-                    _StdOut.advanceLine();
-                    _OsShell.putPrompt();
+                    // _StdOut.advanceLine();
+                    // _StdOut.putText(`Location: ${currentPointer}`);
+                    // _StdOut.advanceLine();
+                    // _StdOut.putText(`Session Storage: ${sessionStorage.getItem(currentPointer)}`);
+                    // _StdOut.advanceLine();
+                    // _StdOut.putText(`Forward Pointer: ${this.getBlockForwardPointer(currentPointer)}`);
+                    // _StdOut.advanceLine();
+                    // _OsShell.putPrompt();
 
                     /// Translate non-swap files only
                     fileContents += isSwapFile ? this.getDataBlockData(currentPointer) : this.hexToEnglish(this.getDataBlockData(currentPointer));
@@ -412,7 +423,6 @@ module TSOS {
                     /// get next block
                     currentPointer = this.getBlockForwardPointer(currentPointer);
                 }/// while
-
                 return fileContents;
             }/// if
 
@@ -428,7 +438,7 @@ module TSOS {
 
             /// Translate non-swap files into hex
             if (!this.isSwapFile(fileName)) {
-                dataInHex = this.englishToHex(data);
+                dataInHex = this.englishToHex(data).toUpperCase();
             }/// if
 
             /// See if file exists again...
@@ -437,16 +447,17 @@ module TSOS {
             if (targetFileKey !== '') {
                 var freeSpaceKeys: string[] = [];
                 var moreSpaceFound: boolean = false;
-                var fileID = this.getBlockFlag(targetFileKey);
+                var fileID: number = parseInt(this.getBlockFlag(targetFileKey), 16);
                 var currentSize = 0;
                 var fileSize = parseInt(this.getBlockSize(targetFileKey), 16);
                 var chunks: string[] = dataInHex.match(new RegExp('.{1,' + (2 * DATA_BLOCK_DATA_LIMIT) + '}', 'g'));
                 var needMoreSpace: boolean = false;
-                
+
                 if ((fileSize - 64) / 64 < chunks.length) {
                     needMoreSpace = true;
                 }/// if
-                _StdOut.putText(`Need more space: ${(fileSize - 64) / 64 >= chunks.length}`);
+
+                // _StdOut.putText(`Need more space: ${(fileSize - 64) / 64 >= chunks.length}`);
                 if (needMoreSpace) {
                     freeSpaceKeys = this.getAvailableBlocksFromDataPartition(chunks.length);
                     if (freeSpaceKeys != null) {
@@ -472,24 +483,18 @@ module TSOS {
                         /// Set previous block to point to this current free block
                         /// Don't forget the previous block is now "in use" as well
                         this.setBlockForwardPointer(previousBlockKey, currentOverwriteBlockKey);
-                        this.setBlockFlag(previousBlockKey, fileID)
+                        this.setBlockFlag(previousBlockKey, Control.formatToHexWithPaddingTwoBytes(fileID));
 
                         /// Fill the currentBlock with the user data
                         /// Don't forget the current block is now "in use" as well
                         this.setDataBlockData(currentOverwriteBlockKey, this.dirBlock.defaultDataBlockZeros);
                         this.setDataBlockData(currentOverwriteBlockKey, currentPaddedChunk);
-                        this.setBlockFlag(currentOverwriteBlockKey, fileID);
+                        this.setBlockFlag(currentOverwriteBlockKey, Control.formatToHexWithPaddingTwoBytes(fileID));
 
                         /// Update the previous block
                         previousBlockKey = currentOverwriteBlockKey;
 
                         currentSize += 64;
-
-                        if (chunks.length === 0) {
-                            this.setBlockForwardPointer(currentOverwriteBlockKey, BLOCK_NULL_POINTER);
-                            this.setBlockSize(targetFileKey, Control.formatToHexWithPaddingTwoBytes(currentSize + 64));
-                            return (`Wrote to: C:\\AXIOS\\${fileName}`);
-                        }/// if
                     }/// while
 
                     /// Pick up where I left off overwritting the file and mark the rest of the file as available
@@ -497,16 +502,31 @@ module TSOS {
                     var temp = currentSize;
                     while (temp < fileSize - 64) {
                         /// Grab next free block
-                        var currentOverwriteBlockKey = this.getBlockForwardPointer(previousBlockKeyContinued);
+                        var tempCurrentOverwriteBlockKey = this.getBlockForwardPointer(previousBlockKeyContinued);
 
                         /// I will be damned if this works...
-                        this.setBlockFlag(previousBlockKey, fileID + 32_000);
-                        this.setBlockFlag(currentOverwriteBlockKey, fileID + 32_000);
+                        this.setBlockForwardPointer(previousBlockKeyContinued, BLOCK_NULL_POINTER);
+                        this.setBlockFlag(tempCurrentOverwriteBlockKey, Control.formatToHexWithPaddingTwoBytes(NEGATIVE_ZERO));
+                        this.setDataBlockData(tempCurrentOverwriteBlockKey, this.dirBlock.defaultDataBlockZeros);
+                        Control.hostLog(`Reclaimed block ${tempCurrentOverwriteBlockKey}, set flag to ${Control.formatToHexWithPaddingTwoBytes(NEGATIVE_ZERO)}`);
+                        // _StdOut.putText(`Updated block ${tempCurrentOverwriteBlockKey} flag to ${Control.formatToHexWithPaddingTwoBytes(NEGATIVE_ZERO)}`);
+                        // _StdOut.advanceLine();
 
-                        previousBlockKeyContinued = currentOverwriteBlockKey;
+                        previousBlockKeyContinued = tempCurrentOverwriteBlockKey;
 
                         temp += 64;
                     }/// while
+                    if (temp === fileSize - 64) {
+                        this.setBlockForwardPointer(previousBlockKeyContinued, BLOCK_NULL_POINTER);
+                    }/// if
+
+
+                    if (chunks.length === 0) {
+                        this.setBlockForwardPointer(currentOverwriteBlockKey, targetFileKey);
+                        this.setBlockSize(targetFileKey, Control.formatToHexWithPaddingTwoBytes(currentSize + 64));
+                        TSOS.Control.updateVisualDisk();
+                        return (`Wrote to: C:\\AXIOS\\${fileName}`);
+                    }/// if
                 }/// if
 
                 if (moreSpaceFound) {
@@ -517,6 +537,10 @@ module TSOS {
                         /// Grab next free block
                         var currentBlockKey: string = freeSpaceKeys.shift();
 
+                        if (parseInt(this.getBlockFlag(currentBlockKey), 16) > NEGATIVE_ZERO) {
+                            this.preserveFileIntegrity(currentBlockKey);
+                        }/// if
+
                         /// Grab next free chunk
                         /// Add right hand padding
                         var currentPaddedChunk: string = chunks.shift().padEnd(DATA_BLOCK_DATA_LIMIT * 2, '0');
@@ -524,25 +548,26 @@ module TSOS {
                         /// Set previous block to point to this current free block
                         /// Don't forget the previous block is now "in use" as well
                         this.setBlockForwardPointer(previousBlockKey, currentBlockKey);
-                        this.setBlockFlag(previousBlockKey, fileID)
+                        this.setBlockFlag(previousBlockKey, Control.formatToHexWithPaddingTwoBytes(fileID))
 
                         /// Fill the currentBlock with the user data
                         /// Don't forget the current block is now "in use" as well
                         this.setDataBlockData(currentBlockKey, this.dirBlock.defaultDataBlockZeros);
                         this.setDataBlockData(currentBlockKey, currentPaddedChunk);
-                        this.setBlockFlag(currentBlockKey, fileID);
+                        this.setBlockFlag(currentBlockKey, Control.formatToHexWithPaddingTwoBytes(fileID));
 
                         /// Update the previous block
                         previousBlockKey = currentBlockKey;
 
                         currentSize += 64;
-
-                        if (chunks.length === 0) {
-                            this.setBlockForwardPointer(currentBlockKey, BLOCK_NULL_POINTER);
-                            this.setBlockSize(targetFileKey, Control.formatToHexWithPaddingTwoBytes(currentSize + 64));
-                            return (`Wrote to: C:\\AXIOS\\${fileName}`);
-                        }/// if
                     }/// while
+
+                    if (chunks.length === 0) {
+                        this.setBlockForwardPointer(currentBlockKey, targetFileKey);
+                        this.setBlockSize(targetFileKey, Control.formatToHexWithPaddingTwoBytes(currentSize + 64));
+                        TSOS.Control.updateVisualDisk();
+                        return (`Wrote to: C:\\AXIOS\\${fileName}`);
+                    }/// if
                 }/// if
                 return `Cannot write to C:\\AXIOS\\${fileName}, not enough file data blocks available!`;
             }/// if
@@ -553,37 +578,54 @@ module TSOS {
             }/// else
         }/// write
 
-        public deleteFile(fileName): string {
+        public deleteFile(fileName: string): string {
             /// See if file exists...
             /// If Not:
             ///     targetFileKey === ''
             /// If Exists
             ///     targetFileKey === the sessionStorage() Key
             var targetFileKey = this.fileNameExists(fileName);
-
+            var isSwapFile = fileName.startsWith(`${this.hiddenFilePrefix}${this.swapFilePrefix}`);
             /// File found
             if (targetFileKey !== '') {
+                var msg: string = '';
+
+                /// Find where file content starts...
+                var currentPointer: string = this.getBlockForwardPointer(targetFileKey);
+
+                /// Request for a deleted file ID
+                var deletedFileID: any = isSwapFile ? -1 : this.idAllocator.allocateNegativeID();
+
+                /// Deleted file ID successfully allocated
+                if (deletedFileID != -1) {
+                    msg = `Deleted C:\\AXIOS\\${fileName}, still recoverable`;
+                    deletedFileID = Control.formatToHexWithPaddingTwoBytes(deletedFileID);
+                }/// if
+
+                /// Ran out of deleted file ID's
+                else {
+                    msg = `Deleted C:\\AXIOS\\${fileName}, no longer recoverable`;
+                    deletedFileID = Control.formatToHexWithPaddingTwoBytes(NEGATIVE_ZERO);
+                }/// else
 
                 /// "Delete" by making the directory block available, hopefully this will
                 /// make recovering the files easier or at least partial recovery...
-                this.setBlockFlag(targetFileKey, "00");
-
-                /// Find where file content starts...
-                var currentPointer: string = this.getBlockForwardPointer(sessionStorage.getItem(targetFileKey));
+                this.setBlockFlag(targetFileKey, deletedFileID);
 
                 /// Keep following the links from block to block until the end of the file
-                while (currentPointer != BLOCK_NULL_POINTER) {
-                    /// Get current block
-                    var currentBlockValue = sessionStorage.getItem(currentPointer);
-
+                while (currentPointer != targetFileKey) {
                     /// Make current block available
-                    this.setBlockFlag(currentPointer, "00");
+                    this.setBlockFlag(currentPointer, deletedFileID);
+
+                    if (deletedFileID === -1) {
+                        this.setDataBlockData(currentPointer, this.dirBlock.defaultDataBlockZeros);
+                    }/// if
 
                     /// Get next block
-                    currentPointer = this.getBlockForwardPointer(currentBlockValue);
+                    currentPointer = this.getBlockForwardPointer(currentPointer);
                 }/// while
-
-                return `Deleted C:\\AXIOS\\${fileName}`;
+                TSOS.Control.updateVisualDisk();
+                return msg;
             }/// if
 
             /// File NOT found
@@ -593,7 +635,8 @@ module TSOS {
             }/// else
         }/// delete
 
-        public getFirstAvailableBlockFromDataPartition() {
+        public getFirstAvailableBlockFromDataPartition(): string {
+            var firstDeletedBlock: string = null;
             /// Only need to search the "file data" portion of the disk
             for (var trackNum: number = this.fileDataBlock.baseTrack; trackNum <= this.fileDataBlock.limitTrack; ++trackNum) {
                 for (var sectorNum: number = this.fileDataBlock.baseSector; sectorNum <= this.fileDataBlock.limitSector; ++sectorNum) {
@@ -602,13 +645,22 @@ module TSOS {
                         if (this.isAvailable(currentKey)) {
                             return currentKey;
                         }/// if
+                        if (firstDeletedBlock === null && parseInt(this.getBlockFlag(currentKey), 16) > NEGATIVE_ZERO) {
+                            firstDeletedBlock = currentKey;
+                        }/// if
                     }/// for
                 }/// for
             }/// for
-            return null;
+            if (firstDeletedBlock != null) {
+                return firstDeletedBlock;
+            }/// if 
+            else {
+                return null;
+            }/// else
         }/// getFirstAvailableBlockFromDataPartition
 
         public getFirstAvailableBlockFromDirectoryPartition() {
+            var firstDeletedBlock: string = null;
             /// Only need to search the "file header" portion of the disk
             for (var trackNum: number = this.dirBlock.baseTrack; trackNum <= this.dirBlock.limitTrack; ++trackNum) {
                 for (var sectorNum: number = this.dirBlock.baseSector; sectorNum <= this.dirBlock.limitSector; ++sectorNum) {
@@ -617,14 +669,23 @@ module TSOS {
                         if (this.isAvailable(currentKey)) {
                             return currentKey;
                         }/// if
+                        if (firstDeletedBlock === null && parseInt(this.getBlockFlag(currentKey), 16) > NEGATIVE_ZERO) {
+                            firstDeletedBlock = currentKey;
+                        }/// if
                     }/// for
                 }/// for
             }/// for
-            return null;
+            if (firstDeletedBlock != null) {
+                return firstDeletedBlock;
+            }/// if 
+            else {
+                return null;
+            }/// else
         }/// getFirstAvailableBlockFromDirectoryPartition
 
         public getAvailableBlocksFromDirectoryPartition(numBlocksNeeded: number): string[] {
             var availableBlocks: string[] = [];
+            var availableDeletedBlocks: string[] = [];
             for (var trackNum: number = this.dirBlock.baseTrack; trackNum <= this.dirBlock.limitTrack; ++trackNum) {
                 for (var sectorNum: number = this.dirBlock.baseSector; sectorNum <= this.dirBlock.limitSector; ++sectorNum) {
                     for (var blockNum: number = this.dirBlock.baseBlock; blockNum <= this.dirBlock.limitBlock; ++blockNum) {
@@ -632,32 +693,66 @@ module TSOS {
                         if (this.isAvailable(currentKey)) {
                             availableBlocks.push(currentKey);
                         }/// if
+                        else if (parseInt(this.getBlockFlag(currentKey), 16) > NEGATIVE_ZERO) {
+                            availableDeletedBlocks.push(currentKey);
+                        }/// if
                     }/// for
                 }/// for
             }/// for
+            if (availableBlocks.length >= numBlocksNeeded) {
+                return availableBlocks;
+            }/// if
 
-            return availableBlocks.length >= numBlocksNeeded ? availableBlocks : null;
+            else {
+                if (availableBlocks.length + availableDeletedBlocks.length >= numBlocksNeeded) {
+                    while (availableDeletedBlocks.length > 0) {
+                        availableBlocks.push(availableDeletedBlocks.shift());
+                    }/// for
+                    return availableBlocks;
+                }/// if
+
+                else {
+                    return null;
+                }/// else
+            }/// else
         }/// getAvailableBlocksFromDirectoryPartition
 
 
         public getAvailableBlocksFromDataPartition(numBlocksNeeded: number): string[] {
             var availableBlocks: string[] = [];
+            var availableDeletedBlocks: string[] = [];
 
             /// Only need to search the "file data" portion of the disk
             for (var trackNum: number = this.fileDataBlock.baseTrack; trackNum <= this.fileDataBlock.limitTrack; ++trackNum) {
                 for (var sectorNum: number = this.fileDataBlock.baseSector; sectorNum <= this.fileDataBlock.limitSector; ++sectorNum) {
                     for (var blockNum: number = this.fileDataBlock.baseBlock; blockNum <= this.fileDataBlock.limitBlock; ++blockNum) {
                         var currentKey: string = `${TSOS.Control.formatToHexWithPadding(trackNum)}${TSOS.Control.formatToHexWithPadding(sectorNum)}${TSOS.Control.formatToHexWithPadding(blockNum)}`;
-                        /// Block is free
                         if (this.isAvailable(currentKey)) {
-                            /// Return the location (the key) where the block is available
                             availableBlocks.push(currentKey);
+                        }/// if
+                        else if (parseInt(this.getBlockFlag(currentKey), 16) > NEGATIVE_ZERO) {
+                            availableDeletedBlocks.push(currentKey);
                         }/// if
                     }/// for
                 }/// for
             }/// for
 
-            return availableBlocks.length >= numBlocksNeeded ? availableBlocks : null;
+            if (availableBlocks.length >= numBlocksNeeded) {
+                return availableBlocks;
+            }/// if
+
+            else {
+                if (availableBlocks.length + availableDeletedBlocks.length >= numBlocksNeeded) {
+                    while (availableDeletedBlocks.length > 0) {
+                        availableBlocks.push(availableDeletedBlocks.shift());
+                    }/// for
+                    return availableBlocks;
+                }/// if
+
+                else {
+                    return null;
+                }/// else
+            }/// else
         }/// getAvailableBlocksFromDataPartition
 
         public fileNameExists(targetFileNameInEnglish: string): string {
@@ -666,7 +761,7 @@ module TSOS {
                 for (var sectorNum: number = this.dirBlock.baseSector; sectorNum <= this.dirBlock.limitSector; ++sectorNum) {
                     for (var blockNum: number = this.dirBlock.baseBlock; blockNum <= this.dirBlock.limitBlock; ++blockNum) {
                         var currentKey: string = `${TSOS.Control.formatToHexWithPadding(trackNum)}${TSOS.Control.formatToHexWithPadding(sectorNum)}${TSOS.Control.formatToHexWithPadding(blockNum)}`;
-                        if (this.hexToEnglish(this.getDirectoryBlockData(currentKey)) === targetFileNameInEnglish && !this.isAvailable(currentKey)) {
+                        if (this.hexToEnglish(this.getDirectoryBlockData(currentKey)) === targetFileNameInEnglish && parseInt(this.getBlockFlag(currentKey), 16) < NEGATIVE_ZERO) {
                             return currentKey;
                         }/// if
                     }/// for
@@ -675,12 +770,57 @@ module TSOS {
             return '';
         }/// searchDirectory
 
+        public defrag(): string {
+            if (this.formatted) {
+                if (!_CPU.isExecuting) {
+                    if (!_SingleStepMode) {
+                        TSOS.Defragment.defragment();
+                        TSOS.Control.updateVisualDisk();
+                    }/// if 
+                    else {
+                        `Cannot defragment the disk while in single step mode!`;
+                    }/// else
+                }/// if
+                else {
+                    return 'Cannot defragment the disk while processes are running!';
+                }/// else
+            }// if
+            else {
+                return 'Cannot defragment an unformatted disk!';
+            }/// else
+
+            return 'Defragmented the disk!';
+        }/// defrag
+
+        private preserveFileIntegrity(nodeToDeleteKey: string) {
+            var previousNodeKey = this.findPreviousBlock(nodeToDeleteKey);
+
+            /// Set current node to point to the node after the node to delete
+            if (previousNodeKey != null) {
+                var nodeAfterNodeToDelete = this.getBlockForwardPointer(nodeToDeleteKey);
+                this.setBlockForwardPointer(previousNodeKey, nodeAfterNodeToDelete);
+            }/// if
+        }/// preserveDeletedFile
+
+        public findPreviousBlock(targetBlockKey: string): string {
+            var current: string = targetBlockKey;
+            if (_krnDiskDriver.getBlockForwardPointer(targetBlockKey) === BLOCK_NULL_POINTER) {
+                return null;
+            }/// if
+            /// Iterate through link list until we find the node that points to the node we change
+            while (_krnDiskDriver.getBlockForwardPointer(current) != targetBlockKey) {
+                current = _krnDiskDriver.getBlockForwardPointer(current);
+            }/// while
+
+            return current;
+        }/// findPreviousBlock
+
         private isSwapFile(fileName: string): boolean {
             return fileName.startsWith('.!');
         }/// isSwapFile
 
         private isAvailable(sessionStorageKey: string): boolean {
-            return this.getBlockFlag(sessionStorageKey) === '0000';
+            return this.getBlockFlag(sessionStorageKey) === '8000';
         }/// isAvailable
 
         private setBlockFlag(sessionStorageKey: string, flag: string): boolean {
@@ -696,7 +836,7 @@ module TSOS {
             return success;
         }/// setBlockFlag
 
-        private setBlockForwardPointer(sessionStorageKey: string, pointer: string) {
+        public setBlockForwardPointer(sessionStorageKey: string, pointer: string) {
             var success = false;
             /// Make sure forward pointer is 3 bytes, so 6 string characters
             if (pointer.length <= 6) {
@@ -741,10 +881,8 @@ module TSOS {
                 var sessionStorageValue = sessionStorage.getItem(sessionStorageKey);
                 sessionStorageValue = sessionStorageValue.substring(0, DIRECTORY_DATA_INDEXES.start) + newBlockData;
                 sessionStorage.setItem(sessionStorageKey, sessionStorageValue);
-                _StdOut.putText('Trues');
                 return true;
             }/// if
-            _StdOut.putText('False');
             return false;
         }/// getBlockData
 
@@ -759,11 +897,11 @@ module TSOS {
             return false;
         }/// getBlockData
 
-        private getBlockFlag(sessionStorageKey: string): string {
+        public getBlockFlag(sessionStorageKey: string): string {
             return sessionStorage.getItem(sessionStorageKey).substring(FLAG_INDEXES.start, FLAG_INDEXES.end + 1);
         }/// getBlockFlag
 
-        private getBlockForwardPointer(sessionStorageKey: string): string {
+        public getBlockForwardPointer(sessionStorageKey: string): string {
             return sessionStorage.getItem(sessionStorageKey).substring(POINTER_INDEXES.start, POINTER_INDEXES.end + 1);
         }/// getBlockNextPointer
 
@@ -851,15 +989,32 @@ module TSOS {
     }/// Partition
 
     export class IdAllocator {
-        /// Not very memory efficient, but I need an id allocator that can Quickly allocate and deallocate id's
+        /// Not very memory efficient, but I need an id allocator that can quickly allocate and deallocate id's
+        ///
+        /// Remeber 1's comp and 2's comp? 
+        /// I sure as hell don't, but I remember the concept...
+        /// So followig that looping radix thing Gormanly taught us:
+        ///     ~ Every ID <= 32,767 
+        ///         - Is in use  
+        ///     ~ Every ID > 32,769
+        ///         - Is deleted, but still needs an ID to defrag by and maintain some sort of coherency in recovery
+        ///     ~ ID 32,768 is special... files that are neither created nor deleted
         constructor(
-            private usedFileID: number[] = [],
-            private availableFileID: number[] = [],
+            private usedFilePositiveID: number[] = [],
+            private usedFileNegativeID: number[] = [],
+            private availableFilePositiveID: number[] = [],
+            private availableFileNegativeID: number[] = [],
         ) {
             /// Allocate 2 Bytes of ID's
-            /// ID 1 is reserved for the master boot record
-            for (var i: number = 1; i <= 512; ++i) {
-                this.availableFileID.push(i);
+            /// ID 0 is reserved for the master boot record
+            for (var i: number = 1; i <= 32_767; ++i) {
+                this.availableFilePositiveID.push(i);
+            }/// for
+
+            /// Allocate 2 Bytes of ID's
+            /// ID 0 is reserved for the master boot record
+            for (var i: number = 32_769; i <= 65_535; ++i) {
+                this.availableFileNegativeID.push(i);
             }/// for
         }/// constructor
 
@@ -871,12 +1026,17 @@ module TSOS {
          *      1.) id ranging from 1-256
          *      2.) -1 if no id is available
          */
-        public allocateID() {
-            var id = this.availableFileID.pop();
-            this.usedFileID.push(id);
+        public allocatePositiveID() {
+            var id = this.availableFilePositiveID.pop();
+            this.usedFilePositiveID.push(id);
             return id === undefined ? -1 : id;
-        }/// allocateID
+        }/// allocatePositiveID
 
+        public allocateNegativeID() {
+            var id = this.availableFileNegativeID.pop();
+            this.usedFileNegativeID.push(id);
+            return id === undefined ? -1 : id;
+        }/// allocateNegaiveID
         /**
          * Can be slower as this will be called in deletions and check disk operations...
          * Name: deallocateID
@@ -885,19 +1045,33 @@ module TSOS {
          *      1.) true
          *      2.) false
          */
-        public deallocateID(idToRenew: number): boolean {
+        public deallocatePositiveID(idToRenew: number): boolean {
             var i: number = 0;
             var found: boolean = false;
-            while (i < this.usedFileID.length && !found) {
-                if (idToRenew === this.usedFileID[i]) {
+            while (i < this.usedFilePositiveID.length && !found) {
+                if (idToRenew === this.usedFilePositiveID[i]) {
                     found = true;
-                    this.availableFileID.push(this.usedFileID[i]);
-                    this.usedFileID.splice(i, 1);
+                    this.availableFilePositiveID.push(this.usedFilePositiveID[i]);
+                    this.usedFilePositiveID.splice(i, 1);
                 }/// if
             }/// while
 
             return found;
-        }/// deallocateID
+        }/// deallocatePositiveID
+
+        public deallocateNegativeID(idToRenew: number): boolean {
+            var i: number = 0;
+            var found: boolean = false;
+            while (i < this.usedFileNegativeID.length && !found) {
+                if (idToRenew === this.usedFileNegativeID[i]) {
+                    found = true;
+                    this.availableFileNegativeID.push(this.usedFileNegativeID[i]);
+                    this.usedFileNegativeID.splice(i, 1);
+                }/// if
+            }/// while
+
+            return found;
+        }/// deallocateNegativeID
     }/// fileIdGenerator
 }/// TSOS
 

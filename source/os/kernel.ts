@@ -574,7 +574,21 @@ module TSOS {
             /// params[0] == disk operation
             if (params[0] === 'format') {
                 /// params [1] == -quick || -full
-                _krnDiskDriver.format(params[1]);
+                if (!_CPU.isExecuting) {
+                    if (!_SingleStepMode) {
+                    _krnDiskDriver.format(params[1]);
+                    }/// if 
+                    else {
+                        _StdOut.putText(`Disk cannot be formatted while in single step mode`);
+                        _StdOut.advanceLine();
+                        _OsShell.putPrompt();
+                    }/// else
+                }/// if
+                else {
+                    _StdOut.putText(`Disk cannot be formatted while processes are running!`);
+                    _StdOut.advanceLine();
+                    _OsShell.putPrompt();
+                }
             }/// if
 
             /// Only allow disk functions on formatted disks
@@ -585,7 +599,7 @@ module TSOS {
             /// Not formatted, don't do anyting
             else {
                 this.krnTrace("Disk is not yet formatted!");
-                _StdOut.putText("You must format the drive disk before use!");
+                _StdOut.putText(`${INDENT_STRING}You must format the drive disk before use!`);
                 _StdOut.advanceLine();
                 _OsShell.putPrompt();
             }/// else

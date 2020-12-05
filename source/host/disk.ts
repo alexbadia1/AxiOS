@@ -40,7 +40,7 @@ module TSOS {
             var forwardPointer = BLOCK_NULL_POINTER;
             /// First byte = availability flag
             ///     0000 means free
-            var isOccupied: string = "0000";
+            var isOccupied: string = "8000";
 
             /// Remaining 60 Bytes are for the raw data
             ///
@@ -60,7 +60,7 @@ module TSOS {
 
         private createMasterBootRecord() {
             var key: string = "000000";
-            var isOccupied: string = "0001";
+            var isOccupied: string = "0000";
             var nextBlockPointer: string = BLOCK_NULL_POINTER;
 
             /// Remaining 60 Bytes are for the raw data

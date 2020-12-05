@@ -131,6 +131,9 @@ var TSOS;
                 else if (chr === String.fromCharCode(38)) {
                     /// Arrow UP so start getting the the older commands
                     if (this.olderCommands.length > 0) {
+                        if (this.newerCommands.length > 10) {
+                            this.newerCommands.unshift();
+                        } /// if
                         /// Step 1: Push whatever is typed so far (the current buffer) to the "newer" commands stack.
                         this.newerCommands.push(this.buffer);
                         /// Step 2: Pop whateverver command is in the "older" command stack.
@@ -148,6 +151,9 @@ var TSOS;
                 else if (chr === String.fromCharCode(40)) {
                     /// Arrow DOWN so start getting the more recent commands
                     if (this.newerCommands.length > 0) {
+                        if (this.olderCommands.length > 10) {
+                            this.olderCommands.unshift();
+                        } /// if
                         /// Step 1: Push whatever is typed so far (the current buffer) to the "older" commands stack.
                         this.olderCommands.push(this.buffer);
                         /// Step 2: Pop whateverver command is in the "newer" command stack.

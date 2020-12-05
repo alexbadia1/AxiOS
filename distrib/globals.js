@@ -17,7 +17,7 @@ const APP_VERSION = "0.07";
 const INDENT_STRING = '  ';
 const INDENT_NUMBER = 16;
 // This is in ms (milliseconds) so 1000 = 1 second.
-const CPU_CLOCK_INTERVAL = .00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001;
+const CPU_CLOCK_INTERVAL = 100;
 // Pages 23 (timer), 9 (interrupts), and 561 (interrupt priority).
 // NOTE: The timer is different from hardware/host clock pulses. Don't confuse these.
 const TIMER_IRQ = 0;
@@ -63,6 +63,8 @@ const FILE_SIZE_INDEXES = { start: 24, end: 27 };
 const DIRECTORY_DATA_INDEXES = { start: 28, end: 128 };
 const DATA_DATA_INDEXES = { start: 10, end: 128 };
 const BLOCK_NULL_POINTER = "FFFFFF";
+const NEGATIVE_ZERO = 32768;
+const FILE_META_DATA_LENGTH = 15;
 //
 // Global Variables
 // TODO: Make a global object and use that instead of the "_" naming convention in the global namespace.

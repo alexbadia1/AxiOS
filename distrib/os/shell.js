@@ -192,6 +192,9 @@ var TSOS;
             /// delete <filename>: Remove [filename] from storage and display a message denoting success or failure
             sc = new TSOS.ShellCommand(this.shellDelete, 'delete', 'Remove [filename] from storage');
             this.commandList[this.commandList.length] = sc;
+            /// defrag: defragment disk drive and display a message denoting success or failure
+            sc = new TSOS.ShellCommand(this.shellDefrag, 'defrag', 'defragment disk drive');
+            this.commandList[this.commandList.length] = sc;
             /// Display the initial prompt.
             ///
             /// If I somehow make it into the "Hall of Fame" I may as well do something memorable. Cause, you know...
@@ -496,6 +499,8 @@ var TSOS;
                     case "delete":
                         _StdOut.putText("delete <filename>: Remove [filename] from storage.");
                         break;
+                    case "defrag":
+                        _StdOut.putText("defrag: defragments disk drive.");
                     default:
                         _StdOut.putText("No manual entry for " + args[0] + ".");
                 } /// switch
@@ -558,7 +563,6 @@ var TSOS;
             /// Getting and cleansing input
             var userInput = _taProgramInput.value.trim();
             userInput = userInput.toUpperCase().replace(/\s/g, '');
-            var hexPairList = new Array();
             /// Test for hexadecimal characters using regular expression...
             /// Learning hurts, ugh...
             if (/^[A-F0-9]+$/i.test(userInput)) {
@@ -588,7 +592,7 @@ var TSOS;
                             /// 
                             /// Ya know, I might actually try to re do this in an asyncronous fashion in Dart and create a fultter app for it...
                             var diskDriverResult = '';
-                            diskDriverResult = _krnDiskDriver.createLite(newProcessControlBlock.swapFileName);
+                            diskDriverResult = _krnDiskDriver.create(newProcessControlBlock.swapFileName);
                             _StdOut.putText(`  ${diskDriverResult}`);
                             _StdOut.advanceLine();
                             /// File created for program
@@ -640,20 +644,18 @@ var TSOS;
                         /// Show user said process id...
                         _StdOut.putText(`Process ID: ${newProcessControlBlock.processID}`);
                         _StdOut.advanceLine();
-                        /// Load user input into free memory segment, by first splitting the input into pairs of 2
-                        for (var pos = 0; pos < userInput.length; pos += 2) {
-                            /// List splits into pairs nicely
-                            hexPairList.push("" + userInput[pos] + userInput[pos + 1]);
-                        } /// for
-                        for (var logicalAddress = 0; logicalAddress < hexPairList.length; ++logicalAddress) {
-                            /// Write to memory from hex pair list
-                            if (_MemoryAccessor.write(freeSimpleVolume, logicalAddress, hexPairList[logicalAddress])) {
-                                TSOS.Control.hostLog(`Command ${hexPairList[logicalAddress]}: SUCCESSFUL WRITE to logical memory location: ${logicalAddress}!`);
-                            } /// if 
+                        var hexPair = '';
+                        var logicalAddress = 0;
+                        for (var pos = 0; pos < MAX_SIMPLE_VOLUME_CAPACITY * 2; pos += 2) {
+                            /// Read two characters at a time...
+                            if (userInput[pos] + userInput[pos + 1]) {
+                                hexPair = userInput[pos] + userInput[pos + 1];
+                            } /// if
                             else {
-                                TSOS.Control.hostLog(`Command ${hexPairList[logicalAddress]}: FAILED to WRITE to logical memory location: ${logicalAddress}!`);
+                                hexPair = '00';
                             } /// else
-                            /// console.log(_MemoryAccessor.read(freeSimpleVolume, logicalAddress));
+                            _MemoryAccessor.write(_MemoryManager.simpleVolumes[freeSpot], logicalAddress, hexPair);
+                            logicalAddress++;
                         } /// for
                         /// Protect volumes from being written into by accident...
                         /// Each individual address at the memory level will be locked to to prevent such overflow issues
@@ -715,7 +717,7 @@ var TSOS;
                 _StdOut.putText("" + ans);
             }
             else {
-                _StdOut.putText("Usage: magic eightball <string>  Please supply a string.");
+                _StdOut.putText(`${INDENT_STRING}Usage: magic eightball <string>  Please supply a string.`);
             } //if-else
         } /// shellMagicEightball
         /*************************************************************************************
@@ -740,7 +742,7 @@ var TSOS;
                         } /// else
                     } /// while
                     if (!found) {
-                        _StdOut.putText(`No process control blocks found with pid: ${parseInt(args[0])}.`);
+                        _StdOut.putText(`${INDENT_STRING}No process control blocks found with pid: ${parseInt(args[0])}.`);
                         _StdOut.advanceLine();
                     } /// if
                     /// Process exists in the resident queue
@@ -758,13 +760,13 @@ var TSOS;
                 } /// try
                 catch (e) {
                     _StdOut.putText(`${e}`);
-                    _StdOut.putText(`Usage: run <int> please supply a process id.`);
+                    _StdOut.putText(`${INDENT_STRING}Usage: run <int> please supply a process id.`);
                     _StdOut.advanceLine();
                 } /// catch
             } /// if
             /// Not only 1 argument was given
             else {
-                _StdOut.putText(`Usage: run <int> Expected 1 arguments, but got ${args.length}`);
+                _StdOut.putText(`${INDENT_STRING}Usage: run <int> Expected 1 arguments, but got ${args.length}`);
                 _StdOut.advanceLine();
             } /// else
         } /// run
@@ -779,7 +781,6 @@ var TSOS;
         ***************************************************************************************/
         /// clearmem - clear all memory partitions
         shellClearMem() {
-            var tempSize = _ResidentList.residentList.length;
             /// Processes are NOT running, safe to clear memory
             if (!_CPU.isExecuting || (_Scheduler.currentProcess === null && _Scheduler.readyQueue.getSize() === 0)) {
                 /// Grab each volume and write "unlock" them
@@ -793,11 +794,11 @@ var TSOS;
                 /// Remove processes from the Resident List that were stored in these volumes
                 _ResidentList.residentList = _ResidentList.residentList.filter(pcb => (pcb.volumeIndex > 2));
                 // words.filter(word => word.length > 6);
-                _StdOut.putText("Memory Cleared");
+                _StdOut.putText(`${INDENT_STRING}Memory Cleared`);
                 _StdOut.advanceLine();
             } /// if
             else {
-                _StdOut.putText("Cannot clear memory while processes running!");
+                _StdOut.putText(`${INDENT_STRING}Cannot clear memory while processes running!`);
                 _StdOut.advanceLine();
             } /// else
             TSOS.Control.updateVisualMemory();
@@ -806,7 +807,7 @@ var TSOS;
         shellRunAll() {
             /// Check if the resident queue is full or not...
             if (_ResidentList.residentList.length === 0) {
-                _StdOut.putText(`No process control blocks found.`);
+                _StdOut.putText(`${INDENT_STRING}No process control blocks found.`);
                 _StdOut.advanceLine();
             } /// if
             else {
@@ -829,7 +830,7 @@ var TSOS;
             if (args.length === 1) {
                 /// Check if the resident queue is full or not...
                 if (_ResidentList.residentList.length === 0) {
-                    _StdOut.putText(`No process control blocks found.`);
+                    _StdOut.putText(`${INDENT_STRING}No process control blocks found.`);
                     _StdOut.advanceLine();
                 } /// if
                 else {
@@ -845,7 +846,7 @@ var TSOS;
             } /// if
             /// More than one argument was given
             else {
-                _StdOut.putText(`Usage: kill <int> Expected 1 arguments, but got ${args.length}`);
+                _StdOut.putText(`${INDENT_STRING}Usage: kill <int> Expected 1 arguments, but got ${args.length}`);
                 _StdOut.advanceLine();
             } /// else
         } /// kill
@@ -856,7 +857,7 @@ var TSOS;
         /// quantum <int> - let the user set the Round Robin Quantum (measured in CPU cycles)
         shellQuantum(args) {
             if (_Scheduler.schedulingMethod !== "Round Robin") {
-                _StdOut.putText(`Quantum cannot be changed while using ${_Scheduler.schedulingMethod} schheduling!`);
+                _StdOut.putText(`${INDENT_STRING}Quantum cannot be changed while using ${_Scheduler.schedulingMethod} schheduling!`);
                 _StdOut.advanceLine();
                 return;
             } /// if
@@ -879,19 +880,19 @@ var TSOS;
                     } /// else-if
                     /// Invalid Quantum
                     else {
-                        _StdOut.putText(`Usage: quantum <int>  Please supply a positive, non-zero, decimal integer only.`);
+                        _StdOut.putText(`${INDENT_STRING}Usage: quantum <int>  Please supply a positive, non-zero, decimal integer only.`);
                         _StdOut.advanceLine();
                     } /// else
                 } /// if
                 /// Error, a character other than [0-9] was detected
                 else {
-                    _StdOut.putText("Usage: quantum <int>  Please supply a positive decimal number only.");
+                    _StdOut.putText(`${INDENT_STRING}Usage: quantum <int>  Please supply a positive decimal number only.`);
                     _StdOut.advanceLine();
                 } /// else
             } /// if 
             /// ERROR, More than one argument given
             else {
-                _StdOut.putText(`Usage: quantum <int> Expected 1 arguments, but got ${args.length}`);
+                _StdOut.putText(`${INDENT_STRING}Usage: quantum <int> Expected 1 arguments, but got ${args.length}`);
                 _StdOut.advanceLine();
             } /// else
         } /// shellQuantum
@@ -924,20 +925,20 @@ var TSOS;
                     _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(DISK_IRQ, ['format', args[0].toLowerCase()]));
                 } /// if
                 else {
-                    _StdOut.putText(`  Invalid argument: ${args[0]} try instead...`);
+                    _StdOut.putText(`${INDENT_STRING}Invalid argument: ${args[0]} try instead...`);
                     _StdOut.advanceLine();
-                    _StdOut.putText(`    format`);
+                    _StdOut.putText(`${INDENT_STRING}${INDENT_STRING}format`);
                     _StdOut.advanceLine();
-                    _StdOut.putText(`    format -quick`);
+                    _StdOut.putText(`${INDENT_STRING}${INDENT_STRING}format -quick`);
                     _StdOut.advanceLine();
-                    _StdOut.putText(`    format -full`);
+                    _StdOut.putText(`${INDENT_STRING}${INDENT_STRING}format -full`);
                     _StdOut.advanceLine();
                 } /// else
             } /// else-if
             /// Either negative arguments were (imposibly) given
             /// OR more than 1 arg was given, so complain...
             else {
-                _StdOut.putText(`Usage: format <string> Expected 0 or 1 arguments, but got ${args.length}`);
+                _StdOut.putText(`${INDENT_STRING}Usage: format <string> Expected 0 or 1 arguments, but got ${args.length}`);
                 _StdOut.advanceLine();
             } /// else
         } /// shellFormat
@@ -947,29 +948,29 @@ var TSOS;
             if (args.length === 1) {
                 /// no empty file names
                 if (args[0].trim().replace(" ", "").length === 0) {
-                    _StdOut.putText(`Usage: create <filename> Expected 1 arguments, but got 0`);
+                    _StdOut.putText(`${INDENT_STRING}Usage: create <filename> Expected 1 arguments, but got 0`);
                 } /// if
                 else {
                     /// Prevent swap file names and hidden file names from being used
-                    if (!args[0].startsWith(_krnDiskDriver.swapFilePrefix)) {
+                    if (!args[0].startsWith(`${_krnDiskDriver.hiddenFilePrefix}${_krnDiskDriver.swapFilePrefix}`)) {
                         /// Minus 4 Bytes of the block metadata (containing the pointer and what not)
-                        if (args[0].length <= BLOCK_SIZE_LIMIT - 4) {
+                        if (args[0].length < BLOCK_SIZE_LIMIT - FILE_META_DATA_LENGTH) {
                             _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(DISK_IRQ, ['create', args[0]]));
                         } /// if
                         else {
-                            _StdOut.putText(`Usage: create <filename> Expected <= 60 Bytes, but got ${args.length} Bytes`);
+                            _StdOut.putText(`${INDENT_STRING}Usage: create <filename> Expected <= 60 Bytes, but got ${args.length} Bytes`);
                             _StdOut.advanceLine();
                         } /// else
                     } /// if
                     else {
-                        _StdOut.putText(`  Usage: <filename> cannot start with "." or "!"`);
+                        _StdOut.putText(`${INDENT_STRING}Usage: <filename> cannot start with ".!"`);
                         _StdOut.advanceLine();
                     } /// else
                 } /// else
             } /// if
             /// More than one argument was given
             else {
-                _StdOut.putText(`Usage: create <filename> Expected 1 arguments, but got ${args.length}`);
+                _StdOut.putText(`${INDENT_STRING}Usage: create <filename> Expected 1 arguments, but got ${args.length}`);
                 _StdOut.advanceLine();
             } /// else
         } /// shelCreate
@@ -988,13 +989,13 @@ var TSOS;
                     _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(DISK_IRQ, ['list', args[0]]));
                 } /// if
                 else {
-                    _StdOut.putText(`Usage: ls <-l> Expected 0 or 1 arguments, but got ${args.length}`);
+                    _StdOut.putText(`${INDENT_STRING}Usage: ls <-l> Expected 0 or 1 arguments, but got ${args.length}`);
                     _StdOut.advanceLine();
                 } /// else
             } /// if
             /// More than one argument was given
             else {
-                _StdOut.putText(`Usage: ls <-l> Expected 0 or 1 arguments, but got ${args.length}`);
+                _StdOut.putText(`${INDENT_STRING}Usage: ls <-l> Expected 0 or 1 arguments, but got ${args.length}`);
                 _StdOut.advanceLine();
             } /// else
         } /// shellList
@@ -1007,7 +1008,7 @@ var TSOS;
             } /// if
             /// More than or less than one argument was given
             else {
-                _StdOut.putText(`Usage: read <filename> Expected 1 argument, but got ${args.length}`);
+                _StdOut.putText(`${INDENT_STRING}Usage: read <filename> Expected 1 argument, but got ${args.length}`);
                 _StdOut.advanceLine();
             } /// else
         } /// read
@@ -1020,24 +1021,24 @@ var TSOS;
                 /// Make sure more than one arg was given
                 if (formattedArgs.startsWith('"') && formattedArgs.endsWith('"')) {
                     /// Not a swap file, safe to write too
-                    if (!formattedArgs.startsWith('.!')) {
+                    if (!fileName.startsWith('.!')) {
                         /// Create write interrupt
                         _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(DISK_IRQ, ['write', [fileName, formattedArgs.replace(/["]/g, "").trim()]]));
                     } /// if
                     /// Swap file
                     else {
-                        _StdOut.putText("Cannot write to a swap file!");
+                        _StdOut.putText(`${INDENT_STRING}Cannot write to a swap file!`);
                     } /// else
                 } /// if
                 /// Text must be in quotes
                 else {
-                    _StdOut.putText(`Usage: write <filename> <"[text]"> Expected 2 arguments, but got ${args.length}`);
+                    _StdOut.putText(`${INDENT_STRING}Usage: write <filename> <"[text]"> Expected 2 arguments, but got ${args.length}`);
                     _StdOut.advanceLine();
                 } /// else
             } /// if
             /// More than or less than one argument was given
             else {
-                _StdOut.putText(`Usage: write <filename> <"[text]"> Expected 2 arguments, but got ${args.length}`);
+                _StdOut.putText(`${INDENT_STRING}Usage: write <filename> <"[text]"> Expected 2 arguments, but got ${args.length}`);
                 _StdOut.advanceLine();
             } /// else
         } /// shellWrite
@@ -1057,10 +1058,19 @@ var TSOS;
             } /// if
             /// More than or less than one argument was given
             else {
-                _StdOut.putText(`Usage: delete <filename> Expected 1 argument, but got ${args.length}`);
+                _StdOut.putText(`${INDENT_STRING}Usage: delete <filename> Expected 1 argument, but got ${args.length}`);
                 _StdOut.advanceLine();
             } /// else
         } /// shellDelete
+        shellDefrag(args) {
+            if (args.length === 0) {
+                _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(DISK_IRQ, ['defrag']));
+            } /// else 
+            else {
+                _StdOut.putText(`${INDENT_STRING}Usage: defrag Expected 0 arguments, but got ${args.length}`);
+                _StdOut.advanceLine();
+            } /// else
+        } /// shellDefrag
         /********************
          * ASCII art for BLM
          ********************/

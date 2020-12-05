@@ -38,15 +38,17 @@ module TSOS {
                     hexPair = '00';
                 }/// else
 
-                /// Write to memory from hex pair list
-                if (_MemoryAccessor.write(_MemoryManager.simpleVolumes[segmentFromRolledOutProcess], logicalAddress, hexPair)) {
-                    Control.hostLog(`Command ${hexPair}: SUCCESSFUL WRITE to logical memory location: ${logicalAddress}!`);
-                }/// if 
-                else {
-                    Control.hostLog(`Command ${hexPair}: FAILED to WRITE to logical memory location: ${logicalAddress}!`);
-                }/// else
+                // /// Write to memory from hex pair list
+                // if (_MemoryAccessor.write(_MemoryManager.simpleVolumes[segmentFromRolledOutProcess], logicalAddress, hexPair)) {
+                //     Control.hostLog(`Command ${hexPair}: SUCCESSFUL WRITE to logical memory location: ${logicalAddress}!`);
+                // }/// if 
+                // else {
+                //     Control.hostLog(`Command ${hexPair}: FAILED to WRITE to logical memory location: ${logicalAddress}!`);
+                // }/// else
 
                 /// console.log(_MemoryAccessor.read(freeSimpleVolume, logicalAddress));
+
+                _MemoryAccessor.write(_MemoryManager.simpleVolumes[segmentFromRolledOutProcess], logicalAddress, hexPair);
                 logicalAddress++;
             }/// for
 
@@ -57,7 +59,9 @@ module TSOS {
 
             /// Program will only be rolled in if it was scheduled in the ready queue, thus the state
             /// should be "Running"
-            programFromDisk.processState = "Running";
+            if (programFromDisk.processState != 'Terminated') {
+                programFromDisk.processState = "Running";
+            }/// if
 
             /// Delete the swap file from the disk...
             _krnDiskDriver.deleteFile(programFromDisk.swapFileName);
@@ -73,7 +77,7 @@ module TSOS {
             }/// for
 
             /// Try to create a swap file
-            if (!_krnDiskDriver.createLite(`${_krnDiskDriver.hiddenFilePrefix}${_krnDiskDriver.swapFilePrefix}${programFromMemory.processID}`).startsWith('Cannot create')) {
+            if (!_krnDiskDriver.create(`${_krnDiskDriver.hiddenFilePrefix}${_krnDiskDriver.swapFilePrefix}${programFromMemory.processID}`).startsWith('Cannot create')) {
                 /// Try to write to the swap file
                 if (!_krnDiskDriver.write(`${_krnDiskDriver.hiddenFilePrefix}${_krnDiskDriver.swapFilePrefix}${programFromMemory.processID}`, this.programRolledOutFromMemory).startsWith('Cannot write')) {
                     /// File successfully rolled out

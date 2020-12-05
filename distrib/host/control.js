@@ -74,11 +74,15 @@ var TSOS;
         static hostBtnStartOS_click(btn) {
             // Disable the (passed-in) start button...
             btn.disabled = true;
+            document.getElementById('btnStartOS').style.backgroundColor = "#143e6c";
             // .. enable the Halt and Reset buttons ...
             /// and the single step buttons
             document.getElementById("btnHaltOS").disabled = false;
+            document.getElementById("btnHaltOS").style.backgroundColor = "#007acc";
             document.getElementById("btnReset").disabled = false;
+            document.getElementById("btnReset").style.backgroundColor = "#007acc";
             document.getElementById("btnSingleStepMode").disabled = false;
+            document.getElementById("btnSingleStepMode").style.backgroundColor = "#007acc";
             // .. set focus on the OS console display ...
             document.getElementById("display").focus();
             // ... Create and initialize the CPU (because it's part of the hardware)  ...
@@ -142,6 +146,7 @@ var TSOS;
             if (_SingleStepMode) {
                 /// Enable the "Next Step" button
                 document.getElementById("btnNextStep").disabled = false;
+                document.getElementById("btnNextStep").style.backgroundColor = "#007acc";
                 /// Show user that single step mode is ON
                 document.getElementById("btnSingleStepMode").value = "Single Step OFF";
             } /// if
@@ -149,6 +154,7 @@ var TSOS;
             else {
                 /// Enable the "Next Step" button
                 document.getElementById("btnNextStep").disabled = true;
+                document.getElementById("btnNextStep").style.backgroundColor = '#143e6c';
                 /// Visually show user that single step mode is OFF
                 document.getElementById("btnSingleStepMode").value = "Single Step ON";
             } /// else
@@ -375,7 +381,7 @@ var TSOS;
             var table = document.createElement('table');
             table.setAttribute("id", "tempTable");
             table.style.width = "100%";
-            table.style.border = "1px solid black";
+            table.style.borderTop = "1px solid #bbbbbb";
             var rowWithHeaders = document.createElement('tr');
             var rowWithValues = document.createElement('tr');
             table.appendChild(rowWithHeaders);
@@ -435,6 +441,48 @@ var TSOS;
                 } /// for
             } /// for
         } /// visualizeResidentList
+        /**
+         * iProject4 Control Methods
+         *
+         */
+        static updateVisualDisk() {
+            _Kernel.krnTrace('Updated visual disk!');
+            /// Get table
+            try {
+                document.getElementById("visual--disk--table").parentNode.removeChild(document.getElementById("visual--disk--table"));
+            } /// try
+            catch (e) { }
+            ;
+            var table = document.createElement('table');
+            table.setAttribute("id", "visual--disk--table");
+            table.style.border = "none";
+            /// Check to see if disk is formatted
+            if (!_krnDiskDriver.formatted) {
+                _Kernel.krnTrace('Not formatted');
+                return;
+            } /// if
+            /// Create Headers and append the header row
+            // var rowWithHeaders = document.createElement('tr');
+            // rowWithHeaders.appendChild(document.createElement('td').appendChild(document.createTextNode('Key')));
+            // rowWithHeaders.appendChild(document.createElement('td').appendChild(document.createTextNode('Value')));
+            // table.appendChild(rowWithHeaders);
+            /// Create each block in the 16KB Disk
+            for (var trackNum = 0; trackNum < TRACK_LIMIT; ++trackNum) {
+                for (var sectorNum = 0; sectorNum < SECTOR_LIMIT; ++sectorNum) {
+                    for (var blockNum = 0; blockNum < BLOCK_LIMIT; ++blockNum) {
+                        /// Create a row
+                        var rowWithValues = document.createElement('tr');
+                        /// var key = document.createElement('td').appendChild(document.createTextNode(`(${trackNum}, ${sectorNum}, ${blockNum})`));
+                        var value = document.createElement('td');
+                        value.style.whiteSpace = 'nowrap';
+                        value.appendChild(document.createTextNode(`(${trackNum}, ${sectorNum}, ${blockNum}) | ${sessionStorage.getItem(`${TSOS.Control.formatToHexWithPadding(trackNum)}${TSOS.Control.formatToHexWithPadding(sectorNum)}${TSOS.Control.formatToHexWithPadding(blockNum)}`)}`));
+                        rowWithValues.appendChild(value);
+                        table.appendChild(rowWithValues);
+                    } /// for
+                } /// for
+            } /// for
+            document.getElementById('visual--disk--table--container').appendChild(table);
+        } /// updateVisualDisk
     } /// class
     TSOS.Control = Control;
 })(TSOS || (TSOS = {})); /// module

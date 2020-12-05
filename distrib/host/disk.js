@@ -37,7 +37,7 @@ var TSOS;
             var forwardPointer = BLOCK_NULL_POINTER;
             /// First byte = availability flag
             ///     0000 means free
-            var isOccupied = "0000";
+            var isOccupied = "8000";
             /// Remaining 60 Bytes are for the raw data
             ///
             /// Be careful with "+=", you don't want to append strings to null, make sure data is initialized to ''.
@@ -53,7 +53,7 @@ var TSOS;
         } /// createSessionBlock
         createMasterBootRecord() {
             var key = "000000";
-            var isOccupied = "0001";
+            var isOccupied = "0000";
             var nextBlockPointer = BLOCK_NULL_POINTER;
             /// Remaining 60 Bytes are for the raw data
             var data = _krnDiskDriver.englishToHex("Master Partition Table, Master Signature, Master Boot Code");
