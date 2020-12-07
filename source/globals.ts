@@ -41,6 +41,10 @@ const NEXT_STEP_IRQ: number = 5;
 /// Scheduling Interrupts
 const CONTEXT_SWITCH_IRQ: number = 6;
 const CHANGE_QUANTUM_IRQ: number = 7;
+const SET_SCHEDULE_ALGORITHM: number = 14;
+const PRIORITY: string = 'priority';
+const ROUND_ROBIN: string = 'rr';
+const FIRST_COME_FIRST_SERVE: string = 'fcfs';
 
 /// Create Process Interrupts
 const RUN_PROCESS_IRQ: number = 8;

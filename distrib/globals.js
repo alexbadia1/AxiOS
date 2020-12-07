@@ -33,6 +33,10 @@ const NEXT_STEP_IRQ = 5;
 /// Scheduling Interrupts
 const CONTEXT_SWITCH_IRQ = 6;
 const CHANGE_QUANTUM_IRQ = 7;
+const SET_SCHEDULE_ALGORITHM = 14;
+const PRIORITY = 'priority';
+const ROUND_ROBIN = 'rr';
+const FIRST_COME_FIRST_SERVE = 'fcfs';
 /// Create Process Interrupts
 const RUN_PROCESS_IRQ = 8;
 const RUN_ALL_PROCESSES_IRQ = 9;

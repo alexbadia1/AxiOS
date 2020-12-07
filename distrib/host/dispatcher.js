@@ -71,6 +71,7 @@ var TSOS;
             if (newPcb.volumeIndex === -1) {
                 if (_Scheduler.readyQueue.getSize() > 1) {
                     /// Of the three processes on the disk, choose the one that is closest to the end of the ready queue
+                    // _StdOut.putText(`${this.victim()}`);
                     segment = _Swapper.rollOut(this.victim());
                     /// _StdOut.putText(`Roll Out Segment number: ${segment}`);
                 } /// if
@@ -125,20 +126,16 @@ var TSOS;
             pcb.zFlag = _CPU.Zflag;
         } /// saveContextFromCPU
         victim() {
-            var pos = _Scheduler.readyQueue.getSize() - 1;
-            while (pos > 0) {
-                var nestedPos = _Scheduler.readyQueue.queues[pos].getSize() - 1;
-                while (nestedPos > 0) {
-                    if (_Scheduler.readyQueue.queues[pos][nestedPos].volumeIndex != -1) {
-                        return _Scheduler.readyQueue.queues[pos][nestedPos];
-                    } /// if
-                    else {
-                        nestedPos--;
-                    } /// else
-                } /// while
-                pos--;
-            } /// while
-            return null;
+            var max = -1;
+            var lastQueue = null;
+            _StdOut.putText(`Ready queue size: ${_Scheduler.readyQueue.queues.length}`);
+            for (var i = 1 + Math.floor(_Scheduler.readyQueue.queues.length / 2); i < _Scheduler.readyQueue.queues.length; ++i) {
+                if (_Scheduler.readyQueue.getIndex(i).priority > max) {
+                    max = _Scheduler.readyQueue.queues[i].priority;
+                    lastQueue = _Scheduler.readyQueue.getIndex(i);
+                } /// if
+            } /// for
+            return lastQueue.getIndex(lastQueue.getSize() - 1);
         } /// victim
     } /// class
     TSOS.Dispatcher = Dispatcher;

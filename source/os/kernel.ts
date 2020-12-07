@@ -279,7 +279,9 @@ module TSOS {
                 case RUN_ALL_PROCESSES_IRQ:
                     this.runAllProcesesISR();
                     break;
-
+                case SET_SCHEDULE_ALGORITHM:
+                    this.setSchedule(params);
+                    break;
                 ///////////////////////////////
                 /// Exit Process Interrupts ///
                 ///////////////////////////////
@@ -349,8 +351,8 @@ module TSOS {
         public psISR() {
             for (var pos = 0; pos < _ResidentList.residentList.length; ++pos) {
                 pos === 0 ?
-                    _StdOut.putText(`  pid ${_ResidentList.residentList[pos].processID}: ${_ResidentList.residentList[pos].processState}`)
-                    : _StdOut.putText(`pid ${_ResidentList.residentList[pos].processID}: ${_ResidentList.residentList[pos].processState}`);
+                    _StdOut.putText(`  pid ${_ResidentList.residentList[pos].processID}: ${_ResidentList.residentList[pos].processState} - Priority ${_ResidentList.residentList[pos].priority} `)
+                    : _StdOut.putText(`pid ${_ResidentList.residentList[pos].processID}: ${_ResidentList.residentList[pos].processState} - Priority ${_ResidentList.residentList[pos].priority}`);
 
                 if (pos !== _ResidentList.residentList.length - 1) {
                     _StdOut.putText(`, `);
@@ -448,6 +450,9 @@ module TSOS {
                 }/// if
             }/// for
 
+            // if (_Scheduler.currentProcess !== null){
+            //     processWasLoaded = true;
+            // }/// if
             _Scheduler.runSchedule(processWasLoaded);
         }/// runAllProcessISR
 
@@ -576,7 +581,7 @@ module TSOS {
                 /// params [1] == -quick || -full
                 if (!_CPU.isExecuting) {
                     if (!_SingleStepMode) {
-                    _krnDiskDriver.format(params[1]);
+                        _krnDiskDriver.format(params[1]);
                     }/// if 
                     else {
                         _StdOut.putText(`Disk cannot be formatted while in single step mode`);
@@ -599,11 +604,149 @@ module TSOS {
             /// Not formatted, don't do anyting
             else {
                 this.krnTrace("Disk is not yet formatted!");
-                _StdOut.putText(`${INDENT_STRING}You must format the drive disk before use!`);
+                _StdOut.putText(`You must format the drive disk before use!`);
                 _StdOut.advanceLine();
                 _OsShell.putPrompt();
             }/// else
         }/// diskISR
+
+        public setSchedule(params: string[]) {
+            var schedulingAgorithm: string = params[0];
+
+            /// Scheduling algorithm is already set to the one being passed
+            if (_Scheduler.schedulingMethod === schedulingAgorithm) {
+                _StdOut.putText(`Scheduling is already ${schedulingAgorithm}`);
+                _StdOut.advanceLine();
+                _OsShell.putPrompt();
+            }/// if
+
+            else if (!_CPU.isExecuting) {
+                _Scheduler.schedulingMethod = schedulingAgorithm;
+                _StdOut.putText(`Scheduling algorithm set to: ${schedulingAgorithm}`);
+                _StdOut.advanceLine();
+                _OsShell.putPrompt();
+            }/// else-if
+
+            /// Scheduling algorithm is different than the one being passed
+            else {
+                switch (schedulingAgorithm) {
+                    case ROUND_ROBIN:
+                        var tempRoundRobin: ProcessControlBlock[] = [];
+
+                        /// Set scheduling method to Round Robin
+                        _Scheduler.schedulingMethod = ROUND_ROBIN;
+                        _Scheduler.swapToUserQuantum();
+
+                        /// Don't forget current process
+                        if (_Scheduler.currentProcess !== null) {
+                            _Scheduler.currentProcess.swapToDefaultPriority();
+                            tempRoundRobin.push(_Scheduler.currentProcess);
+                            _Scheduler.currentProcess = null;
+                        }/// if
+
+                        /// Dequeue every process and swap back to using the user defined priority
+                        while (_Scheduler.readyQueue.getSize() > 0) {
+                            var pcb: ProcessControlBlock = _Scheduler.readyQueue.dequeueInterruptOrPcb();
+                            pcb.swapToDefaultPriority();
+                            tempRoundRobin.push(pcb);
+                        }/// while
+
+                        /// Re-enqueue all process
+                        for (var p: number = 0; p < tempRoundRobin.length; ++p) {
+                            _Scheduler.readyQueue.enqueueInterruptOrPcb(tempRoundRobin[p]);
+                        }/// for
+
+                        /// Re-attach first process back to cpu...
+                        if (_Scheduler.currentProcess === null) {
+                            _Scheduler.currentProcess = _Scheduler.readyQueue.dequeueInterruptOrPcb();
+                            _Scheduler.currentProcess.processState === "Running";
+                            _Dispatcher.setNewProcessToCPU(_Scheduler.currentProcess);
+                        }/// if
+                        _StdOut.putText(`Scheduling algorithm set to: ${schedulingAgorithm}`);
+                        _StdOut.advanceLine();
+                        _OsShell.putPrompt();
+                        break;
+
+                    case FIRST_COME_FIRST_SERVE:
+                        var tempFcFs: number[] = [];
+
+                        /// Set scheduling method to First Come First Serve
+                        _Scheduler.schedulingMethod = FIRST_COME_FIRST_SERVE;
+                        _Scheduler.swapToFcFsQuantum();
+
+                        /// Don't forget current process
+                        if (_Scheduler.currentProcess !== null) {
+                            tempFcFs.push(_Scheduler.currentProcess.processID);
+                            _Scheduler.currentProcess = null;
+                        }/// if
+
+                        /// Dequeue every process and swap back to using the user defined priority
+                        while (_Scheduler.readyQueue.getSize() > 0) {
+                            tempFcFs.push(_Scheduler.readyQueue.dequeueInterruptOrPcb().processID);
+                        }/// while
+
+                        /// Re-enqueue all process
+                        for (var p: number = 0; p < _ResidentList.residentList.length; ++p) {
+                            /// Only re-enqueue scheduled processes
+                            if (tempFcFs.includes(_ResidentList.residentList[p].processID)) {
+                                _ResidentList.residentList[p].swapToDefaultPriority();
+                                _Scheduler.readyQueue.enqueueInterruptOrPcb(_ResidentList.residentList[p]);
+                            }/// if
+                        }/// for
+
+                        /// Re-attach first process back to cpu...
+                        if (_Scheduler.currentProcess === null) {
+                            _Scheduler.currentProcess = _Scheduler.readyQueue.dequeueInterruptOrPcb();
+                            _Scheduler.currentProcess.processState === "Running";
+                            _Dispatcher.setNewProcessToCPU(_Scheduler.currentProcess);
+                        }/// if
+                        _StdOut.putText(`Scheduling algorithm set to: ${schedulingAgorithm}`);
+                        _StdOut.advanceLine();
+                        _OsShell.putPrompt();
+                        break;
+                    case PRIORITY:
+                        var tempPriority: ProcessControlBlock[] = [];
+
+                        /// Set scheduling method to Priority
+                        _Scheduler.schedulingMethod = PRIORITY;
+
+                        /// Don't forget current process
+                        if (_Scheduler.currentProcess !== null) {
+                            _Scheduler.currentProcess.swapToUserPriority();
+                            tempPriority.push(_Scheduler.currentProcess);
+                            _Scheduler.currentProcess = null;
+                        }/// if
+
+                        /// Dequeue every process and swap back to using the user defined priority
+                        while (_Scheduler.readyQueue.getSize() > 0) {
+                            var pcb: ProcessControlBlock = _Scheduler.readyQueue.dequeueInterruptOrPcb();
+                            pcb.swapToUserPriority();
+                            tempPriority.push(pcb);
+                        }/// while
+
+                        /// Re-enqueue all process
+                        for (var p: number = 0; p < tempPriority.length; ++p) {
+                            _Scheduler.readyQueue.enqueueInterruptOrPcb(tempPriority[p]);
+                        }/// for
+
+                        /// Re-attach first process back to cpu...
+                        if (_Scheduler.currentProcess === null) {
+                            _Scheduler.currentProcess = _Scheduler.readyQueue.dequeueInterruptOrPcb();
+                            _Scheduler.currentProcess.processState === "Running";
+                            _Dispatcher.setNewProcessToCPU(_Scheduler.currentProcess);
+                        }/// if
+                        _StdOut.putText(`Scheduling algorithm set to: ${schedulingAgorithm}`);
+                        _StdOut.advanceLine();
+                        _OsShell.putPrompt();
+                        break;
+                    default:
+                        _StdOut.putText(`Scheduling algorithm: ${schedulingAgorithm} not recognized!`);
+                        _StdOut.advanceLine();
+                        _OsShell.putPrompt();
+                        break;
+                }/// switch
+            }/// else
+        }/// setSchedule
 
         //
         // System Calls... that generate software interrupts via tha Application Programming Interface library routines.

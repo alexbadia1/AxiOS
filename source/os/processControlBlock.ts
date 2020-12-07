@@ -24,7 +24,8 @@ module TSOS {
             public yRegister: string = "00",
             public zFlag: number = 0,
             public priority: number = 1,
-            private roundRobinPriority = 1,
+            private defaultPriority = 1,
+            public isDefaultPriorityInUse = false,
             public processState: string = 'New',
             public volumeIndex: number = -1,
             public outputBuffer: string = "",
@@ -35,15 +36,22 @@ module TSOS {
 
         public init(): void {} /// init
 
-        public getRoundRobinPriority() {
-            return this.roundRobinPriority;
+        public swapToDefaultPriority() {
+            if (!this.isDefaultPriorityInUse) {
+                var temp: number = this.priority;
+                this.priority = this.defaultPriority;
+                this.defaultPriority = temp;
+                this.isDefaultPriorityInUse = true;
+            }/// if
         }/// getRoundRobinPriority
-        // public getVolumeLocation() {
-        //     if (this.volumeIndex !== -1){
-        //         var locations: string[] = ["Simple Volume 1", "Simple Volume 2", "Simple Volume 3"];
-        //         return locations[this.volumeIndex];
-        //     }/// if
-        //     else return "ERR: Vol Index: -1";
-        // }///getVolumeLocation
+
+        public swapToUserPriority() {
+            if (this.isDefaultPriorityInUse) {
+                var temp: number = this.defaultPriority;
+                this.defaultPriority = this.priority;
+                this.priority = temp;
+                this.isDefaultPriorityInUse = false;
+            }/// if
+        }/// getRoundRobinPriority
     }/// ProcessControlBlock
 }/// TSOS

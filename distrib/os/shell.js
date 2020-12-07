@@ -195,6 +195,12 @@ var TSOS;
             /// defrag: defragment disk drive and display a message denoting success or failure
             sc = new TSOS.ShellCommand(this.shellDefrag, 'defrag', 'defragment disk drive');
             this.commandList[this.commandList.length] = sc;
+            /// getSchedule: returns currently selected sheduling algorithm
+            sc = new TSOS.ShellCommand(this.shellGetSchedule, 'getschedule', 'returns currently selected sheduling algorithm');
+            this.commandList[this.commandList.length] = sc;
+            /// setSchedule: defragment disk drive and display a message denoting success or failure
+            sc = new TSOS.ShellCommand(this.shellSetSchedule, 'setschedule', 'sets the currently selected scheduling algorithm');
+            this.commandList[this.commandList.length] = sc;
             /// Display the initial prompt.
             ///
             /// If I somehow make it into the "Hall of Fame" I may as well do something memorable. Cause, you know...
@@ -501,6 +507,13 @@ var TSOS;
                         break;
                     case "defrag":
                         _StdOut.putText("defrag: defragments disk drive.");
+                        break;
+                    case "setschedule":
+                        _StdOut.putText("setschedule: sets the current scheduling algorithm");
+                        break;
+                    case "getschedule":
+                        _StdOut.putText("getschedule: gets the current scheduling algorithm");
+                        break;
                     default:
                         _StdOut.putText("No manual entry for " + args[0] + ".");
                 } /// switch
@@ -557,128 +570,149 @@ var TSOS;
         /// load [<priority>] - Loads the specified user program
         ///
         /// In hindsight, creating the process and all should not be in the shell...
-        shellLoad() {
-            ///Regular expressions, smh.
-            ///
-            /// Getting and cleansing input
-            var userInput = _taProgramInput.value.trim();
-            userInput = userInput.toUpperCase().replace(/\s/g, '');
-            /// Test for hexadecimal characters using regular expression...
-            /// Learning hurts, ugh...
-            if (/^[A-F0-9]+$/i.test(userInput)) {
-                /// Making sure there are no incomplete hex data pairs
-                if (userInput.length % 2 === 0) {
-                    /// Memory is full...
-                    if (_MemoryManager.firstFit() === -1) {
-                        /// Try to write to the disk instead, remember it must be formatted first!
-                        if (_krnDiskDriver.formatted) {
-                            /// Create a Process Control Block
-                            var newProcessControlBlock = new TSOS.ProcessControlBlock();
-                            /// Assign continuosly growing list of process id's and add to list of processes
-                            ///
-                            /// This is TEMPORARY and may need to be rolled back if no room on the disk
-                            /// Thus we will wait to actually push the pcb onto the resident list
-                            newProcessControlBlock.processID = _ResidentList.size;
-                            _ResidentList.size++;
-                            /// Create a swap file for said pcb
-                            newProcessControlBlock.swapFileName = `${_krnDiskDriver.hiddenFilePrefix}${_krnDiskDriver.swapFilePrefix}${newProcessControlBlock.processID}`;
-                            /// Now try to actually create the swap file and write to it if there's enough room
-                            ///
-                            /// Asyncronously...
-                            ///     Future<void> shellLoad() async {
-                            ///         Future<boolean> result = await _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(DISK_IRQ, ['create', args[0]]));
-                            ///         return result;
-                            ///     }/// shellLoad
-                            /// 
-                            /// Ya know, I might actually try to re do this in an asyncronous fashion in Dart and create a fultter app for it...
-                            var diskDriverResult = '';
-                            diskDriverResult = _krnDiskDriver.create(newProcessControlBlock.swapFileName);
-                            _StdOut.putText(`  ${diskDriverResult}`);
-                            _StdOut.advanceLine();
-                            /// File created for program
-                            if (!diskDriverResult.startsWith('Cannot create')) {
-                                diskDriverResult = _krnDiskDriver.write(newProcessControlBlock.swapFileName, userInput);
-                                _StdOut.putText(`  Program Succesfully ${diskDriverResult}`);
+        shellLoad(args) {
+            if (args.length <= 1 && args.length >= 0) {
+                /// Getting and cleansing input
+                var userInput = _taProgramInput.value.trim();
+                userInput = userInput.toUpperCase().replace(/\s/g, '');
+                /// Test for hexadecimal characters using regular expression...
+                if (/^[A-F0-9]+$/i.test(userInput)) {
+                    /// Making sure there are no incomplete hex data pairs
+                    if (userInput.length % 2 === 0) {
+                        /// Memory is full...
+                        if (_MemoryManager.firstFit() === -1) {
+                            /// Try to write to the disk instead, remember it must be formatted first!
+                            if (_krnDiskDriver.formatted) {
+                                /// Create a Process Control Block
+                                var newProcessControlBlock = new TSOS.ProcessControlBlock();
+                                /// Assign continuosly growing list of process id's and add to list of processes
+                                ///
+                                /// This is TEMPORARY and may need to be rolled back if no room on the disk
+                                /// Thus we will wait to actually push the pcb onto the resident list
+                                newProcessControlBlock.processID = _ResidentList.size;
+                                _ResidentList.size++;
+                                /// Create a swap file for said pcb
+                                newProcessControlBlock.swapFileName = `${_krnDiskDriver.hiddenFilePrefix}${_krnDiskDriver.swapFilePrefix}${newProcessControlBlock.processID}`;
+                                /// Now try to actually create the swap file and write to it if there's enough room
+                                ///
+                                /// Asyncronously...
+                                ///     Future<void> shellLoad() async {
+                                ///         Future<boolean> result = await _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(DISK_IRQ, ['create', args[0]]));
+                                ///         return result;
+                                ///     }/// shellLoad
+                                /// 
+                                /// Ya know, I might actually try to re do this in an asyncronous fashion in Dart and create a fultter app for it...
+                                var diskDriverResult = '';
+                                diskDriverResult = _krnDiskDriver.create(newProcessControlBlock.swapFileName);
+                                _StdOut.putText(`  ${diskDriverResult}`);
                                 _StdOut.advanceLine();
-                                /// Program succesfully written to file
-                                if (!diskDriverResult.startsWith('Cannot write')) {
-                                    newProcessControlBlock.volumeIndex = -1;
-                                    /// Can safely add process to the resident queue
-                                    _ResidentList.residentList.push(newProcessControlBlock);
-                                    /// Update pcb state to resident as the process is now in the resident list
-                                    newProcessControlBlock.processState = "Resident";
+                                /// File created for program
+                                if (!diskDriverResult.startsWith('Cannot create')) {
+                                    diskDriverResult = _krnDiskDriver.write(newProcessControlBlock.swapFileName, userInput);
+                                    _StdOut.putText(`  Program Succesfully ${diskDriverResult}`);
+                                    _StdOut.advanceLine();
+                                    /// Program succesfully written to file
+                                    if (!diskDriverResult.startsWith('Cannot write')) {
+                                        newProcessControlBlock.volumeIndex = -1;
+                                        if (args.length === 1) {
+                                            /// Getting and cleansing input
+                                            var trimmedStringPriority = args[0].trim();
+                                            trimmedStringPriority = trimmedStringPriority.toUpperCase().replace(/\s/g, '');
+                                            if (/^[0-9]+$/i.test(trimmedStringPriority)) {
+                                                newProcessControlBlock.priority = parseInt(trimmedStringPriority);
+                                            } /// if
+                                        } /// if
+                                        /// Can safely add process to the resident queue
+                                        _ResidentList.residentList.push(newProcessControlBlock);
+                                        /// Update pcb state to resident as the process is now in the resident list
+                                        newProcessControlBlock.processState = "Resident";
+                                    } /// if
+                                    /// Not enough room to write to the file so roll back process control block changes
+                                    else {
+                                        /// Undo the increase to resident list size
+                                        _ResidentList.size--;
+                                    } /// else
                                 } /// if
-                                /// Not enough room to write to the file so roll back process control block changes
+                                /// Not enough room to create the file so roll back process control block changes
                                 else {
                                     /// Undo the increase to resident list size
                                     _ResidentList.size--;
-                                } /// else
+                                }
                             } /// if
-                            /// Not enough room to create the file so roll back process control block changes
+                            /// Disk ain't formatted doofus!
                             else {
-                                /// Undo the increase to resident list size
-                                _ResidentList.size--;
-                            }
-                        } /// if
-                        /// Disk ain't formatted doofus!
-                        else {
-                            _Kernel.krnTrace("Disk is not yet formatted!");
-                            _StdOut.putText("You must format the drive disk before use!");
-                        } /// else
-                    } ///if
-                    /// Memory not full...
-                    else {
-                        /// Free Simple Volume was found
-                        var freeSpot = _MemoryManager.firstFit();
-                        var freeSimpleVolume = _MemoryManager.simpleVolumes[freeSpot];
-                        /// Create a Process Control Block
-                        /// State is "New" until put in resident list
-                        var newProcessControlBlock = new TSOS.ProcessControlBlock();
-                        newProcessControlBlock.processState = "New";
-                        /// Set location of the new process in memory segment
-                        newProcessControlBlock.volumeIndex = freeSpot;
-                        /// Assign continuosly growing list of process id's and add to list of processes
-                        newProcessControlBlock.processID = _ResidentList.size;
-                        _ResidentList.size++;
-                        _ResidentList.residentList.push(newProcessControlBlock);
-                        /// Show user said process id...
-                        _StdOut.putText(`Process ID: ${newProcessControlBlock.processID}`);
-                        _StdOut.advanceLine();
-                        var hexPair = '';
-                        var logicalAddress = 0;
-                        for (var pos = 0; pos < MAX_SIMPLE_VOLUME_CAPACITY * 2; pos += 2) {
-                            /// Read two characters at a time...
-                            if (userInput[pos] + userInput[pos + 1]) {
-                                hexPair = userInput[pos] + userInput[pos + 1];
-                            } /// if
-                            else {
-                                hexPair = '00';
+                                _Kernel.krnTrace("Disk is not yet formatted!");
+                                _StdOut.putText("You must format the drive disk before use!");
                             } /// else
-                            _MemoryAccessor.write(_MemoryManager.simpleVolumes[freeSpot], logicalAddress, hexPair);
-                            logicalAddress++;
-                        } /// for
-                        /// Protect volumes from being written into by accident...
-                        /// Each individual address at the memory level will be locked to to prevent such overflow issues
-                        freeSimpleVolume.writeLock();
-                        /// Nothing went wrong, update pcb state to resident as the process is now in the resident list
-                        newProcessControlBlock.processState = "Resident";
-                    } ///else
-                } /// if 
-                /// The user inputted an odd amount of hex characters meaning there is an unmatched pair, so 
-                /// print out to the console that is ain't gonna work.
+                        } ///if
+                        /// Memory not full...
+                        else {
+                            /// Free Simple Volume was found
+                            var freeSpot = _MemoryManager.firstFit();
+                            var freeSimpleVolume = _MemoryManager.simpleVolumes[freeSpot];
+                            /// Create a Process Control Block
+                            /// State is "New" until put in resident list
+                            var newProcessControlBlock = new TSOS.ProcessControlBlock();
+                            newProcessControlBlock.processState = "New";
+                            /// Set location of the new process in memory segment
+                            newProcessControlBlock.volumeIndex = freeSpot;
+                            /// Set Priority
+                            if (args.length === 1) {
+                                /// Getting and cleansing input
+                                var trimmedStringPriority = args[0].trim();
+                                trimmedStringPriority = trimmedStringPriority.toUpperCase().replace(/\s/g, '');
+                                if (/^[0-9]+$/i.test(trimmedStringPriority)) {
+                                    newProcessControlBlock.priority = parseInt(trimmedStringPriority);
+                                } /// if
+                            } /// if
+                            /// Assign continuosly growing list of process id's and add to list of processes
+                            newProcessControlBlock.processID = _ResidentList.size;
+                            _ResidentList.size++;
+                            _ResidentList.residentList.push(newProcessControlBlock);
+                            /// Show user said process id...
+                            _StdOut.putText(`Process ID: ${newProcessControlBlock.processID}`);
+                            _StdOut.advanceLine();
+                            var hexPair = '';
+                            var logicalAddress = 0;
+                            for (var pos = 0; pos < MAX_SIMPLE_VOLUME_CAPACITY * 2; pos += 2) {
+                                /// Read two characters at a time...
+                                if (userInput[pos] + userInput[pos + 1]) {
+                                    hexPair = userInput[pos] + userInput[pos + 1];
+                                } /// if
+                                else {
+                                    hexPair = '00';
+                                } /// else
+                                _MemoryAccessor.write(_MemoryManager.simpleVolumes[freeSpot], logicalAddress, hexPair);
+                                logicalAddress++;
+                            } /// for
+                            /// Protect volumes from being written into by accident...
+                            /// Each individual address at the memory level will be locked to to prevent such overflow issues
+                            freeSimpleVolume.writeLock();
+                            /// Nothing went wrong, update pcb state to resident as the process is now in the resident list
+                            newProcessControlBlock.processState = "Resident";
+                        } ///else
+                    } /// if 
+                    /// The user inputted an odd amount of hex characters meaning there is an unmatched pair, so 
+                    /// print out to the console that is ain't gonna work.
+                    else {
+                        _StdOut.putText("Invalid Hex Data.");
+                        _StdOut.advanceLine();
+                        _StdOut.putText("Hex Command or Hex Data is incomplete.");
+                        _StdOut.advanceLine();
+                        _StdOut.putText("Type \'help\' for, well... help.");
+                        _StdOut.advanceLine();
+                    }
+                } /// if
                 else {
                     _StdOut.putText("Invalid Hex Data.");
                     _StdOut.advanceLine();
-                    _StdOut.putText("Hex Command or Hex Data is incomplete.");
-                    _StdOut.advanceLine();
                     _StdOut.putText("Type \'help\' for, well... help.");
                     _StdOut.advanceLine();
-                }
+                } /// else
             } /// if
+            /// Too many arguments
             else {
-                _StdOut.putText("Invalid Hex Data.");
-                _StdOut.advanceLine();
-                _StdOut.putText("Type \'help\' for, well... help.");
+                _StdOut.putText(`${INDENT_STRING}Usage: load <int> Expected 0 or 1 arguments, but got ${args.length}`);
                 _StdOut.advanceLine();
             } /// else
             /// Update Visual Memory
@@ -846,7 +880,7 @@ var TSOS;
             } /// if
             /// More than one argument was given
             else {
-                _StdOut.putText(`${INDENT_STRING}Usage: kill <int> Expected 1 arguments, but got ${args.length}`);
+                _StdOut.putText(`${INDENT_STRING}Usage: kill <int> Expected 1 argument, but got ${args.length}`);
                 _StdOut.advanceLine();
             } /// else
         } /// kill
@@ -1071,6 +1105,44 @@ var TSOS;
                 _StdOut.advanceLine();
             } /// else
         } /// shellDefrag
+        shellGetSchedule(args) {
+            if (args.length === 0) {
+                _StdOut.putText(`${INDENT_STRING}Current Scheduling Algorithm: ${_Scheduler.schedulingMethod}`);
+            } /// if
+            else {
+                _StdOut.putText(`${INDENT_STRING}Usage: getscedule Expected 0 arguments, but got ${args.length}`);
+                _StdOut.advanceLine();
+            } /// else
+        } ///
+        shellSetSchedule(args) {
+            if (args.length === 1) {
+                switch (args[0]) {
+                    case ROUND_ROBIN:
+                        _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(SET_SCHEDULE_ALGORITHM, [ROUND_ROBIN]));
+                        break;
+                    case FIRST_COME_FIRST_SERVE:
+                        _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(SET_SCHEDULE_ALGORITHM, [FIRST_COME_FIRST_SERVE]));
+                        break;
+                    case PRIORITY:
+                        _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(SET_SCHEDULE_ALGORITHM, [PRIORITY]));
+                        break;
+                    default:
+                        _StdOut.putText(`${INDENT_STRING}Invalid Schedulng Algorithm, try:`);
+                        _StdOut.advanceLine();
+                        _StdOut.putText(`${INDENT_STRING}${INDENT_STRING}${ROUND_ROBIN}`);
+                        _StdOut.advanceLine();
+                        _StdOut.putText(`${INDENT_STRING}${INDENT_STRING}${FIRST_COME_FIRST_SERVE}`);
+                        _StdOut.advanceLine();
+                        _StdOut.putText(`${INDENT_STRING}${INDENT_STRING}${PRIORITY}`);
+                        _StdOut.advanceLine();
+                        break;
+                } /// switch
+            } /// if
+            else {
+                _StdOut.putText(`${INDENT_STRING}Usage: setscedule Expected 1 argument, but got ${args.length}`);
+                _StdOut.advanceLine();
+            } /// else
+        }
         /********************
          * ASCII art for BLM
          ********************/

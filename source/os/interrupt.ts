@@ -52,6 +52,9 @@ module TSOS {
                 case DISK_IRQ:
                     this.priority = 1;
                     break;
+                case SET_SCHEDULE_ALGORITHM:
+                    this.priority = 2;
+                    break;
                 default:
                     this.priority = 1;
                     break;
