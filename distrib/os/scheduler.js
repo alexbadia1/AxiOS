@@ -13,7 +13,7 @@
 var TSOS;
 (function (TSOS) {
     class Scheduler {
-        constructor(quanta = 6, fcfsQuanta = Number.MAX_SAFE_INTEGER, isFcFcQuantaInUse = false, startBurst = 0, processesMetaData = [], unInterleavedOutput = [], processTurnaroundTime = [], readyQueue = new TSOS.PriorityQueue(), currentProcess = null, schedulingMethod = PRIORITY) {
+        constructor(quanta = 6, fcfsQuanta = Number.MAX_SAFE_INTEGER, isFcFcQuantaInUse = false, startBurst = 0, processesMetaData = [], unInterleavedOutput = [], processTurnaroundTime = [], readyQueue = new TSOS.PriorityQueue(), currentProcess = null, schedulingMethod = ROUND_ROBIN) {
             this.quanta = quanta;
             this.fcfsQuanta = fcfsQuanta;
             this.isFcFcQuantaInUse = isFcFcQuantaInUse;

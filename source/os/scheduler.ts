@@ -25,7 +25,7 @@ module TSOS {
             public processTurnaroundTime: number[] = [],
             public readyQueue = new PriorityQueue(),
             public currentProcess: ProcessControlBlock = null,
-            public schedulingMethod = PRIORITY,
+            public schedulingMethod = ROUND_ROBIN,
         ) { 
            /// this.readyQueue = this.schedulingMethod === 'Round Robin'? new Queue() : new PriorityQueue();
         }/// constructor
