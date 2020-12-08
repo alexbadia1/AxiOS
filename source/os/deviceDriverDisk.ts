@@ -305,8 +305,9 @@ module TSOS {
 
             else {
                 return `Cannot rename ${oldFileName}`;
-            }///
+            }/// else
 
+            TSOS.Control.updateVisualDisk();
             return `${oldFileName} renamed to ${this.hexToEnglish(newFileNameInHex)}`;
         }/// rename
 
@@ -608,8 +609,10 @@ module TSOS {
 
                 /// Recover the positive ID
                 this.idAllocator.deallocatePositiveID(parseInt(this.getBlockFlag(targetFileKey), 16));
+
                 // _StdOut.putText(`Recovered ID: ${parseInt(this.getBlockFlag(targetFileKey), 16)}`);
                 // _StdOut.advanceLine();
+
                 /// Deleted file ID successfully allocated
                 if (deletedFileID != -1) {
                     msg = `Deleted C:\\AXIOS\\${fileName}`;
@@ -618,7 +621,7 @@ module TSOS {
 
                 /// Ran out of deleted file ID's
                 else {
-                    msg = `Deleted C:\\AXIOS\\${fileName}, no longer recoverable`;
+                    msg = `Deleted C:\\AXIOS\\${fileName}`;
                     deletedFileID = Control.formatToHexWithPaddingTwoBytes(NEGATIVE_ZERO);
                 }/// else
 
@@ -628,6 +631,7 @@ module TSOS {
 
                 /// Keep following the links from block to block until the end of the file
                 while (currentPointer != targetFileKey) {
+
                     /// Make current block available
                     this.setBlockFlag(currentPointer, deletedFileID);
 
@@ -648,6 +652,65 @@ module TSOS {
                 return `Cannot delete C:\\AXIOS\\${fileName}`;
             }/// else
         }/// delete
+
+        /// Hopefully no infinite loops
+        public recoverDirectoryFile(deletedFileName: string) {
+            /// Search for deleted file in directory
+            var targetFileKey: string = this.deletedFileNameExists(deletedFileName);
+
+            /// File found
+            if (targetFileKey !== '') {
+
+                /// Request new ID
+                var newID: number = this.idAllocator.allocatePositiveID();
+
+                /// Got Positive ID 
+                if (newID !== -1) {
+
+                    /// Formatted id in hex
+                    var formattedNewIdInHex: string = Control.formatToHexWithPaddingTwoBytes(newID);
+                    
+                    /// Recover negative ID
+                    this.idAllocator.deallocateNegativeID(parseInt(this.getBlockFlag(targetFileKey), 16));
+
+                    /// Don't forget to update the file entry flag
+                    this.setBlockFlag(targetFileKey, formattedNewIdInHex);
+
+                    /// Start at first file block
+                    var currentPointer: string = this.getBlockForwardPointer(targetFileKey);
+
+                    /// Iterate through the file and change flags to new ID
+                    while (currentPointer !== targetFileKey) {
+
+                        /// Change flags to new ID
+                        this.setBlockFlag(currentPointer, formattedNewIdInHex);
+
+                        /// get next block
+                        currentPointer = this.getBlockForwardPointer(currentPointer);
+                    }/// while
+
+                    /// Change filename to avoid duplicates
+                    var defaultFileNameInHex: string = this.englishToHex(`undeleted-${newID}`);
+                    var defaultFileNameWithPadding: string = defaultFileNameInHex + this.dirBlock.defaultDirectoryBlockZeros.substring(defaultFileNameInHex.length);
+                    this.setDirectoryBlockData(targetFileKey, defaultFileNameWithPadding);
+
+                    TSOS.Control.updateVisualDisk();
+                    return `Recovered file ${deletedFileName}, now called: "undeleted-${newID}". `;
+                }/// if
+
+                /// Ran out of ID's
+                else {
+                    return `Cannot recover ${deletedFileName}, ran out of IDs!`;
+                }/// else
+            }/// if
+
+            /// File not found
+            else {
+                return `Cannot recover ${deletedFileName}`;
+            }/// else
+        }/// recover
+
+        // public recoverOrphans() {}
 
         public getFirstAvailableBlockFromDataPartition(): string {
             var firstDeletedBlock: string = null;
@@ -776,6 +839,21 @@ module TSOS {
                     for (var blockNum: number = this.dirBlock.baseBlock; blockNum <= this.dirBlock.limitBlock; ++blockNum) {
                         var currentKey: string = `${TSOS.Control.formatToHexWithPadding(trackNum)}${TSOS.Control.formatToHexWithPadding(sectorNum)}${TSOS.Control.formatToHexWithPadding(blockNum)}`;
                         if (this.hexToEnglish(this.getDirectoryBlockData(currentKey)) === targetFileNameInEnglish && parseInt(this.getBlockFlag(currentKey), 16) < NEGATIVE_ZERO) {
+                            return currentKey;
+                        }/// if
+                    }/// for
+                }/// for
+            }/// for
+            return '';
+        }/// searchDirectory
+
+        public deletedFileNameExists(targetFileNameInEnglish: string): string {
+            /// Only need to search the "file names" portion of the disk
+            for (var trackNum: number = this.dirBlock.baseTrack; trackNum <= this.dirBlock.limitTrack; ++trackNum) {
+                for (var sectorNum: number = this.dirBlock.baseSector; sectorNum <= this.dirBlock.limitSector; ++sectorNum) {
+                    for (var blockNum: number = this.dirBlock.baseBlock; blockNum <= this.dirBlock.limitBlock; ++blockNum) {
+                        var currentKey: string = `${TSOS.Control.formatToHexWithPadding(trackNum)}${TSOS.Control.formatToHexWithPadding(sectorNum)}${TSOS.Control.formatToHexWithPadding(blockNum)}`;
+                        if (this.hexToEnglish(this.getDirectoryBlockData(currentKey)) === targetFileNameInEnglish && parseInt(this.getBlockFlag(currentKey), 16) > NEGATIVE_ZERO) {
                             return currentKey;
                         }/// if
                     }/// for
@@ -1071,20 +1149,27 @@ module TSOS {
                     this.availableFilePositiveID.push(this.usedFilePositiveID[i]);
                     this.usedFilePositiveID.splice(i, 1);
                 }/// if
+
+                else {
+                    i++;
+                }/// else
             }/// while
 
             return found;
         }/// deallocatePositiveID
 
         public deallocateNegativeID(idToRenew: number): boolean {
-            var i: number = 0;
+            var h: number = 0;
             var found: boolean = false;
-            while (i < this.usedFileNegativeID.length && !found) {
-                if (idToRenew === this.usedFileNegativeID[i]) {
+            while (h < this.usedFileNegativeID.length && !found) {
+                if (idToRenew === this.usedFileNegativeID[h]) {
                     found = true;
-                    this.availableFileNegativeID.push(this.usedFileNegativeID[i]);
-                    this.usedFileNegativeID.splice(i, 1);
+                    this.availableFileNegativeID.push(this.usedFileNegativeID[h]);
+                    this.usedFileNegativeID.splice(h, 1);
                 }/// if
+                else {
+                    h++;
+                }/// else
             }/// while
 
             return found;

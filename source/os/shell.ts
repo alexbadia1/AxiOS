@@ -293,18 +293,23 @@ module TSOS {
                 'returns currently selected sheduling algorithm');
             this.commandList[this.commandList.length] = sc;
 
-            /// setSchedule: defragment disk drive and display a message denoting success or failure
+            /// setSchedule <rr, fcfs, priority>: defragment disk drive and display a message denoting success or failure
             sc = new ShellCommand(this.shellSetSchedule,
                 'setschedule',
                 'sets the currently selected scheduling algorithm');
             this.commandList[this.commandList.length] = sc;
 
-            /// rename: defragment disk drive and display a message denoting success or failure
+            /// rename <file> <new filename>: changes the filename to the new name specified
             sc = new ShellCommand(this.shellRename,
                 'rename',
                 'changes the filename to the new name specified');
             this.commandList[this.commandList.length] = sc;
 
+            /// recover <filename>: attempts recovers the delete file
+            sc = new ShellCommand(this.shellRecover,
+                'recover',
+                'attempts recovers the delete file');
+            this.commandList[this.commandList.length] = sc;
 
             /// Display the initial prompt.
             ///
@@ -644,6 +649,8 @@ module TSOS {
                     case "rename":
                         _StdOut.putText("rename <file> <new filename>: changes the filename to the new name specified");
                         break;
+                    case "recover":
+                        _StdOut.putText("recover <filename>: attempts to recover the delted file");
                     default:
                         _StdOut.putText("No manual entry for " + args[0] + ".");
                 }/// switch
@@ -1320,7 +1327,6 @@ module TSOS {
                 else {
                     /// TODO: kill process on disk... acgually don't
                     _StdOut.putText(`${INDENT_STRING}Cannot delete swap files!`);
-                    
                 }/// else
             }/// if
 
@@ -1330,6 +1336,32 @@ module TSOS {
                 _StdOut.advanceLine();
             }/// else
         }/// shellDelete
+
+        public shellRecover(args: string[]) {
+            if (args.length === 1) {
+                var filename: string = args[0].trim().replace(" ", "");
+
+                /// Not a swap file
+                if (!filename.startsWith(`${_krnDiskDriver.hiddenFilePrefix}${_krnDiskDriver.swapFilePrefix}`)) {
+
+                    /// No interrupt needed as long as no one else but the user is recovering non-swap files...
+                    _StdOut.putText(`${INDENT_STRING}${_krnDiskDriver.recoverDirectoryFile(filename)}`);
+                    _StdOut.advanceLine();
+                }/// if
+
+                /// Swap file
+                else {
+                    _StdOut.putText(`${INDENT_STRING}Cannot recover a swap file!`);
+                    _StdOut.advanceLine();
+                }/// else
+            }/// if
+
+            /// More than or less than one argument was given
+            else {
+                _StdOut.putText(`${INDENT_STRING}Usage: recover <filename> Expected 1 argument, but got ${args.length}`);
+                _StdOut.advanceLine();
+            }/// else
+        }/// shellRecover
 
         public shellDefrag(args) {
             if (args.length === 0) {
@@ -1397,6 +1429,7 @@ module TSOS {
 
                             /// Interrupt not necessary, unless anyone other than the user is renaming the file...
                             _StdOut.putText(`${INDENT_STRING}${_krnDiskDriver.rename(oldFileName, newFileNameInHex)}`);
+                            _StdOut.advanceLine();
                         }/// if
 
                         /// New filename cannot be a swap file name
