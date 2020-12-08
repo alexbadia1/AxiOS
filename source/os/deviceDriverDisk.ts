@@ -211,17 +211,6 @@ module TSOS {
             }/// else
         }/// quickFormat
 
-        /**
-         * Creating files should be quick
-         *      0. Make sure file does not exist
-         *      1. Request a unique one byte ID from the ID manager
-         *      2. if (file does not exist and id request is successfull) try to create a file
-         *      3. Create the file
-         *          - Get creation date 
-         *          - Set the file size to 128 Bytes (1 Byte for file entry, 1 byte for first reserved data block)
-         *          - 
-         *      4. 
-         */
         public create(fileName: string = ''): string {
             var msg: string = 'File creation failed';
 
@@ -303,7 +292,23 @@ module TSOS {
             }/// else
 
             return msg;
-        }/// createLite
+        }/// create
+
+        public rename(oldFileName: string, newFileNameInHex: string) {
+            var targetFileKey = this.fileNameExists(oldFileName);
+
+            /// File found
+            if (targetFileKey !== '') {
+                var paddedFileNameInHex = newFileNameInHex + this.dirBlock.defaultDirectoryBlockZeros.substring(newFileNameInHex.length);
+                this.setDirectoryBlockData(targetFileKey, paddedFileNameInHex);
+            }/// if
+
+            else {
+                return `Cannot rename ${oldFileName}`;
+            }///
+
+            return `${oldFileName} renamed to ${this.hexToEnglish(newFileNameInHex)}`;
+        }/// rename
 
         public list(type: string): void {
             var isEmpty: boolean = true;

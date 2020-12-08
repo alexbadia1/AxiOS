@@ -299,6 +299,12 @@ module TSOS {
                 'sets the currently selected scheduling algorithm');
             this.commandList[this.commandList.length] = sc;
 
+            /// rename: defragment disk drive and display a message denoting success or failure
+            sc = new ShellCommand(this.shellRename,
+                'rename',
+                'changes the filename to the new name specified');
+            this.commandList[this.commandList.length] = sc;
+
 
             /// Display the initial prompt.
             ///
@@ -634,6 +640,9 @@ module TSOS {
                         break;
                     case "getschedule":
                         _StdOut.putText("getschedule: gets the current scheduling algorithm");
+                        break;
+                    case "rename":
+                        _StdOut.putText("rename <file> <new filename>: changes the filename to the new name specified");
                         break;
                     default:
                         _StdOut.putText("No manual entry for " + args[0] + ".");
@@ -1368,7 +1377,53 @@ module TSOS {
                 _StdOut.putText(`${INDENT_STRING}Usage: setscedule Expected 1 argument, but got ${args.length}`);
                 _StdOut.advanceLine();
             }/// else
-        }
+        }/// shellSetSchedule
+
+        public shellRename(args: string[]) {
+            if (args.length === 2) {
+                var oldFileName: string = args[0].trim().replace(" ", "");
+                var newFileName: string = args[1].trim().replace(" ", "");
+
+                /// Don't allow swap files to be renamed
+                if (!oldFileName.startsWith(`${_krnDiskDriver.hiddenFilePrefix}${_krnDiskDriver.swapFilePrefix}`)) {
+                    var newFileNameInHex: string = _krnDiskDriver.englishToHex(newFileName).toUpperCase();
+                    /// make sure data is not too big
+                    if (newFileNameInHex.length < 100) {
+
+                        /// New name is not a swap file name
+                        if (!newFileName.startsWith(`${_krnDiskDriver.hiddenFilePrefix}${_krnDiskDriver.swapFilePrefix}`)) {
+
+                            /// Interrupt not necessary, unless anyone other than the user is renaming the file...
+                            _StdOut.putText(`${INDENT_STRING}${_krnDiskDriver.rename(oldFileName, newFileNameInHex)}`);
+                        }/// if
+
+                        /// New filename cannot be a swap file name
+                        else {
+                            _StdOut.putText(`${INDENT_STRING}New filename cnnot start with${_krnDiskDriver.hiddenFilePrefix}${_krnDiskDriver.swapFilePrefix}`);
+                            _StdOut.advanceLine();
+                        }/// else
+                    }/// if
+
+                    /// new name too big... No Buffer Overflows here!
+                    else {
+                        _StdOut.putText(`${INDENT_STRING}New filename is too long!`);
+                        _StdOut.advanceLine();
+                    }/// else
+
+                }/// if
+
+                /// Cannot rename a swap file
+                else {
+                    _StdOut.putText(`${INDENT_STRING}Cannot rename swap files!`);
+                    _StdOut.advanceLine();
+                }/// else
+            }/// if
+
+            else {
+                _StdOut.putText(`${INDENT_STRING}Usage: rename <file> <newname> Expected 2 argument, but got ${args.length}`);
+                _StdOut.advanceLine();
+            }/// else
+        }/// shellRenam
 
         /********************
          * ASCII art for BLM
