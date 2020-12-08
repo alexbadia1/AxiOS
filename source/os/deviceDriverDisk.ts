@@ -606,9 +606,13 @@ module TSOS {
                 /// Request for a deleted file ID
                 var deletedFileID: any = isSwapFile ? -1 : this.idAllocator.allocateNegativeID();
 
+                /// Recover the positive ID
+                this.idAllocator.deallocatePositiveID(parseInt(this.getBlockFlag(targetFileKey), 16));
+                // _StdOut.putText(`Recovered ID: ${parseInt(this.getBlockFlag(targetFileKey), 16)}`);
+                // _StdOut.advanceLine();
                 /// Deleted file ID successfully allocated
                 if (deletedFileID != -1) {
-                    msg = `Deleted C:\\AXIOS\\${fileName}, still recoverable`;
+                    msg = `Deleted C:\\AXIOS\\${fileName}`;
                     deletedFileID = Control.formatToHexWithPaddingTwoBytes(deletedFileID);
                 }/// if
 
@@ -1001,14 +1005,15 @@ module TSOS {
     export class IdAllocator {
         /// Not very memory efficient, but I need an id allocator that can quickly allocate and deallocate id's
         ///
-        /// Remeber 1's comp and 2's comp? 
+        /// Remember 1's comp and 2's comp? 
         /// I sure as hell don't, but I remember the concept...
         /// So followig that looping radix thing Gormanly taught us:
         ///     ~ Every ID <= 32,767 
-        ///         - Is in use  
+        ///         - Is in use (so our positive ID's 0 <--> 32,767)
         ///     ~ Every ID > 32,769
-        ///         - Is deleted, but still needs an ID to defrag by and maintain some sort of coherency in recovery
-        ///     ~ ID 32,768 is special... files that are neither created nor deleted
+        ///         - Is deleted (so our negative ID's also 0 <--> 32,767)
+        ///         - but still needs an ID to defrag by and maintain some sort of coherency in recovery
+        ///     ~ ID 32,768 is special... files that are neither created nor deleted, it's our second "0", (a.k.a -0);
         constructor(
             private usedFilePositiveID: number[] = [],
             private usedFileNegativeID: number[] = [],
@@ -1058,6 +1063,8 @@ module TSOS {
         public deallocatePositiveID(idToRenew: number): boolean {
             var i: number = 0;
             var found: boolean = false;
+
+            /// Find the id in the used ID list to move it to the available ID lis
             while (i < this.usedFilePositiveID.length && !found) {
                 if (idToRenew === this.usedFilePositiveID[i]) {
                     found = true;
@@ -1084,96 +1091,3 @@ module TSOS {
         }/// deallocateNegativeID
     }/// fileIdGenerator
 }/// TSOS
-
-// /// Create File should be all or nothing...No partial creations of files
-        // public create(fileName: string = ''): string {
-        //     var msg: string = 'File creation failed';
-
-        //     // File does NOT exist
-        //     if (this.fileNameExists(fileName) === '') {
-        //         /// Find a free space, null if there are no available blocks
-        //         var availableDirKey = this.getFirstAvailableBlock("File Header");
-
-        //         /// Find a free space, null if there are no available blocks
-        //         var availableFileDataKey = this.getFirstAvailableBlock("File Body");
-
-        //         /// Free space found in both file header and file data directories
-        //         ///
-        //         /// Split into multiple "if" statements for "clearer" error detection
-        //         if (availableDirKey != null) {
-        //             if (availableFileDataKey != null) {
-        //                 /// First 4 bytes (8 characters) are pointer to the free data block in the file data directory...
-        //                 /// Remaining bytes are allocated for filename (in hex of course).
-        //                 /// Set is occupied to true
-        //                 var data: string = '';
-        //                 var zeros: string = '';
-        //                 for (var byte = 0; byte < BLOCK_DATA_LIMIT; ++byte) {
-        //                     data += "00";
-        //                     zeros += "00"
-        //                 }// for
-        //                 /// Replace the first 4 bytes (8 characters) with 00's
-        //                 data = this.englishToHex(fileName) + data.substring(fileName.length, data.length);
-
-        //                 var value = "01" + availableFileDataKey + data;
-
-        //                 /// Write to the directory block
-        //                 sessionStorage.setItem(availableDirKey, value);
-
-        //                 /// Update the first data block to be in use so all new files won't point to the same first directory block
-        //                 this.setBlockFlag(availableFileDataKey, "01");
-
-        //                 /// Reset the data back to zero's
-        //                 this.setBlockData(availableFileDataKey, zeros);
-
-        //                 _Kernel.krnTrace('File sucessfully created!');
-        //                 msg = `C:\\AXIOS\\${fileName} sucessfully created!`;
-
-        //             }/// if
-        //             else {
-        //                 _Kernel.krnTrace(`Cannot create C:\\AXIOS\\${fileName}, all file data blocks are in use!`);
-        //                 msg = `Cannot create C:\\AXIOS\\${fileName}, all file data blocks are in use!`;
-        //             }/// else
-        //         }/// if
-        //         else {
-        //             _Kernel.krnTrace(`Cannot create C:\\AXIOS\\${fileName}, all file header blocks are in use!`);
-        //             msg = `Cannot create C:\\AXIOS\\${fileName}, all file header blocks are in use!`;
-        //         }/// else
-        //     }/// if
-
-        //     else {
-        //         _Kernel.krnTrace(`Cannot create C:\\AXIOS\\${fileName}, filename is already in use!`);
-        //         msg = `Cannot create C:\\AXIOS\\${fileName}, filename already in use!`;
-        //     }/// else
-
-        //     return msg;
-        // }/// createFile
-
-        // public updateFreeSpaceLinkedList() {
-        //     /// Start off at the MBR, to have it hold the pointer to the first free block
-        //     /// 
-        //     /// If the MBR points to a block in use, then we ran out of storage
-        //     var previousBlockKey: string = "000000";
-        //     var previousBlockValue: string = '';
-        //     var currentBlockKey: string = "000000";
-        //     var currentBlockValue: string = '';
-
-        //      for (var trackNum: number = this.fileDataBlock.baseTrack; trackNum <= this.fileDataBlock.limitTrack; ++trackNum) {
-        //         for (var sectorNum: number = this.fileDataBlock.baseSector; sectorNum <= this.fileDataBlock.limitSector; ++sectorNum) {
-        //             for (var blockNum: number = this.fileDataBlock.baseBlock; blockNum <= this.fileDataBlock.limitBlock; ++blockNum) {
-        //                 currentBlockKey = `${TSOS.Control.formatToHexWithPadding(trackNum)}${TSOS.Control.formatToHexWithPadding(sectorNum)}${TSOS.Control.formatToHexWithPadding(blockNum)}`;
-        //                 currentBlockValue = sessionStorage.getItem(currentBlockKey).substring(0, 2);
-
-        //                 /// Block is free
-        //                 if (currentBlockValue === "00") {
-
-        //                     /// Update previous blocks pointer to point to the current free block
-        //                     previousBlockValue = sessionStorage.getItem(previousBlockKey);
-        //                     previousBlockValue = "00" + currentBlockKey + previousBlockValue.substring(8, previousBlockValue.length);
-        //                     sessionStorage.setItem(previousBlockKey, previousBlockValue);
-
-        //                     previousBlockKey = currentBlockKey;
-        //                 }/// if
-        //             }/// for
-        //         }/// for
-        //     }/// for
-        // }/// updateFreeSpaceLinkedList

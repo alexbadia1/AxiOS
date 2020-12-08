@@ -1087,13 +1087,14 @@ var TSOS;
             /// Make sure only one argument is given
             if (args.length === 1) {
                 /// Not a swap file, safe to delete
-                if (!args[0].startsWith('.!')) {
+                if (!args[0].startsWith(`${_krnDiskDriver.hiddenFilePrefix}${_krnDiskDriver.swapFilePrefix}`)) {
                     /// Create delete interrupt
                     _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(DISK_IRQ, ['delete', args[0]]));
                 } /// if
                 /// Swap file
                 else {
-                    /// TODO: kill process on disk
+                    /// TODO: kill process on disk... acgually don't
+                    _StdOut.putText(`${INDENT_STRING}Cannot delete swap files!`);
                 } /// else
             } /// if
             /// More than or less than one argument was given
