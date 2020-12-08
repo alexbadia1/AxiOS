@@ -128,7 +128,7 @@ var TSOS;
         victim() {
             var max = -1;
             var lastQueue = null;
-            _StdOut.putText(`Ready queue size: ${_Scheduler.readyQueue.queues.length}`);
+            // _StdOut.putText(`Ready queue size: ${_Scheduler.readyQueue.queues.length}`)
             for (var i = 1 + Math.floor(_Scheduler.readyQueue.queues.length / 2); i < _Scheduler.readyQueue.queues.length; ++i) {
                 if (_Scheduler.readyQueue.getIndex(i).priority > max) {
                     max = _Scheduler.readyQueue.queues[i].priority;
