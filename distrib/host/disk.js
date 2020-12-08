@@ -31,6 +31,8 @@ var TSOS;
                 } /// for
             } /// for
             this.createMasterBootRecord();
+            /// Reclaim all ID's
+            _krnDiskDriver.idAllocator = new TSOS.IdAllocator();
         } /// init
         createSessionBlock(newTrackNum, newSectorNum, newBlockNum) {
             var key = `${TSOS.Control.formatToHexWithPadding(newTrackNum)}${TSOS.Control.formatToHexWithPadding(newSectorNum)}${TSOS.Control.formatToHexWithPadding(newBlockNum)}`;

@@ -33,6 +33,9 @@ module TSOS {
             }/// for
 
             this.createMasterBootRecord();
+
+            /// Reclaim all ID's
+            _krnDiskDriver.idAllocator = new IdAllocator();
         }/// init
 
         public createSessionBlock(newTrackNum: number, newSectorNum: number, newBlockNum: number) {

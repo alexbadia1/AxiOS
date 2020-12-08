@@ -144,6 +144,9 @@ module TSOS {
                     }/// for
                 }/// for
                 _Kernel.krnTrace(`Disk formatted (Type: Full Format)`);
+
+                /// Reclaim all ID's
+                this.idAllocator = new IdAllocator();
                 this.formatted = true;
                 return true;
             }/// if
@@ -184,7 +187,7 @@ module TSOS {
                                 var value: string = sessionStorage.getItem(currentKey);
 
                                 /// Replace the first 4 bytes (8 characters) with 00's
-                                value = "00000000" + value.substring(8, value.length);
+                                value = "8000" + BLOCK_NULL_POINTER + value.substring(10, value.length);
 
                                 /// Write the change back to the list
                                 sessionStorage.setItem(currentKey, value);
@@ -192,6 +195,8 @@ module TSOS {
                         }/// for
                     }/// for
                 }/// for
+                /// Reclaim all ID's
+                this.idAllocator = new IdAllocator();
                 _Kernel.krnTrace(`Disk formatted (Type: Quick Format)`);
                 this.formatted = true;
                 return true;
