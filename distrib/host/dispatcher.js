@@ -69,43 +69,81 @@ var TSOS;
             ///         roll out any terminated process in memory... maybe automatically roll out processes they terminate?
             ///     Roll in process to memory segment that was rolled out
             if (newPcb.volumeIndex === -1) {
-                if (_Scheduler.readyQueue.getSize() > 1) {
-                    /// Of the three processes on the disk, choose the one that is closest to the end of the ready queue
-                    // _StdOut.putText(`${this.victim()}`);
-                    segment = _Swapper.rollOut(this.victim());
-                    /// _StdOut.putText(`Roll Out Segment number: ${segment}`);
-                } /// if
-                else {
-                    var pos = 0;
-                    var found = false;
-                    while (pos < _ResidentList.residentList.length && !found) {
-                        if (_ResidentList.residentList[pos].volumeIndex !== -1 && _ResidentList.residentList[pos].processState === "Terminated") {
-                            found = true;
-                            segment = _Swapper.rollOut(_ResidentList.residentList[pos]);
-                            ///_StdOut.putText(`Roll Out Segment number: ${segment}`);
+                var numProcessesInMemory = 0;
+                var pos = 0;
+                /// See how many process are in memory
+                while (pos < _ResidentList.residentList.length && numProcessesInMemory < 3) {
+                    if (_ResidentList.residentList[pos].volumeIndex >= 0 && _ResidentList.residentList[pos].volumeIndex <= 2) {
+                        numProcessesInMemory++;
+                    } /// if
+                    pos++;
+                } /// for
+                switch (numProcessesInMemory) {
+                    case 0:
+                        /// No processes in memory, roll into first segment
+                        _Swapper.rollIn(newPcb, 0);
+                        _Swapper.init();
+                        _StdOut.putText("Nice try *claps*");
+                        _StdOut.advanceLine();
+                        _OsShell.putPrompt();
+                        break;
+                    case 1:
+                        /// One process in memory, roll into second segment
+                        _Swapper.rollIn(newPcb, 1);
+                        _Swapper.init();
+                        _StdOut.putText("Nice try  *claps*");
+                        _OsShell.putPrompt();
+                        break;
+                    case 2:
+                        /// Second process in memory, roll into third segment
+                        _Swapper.rollIn(newPcb, 2);
+                        _Swapper.init();
+                        _StdOut.putText("Nice try *claps*");
+                        _OsShell.putPrompt();
+                        break;
+                    default:
+                        /// Memory is full, pick a victim
+                        ///
+                        /// Processes to be rolled out
+                        if (_Scheduler.readyQueue.getSize() > 1) {
+                            /// Of the three processes on the disk, choose the one that is closest to the end of the ready queue
+                            // _StdOut.putText(`${this.victim()}`);
+                            segment = _Swapper.rollOut(this.victim());
+                            /// _StdOut.putText(`Roll Out Segment number: ${segment}`);
                         } /// if
                         else {
-                            pos++;
-                        } /// else
-                    } /// while
-                    /// If no terminated processes, roll out the first segment
-                    if (!found) {
-                        var i = 0;
-                        var firstProcessFound = false;
-                        while (i < _ResidentList.residentList.length && !firstProcessFound) {
-                            if (_ResidentList.residentList[i].volumeIndex === 1) {
-                                firstProcessFound = true;
-                                segment = _Swapper.rollOut(_ResidentList.residentList[i]);
-                                ///_StdOut.putText(`Roll Out Segment number: ${segment}`);
+                            var pos = 0;
+                            var found = false;
+                            while (pos < _ResidentList.residentList.length && !found) {
+                                if (_ResidentList.residentList[pos].volumeIndex !== -1 && _ResidentList.residentList[pos].processState === "Terminated") {
+                                    found = true;
+                                    segment = _Swapper.rollOut(_ResidentList.residentList[pos]);
+                                    ///_StdOut.putText(`Roll Out Segment number: ${segment}`);
+                                } /// if
+                                else {
+                                    pos++;
+                                } /// else
+                            } /// while
+                            /// If no terminated processes, roll out the first segment
+                            if (!found) {
+                                var i = 0;
+                                var firstProcessFound = false;
+                                while (i < _ResidentList.residentList.length && !firstProcessFound) {
+                                    if (_ResidentList.residentList[i].volumeIndex === 1) {
+                                        firstProcessFound = true;
+                                        segment = _Swapper.rollOut(_ResidentList.residentList[i]);
+                                        ///_StdOut.putText(`Roll Out Segment number: ${segment}`);
+                                    } /// if
+                                    else {
+                                        i++;
+                                    } /// else
+                                } /// while
                             } /// if
-                            else {
-                                i++;
-                            } /// else
-                        } /// while
-                    } /// if
-                } /// else
-                _Swapper.rollIn(newPcb, segment);
-                _Swapper.init();
+                        } /// else
+                        _Swapper.rollIn(newPcb, segment);
+                        _Swapper.init();
+                        break;
+                } /// switch
             } /// if
             _Kernel.krnTrace(`Attaching process ${newPcb.processID} to cpu.`);
             _CPU.PC = newPcb.programCounter;
@@ -131,7 +169,7 @@ var TSOS;
             // _StdOut.putText(`Ready queue size: ${_Scheduler.readyQueue.queues.length}`)
             for (var i = 1 + Math.floor(_Scheduler.readyQueue.queues.length / 2); i < _Scheduler.readyQueue.queues.length; ++i) {
                 if (_Scheduler.readyQueue.getIndex(i).priority > max) {
-                    max = _Scheduler.readyQueue.queues[i].priority;
+                    max = _Scheduler.readyQueue.getIndex(i).priority;
                     lastQueue = _Scheduler.readyQueue.getIndex(i);
                 } /// if
             } /// for

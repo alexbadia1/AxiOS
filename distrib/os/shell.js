@@ -828,16 +828,34 @@ var TSOS;
         shellClearMem() {
             /// Processes are NOT running, safe to clear memory
             if (!_CPU.isExecuting || (_Scheduler.currentProcess === null && _Scheduler.readyQueue.getSize() === 0)) {
-                /// Grab each volume and write "unlock" them
-                for (var vol = 0; vol < _MemoryManager.simpleVolumes.length; ++vol) {
-                    _MemoryManager.simpleVolumes[vol].writeUnlock();
-                    /// Write in 00's for the entire volume
-                    for (var logicalAddress = 0; logicalAddress < MAX_SIMPLE_VOLUME_CAPACITY; ++logicalAddress) {
-                        _MemoryAccessor.write(_MemoryManager.simpleVolumes[vol], logicalAddress, "00");
-                    } /// for
+                var processToRemove = [];
+                /// Loop through resident list 
+                for (var p = 0; p < _ResidentList.residentList.length; ++p) {
+                    /// Find each process that is in memory
+                    if (_ResidentList.residentList[p].volumeIndex === 0 || _ResidentList.residentList[p].volumeIndex === 1 || _ResidentList.residentList[p].volumeIndex === 2) {
+                        /// Unlock volume
+                        _MemoryManager.simpleVolumes[_ResidentList.residentList[p].volumeIndex].writeUnlock();
+                        /// Write in 00's for the entire volume
+                        for (var logicalAddress = 0; logicalAddress < MAX_SIMPLE_VOLUME_CAPACITY; ++logicalAddress) {
+                            _MemoryAccessor.write(_MemoryManager.simpleVolumes[_ResidentList.residentList[p].volumeIndex], logicalAddress, "00");
+                        } /// for
+                        /// Push to list to remove
+                        processToRemove.push(_ResidentList.residentList[p]);
+                    } /// if
                 } /// for
-                /// Remove processes from the Resident List that were stored in these volumes
-                _ResidentList.residentList = _ResidentList.residentList.filter(pcb => (pcb.volumeIndex > 2));
+                for (var pToRemove = 0; pToRemove < processToRemove.length; ++pToRemove) {
+                    var found = false;
+                    var pos = 0;
+                    while (pos < _ResidentList.residentList.length && !found) {
+                        if (processToRemove[pToRemove].processID === _ResidentList.residentList[pos].processID) {
+                            found = true;
+                        } /// if
+                        else {
+                            pos++;
+                        } /// else
+                    } /// while
+                    _ResidentList.residentList.splice(pos, 1);
+                } /// for
                 // words.filter(word => word.length > 6);
                 _StdOut.putText(`${INDENT_STRING}Memory Cleared`);
                 _StdOut.advanceLine();
