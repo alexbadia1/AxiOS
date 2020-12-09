@@ -83,23 +83,16 @@ var TSOS;
                         /// No processes in memory, roll into first segment
                         _Swapper.rollIn(newPcb, 0);
                         _Swapper.init();
-                        _StdOut.putText("Nice try *claps*");
-                        _StdOut.advanceLine();
-                        _OsShell.putPrompt();
                         break;
                     case 1:
                         /// One process in memory, roll into second segment
                         _Swapper.rollIn(newPcb, 1);
                         _Swapper.init();
-                        _StdOut.putText("Nice try  *claps*");
-                        _OsShell.putPrompt();
                         break;
                     case 2:
                         /// Second process in memory, roll into third segment
                         _Swapper.rollIn(newPcb, 2);
                         _Swapper.init();
-                        _StdOut.putText("Nice try *claps*");
-                        _OsShell.putPrompt();
                         break;
                     default:
                         /// Memory is full, pick a victim

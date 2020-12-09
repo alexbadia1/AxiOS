@@ -870,7 +870,7 @@ module TSOS {
                         TSOS.Control.updateVisualDisk();
                     }/// if 
                     else {
-                        `Cannot defragment the disk while in single step mode!`;
+                        `Cannot defragment the disk while in single step mode! Again, ran out of time for this...`;
                     }/// else
                 }/// if
                 else {
@@ -881,7 +881,7 @@ module TSOS {
                 return 'Cannot defragment an unformatted disk!';
             }/// else
 
-            return 'Defragmented the disk!';
+            return '(Hopefully) Defragmented the disk!';
         }/// defrag
 
         private preserveFileIntegrity(nodeToDeleteKey: string) {

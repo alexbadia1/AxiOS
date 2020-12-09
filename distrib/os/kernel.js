@@ -504,11 +504,15 @@ var TSOS;
                     else {
                         _StdOut.putText(`Disk cannot be formatted while in single step mode`);
                         _StdOut.advanceLine();
+                        _StdOut.putText(`To be honest I ran out of time to fix this, so I just disabled it...`);
+                        _StdOut.advanceLine();
                         _OsShell.putPrompt();
                     } /// else
                 } /// if
                 else {
                     _StdOut.putText(`Disk cannot be formatted while processes are running!`);
+                    _StdOut.advanceLine();
+                    _StdOut.putText(`Well, hello there! Evil Professor...`);
                     _StdOut.advanceLine();
                     _OsShell.putPrompt();
                 }
@@ -547,6 +551,7 @@ var TSOS;
                         /// Set scheduling method to Round Robin
                         _Scheduler.schedulingMethod = ROUND_ROBIN;
                         _Scheduler.swapToUserQuantum();
+                        _Scheduler.startBurst = _CPU_BURST;
                         /// Don't forget current process
                         if (_Scheduler.currentProcess !== null) {
                             _Scheduler.currentProcess.swapToDefaultPriority();
@@ -578,6 +583,7 @@ var TSOS;
                         /// Set scheduling method to First Come First Serve
                         _Scheduler.schedulingMethod = FIRST_COME_FIRST_SERVE;
                         _Scheduler.swapToFcFsQuantum();
+                        _Scheduler.startBurst = _CPU_BURST;
                         /// Don't forget current process
                         if (_Scheduler.currentProcess !== null) {
                             tempFcFs.push(_Scheduler.currentProcess.processID);
