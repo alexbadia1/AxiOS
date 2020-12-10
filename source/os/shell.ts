@@ -311,6 +311,12 @@ module TSOS {
                 'attempts recovers the delete file');
             this.commandList[this.commandList.length] = sc;
 
+            /// copy <filename>: attempts copy the file
+            sc = new ShellCommand(this.shellCopy,
+                'copy',
+                'attempts copy the file');
+            this.commandList[this.commandList.length] = sc;
+
             /// Display the initial prompt.
             ///
             /// If I somehow make it into the "Hall of Fame" I may as well do something memorable. Cause, you know...
@@ -1439,6 +1445,10 @@ module TSOS {
             if (args.length === 2) {
                 var oldFileName: string = args[0].trim().replace(" ", "");
                 var newFileName: string = args[1].trim().replace(" ", "");
+                /// no empty file names
+                if (oldFileName.length === 0 || newFileName.length === 0) {
+                    _StdOut.putText(`${INDENT_STRING}Usage: not acceptable file name!`);
+                }/// if
 
                 /// Don't allow swap files to be renamed
                 if (!oldFileName.startsWith(`${_krnDiskDriver.hiddenFilePrefix}${_krnDiskDriver.swapFilePrefix}`)) {
@@ -1480,7 +1490,49 @@ module TSOS {
                 _StdOut.putText(`${INDENT_STRING}Usage: rename <file> <newname> Expected 2 argument, but got ${args.length}`);
                 _StdOut.advanceLine();
             }/// else
-        }/// shellRenam
+        }/// shellRename
+
+        /// Kind of a last minute thing...
+        public shellCopy(args: string[]) {
+            /// Make sure filename.length <= 60 Bytes
+            if (args.length === 2) {
+                var oldFile = args[0].trim().replace(" ", "");
+                var newFile = args[1].trim().replace(" ", "");
+
+                /// no empty file names
+                if (oldFile.length === 0 || newFile.length === 0) {
+                    _StdOut.putText(`${INDENT_STRING}Usage: not acceptable file name!`);
+                }/// if
+
+                else {
+                    /// Prevent swap file names and hidden file names from being used
+                    if (!oldFile.startsWith(`${_krnDiskDriver.hiddenFilePrefix}${_krnDiskDriver.swapFilePrefix}`) && !newFile.startsWith(`${_krnDiskDriver.hiddenFilePrefix}${_krnDiskDriver.swapFilePrefix}` )) {
+
+                        /// Minus 4 Bytes of the block metadata (containing the pointer and what not)
+                        if (args[0].length < BLOCK_SIZE_LIMIT - FILE_META_DATA_LENGTH) {
+                            _StdOut.putText(`${INDENT_STRING}${_krnDiskDriver.copyDirectoryFile(oldFile, newFile)}`);
+                            _StdOut.advanceLine();
+                        }/// if
+
+                        else {
+                            _StdOut.putText(`${INDENT_STRING}Usage: copy <filename> Expected <= 60 Bytes, but got ${args.length} Bytes`);
+                            _StdOut.advanceLine();
+                        }/// else
+                    }/// if
+
+                    else {
+                        _StdOut.putText(`${INDENT_STRING}Usage: copy <filename> cannot start with ".!"`);
+                        _StdOut.advanceLine();
+                    }/// else
+                }/// else
+            }/// if
+
+            /// More than one argument was given
+            else {
+                _StdOut.putText(`${INDENT_STRING}Usage: create <filename> Expected 1 arguments, but got ${args.length}`);
+                _StdOut.advanceLine();
+            }/// else
+        }/// shellCopy
 
         /********************
          * ASCII art for BLM

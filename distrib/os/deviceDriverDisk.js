@@ -546,6 +546,37 @@ var TSOS;
                 return `Cannot delete C:\\AXIOS\\${fileName}`;
             } /// else
         } /// delete
+        /// Last minute sorry
+        copyDirectoryFile(filename, copyFilename) {
+            /// Search for deleted file in directory
+            var targetFileKey = this.fileNameExists(filename);
+            var copyFileNameKey = this.fileNameExists(copyFileNameKey);
+            /// File found
+            if (targetFileKey !== '' && copyFileNameKey === '') {
+                var success = this.create(copyFilename);
+                if (!success.startsWith('Cannot create')) {
+                    var content = this.read(filename);
+                    // _StdOut.putText(`${content}`);
+                    // _StdOut.advanceLine();
+                    if (!content.startsWith('Cannot access') && content.trim().replace(' ', '').length !== 0) {
+                        if (!this.write(copyFilename, content).startsWith('Cannot write'))
+                            return `Copied ${filename} to ${copyFilename}`;
+                        else
+                            return `Copied ${filename}, but no space to copy contents`;
+                    } /// if
+                    else {
+                        return `Copied ${filename} to ${copyFilename}`;
+                    }
+                } /// if
+                else {
+                    return `Cannot copy ${filename}`;
+                } /// else
+            } /// if
+            /// File not found
+            else {
+                return `Cannot copy ${filename}, not found`;
+            } /// else
+        } /// copyDirectoryFile
         /// Hopefully no infinite loops
         recoverDirectoryFile(deletedFileName) {
             /// Search for deleted file in directory

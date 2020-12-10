@@ -653,6 +653,45 @@ module TSOS {
             }/// else
         }/// delete
 
+        /// Last minute sorry
+        public copyDirectoryFile(filename: string, copyFilename: string) {
+            /// Search for deleted file in directory
+            var targetFileKey: string = this.fileNameExists(filename);
+
+            var copyFileNameKey: string = this.fileNameExists(copyFileNameKey);
+
+            /// File found
+            if (targetFileKey !== '' && copyFileNameKey === '') {
+                var success = this.create(copyFilename);
+
+                if (!success.startsWith('Cannot create')) {
+                    var content: string = this.read(filename);
+                    
+                    // _StdOut.putText(`${content}`);
+                    // _StdOut.advanceLine();
+                    if (!content.startsWith('Cannot access') && content.trim().replace(' ', '').length !== 0) {
+                        if (!this.write(copyFilename, content).startsWith('Cannot write')) 
+                            return `Copied ${filename} to ${copyFilename}`;
+                        else 
+                            return `Copied ${filename}, but no space to copy contents`;
+                    }/// if
+
+                    else {
+                        return `Copied ${filename} to ${copyFilename}`;
+                    }
+                }/// if
+
+                else {
+                    return `Cannot copy ${filename}`;
+                }/// else
+            }/// if
+
+            /// File not found
+            else {
+                return `Cannot copy ${filename}, not found`;
+            }/// else
+        }/// copyDirectoryFile
+
         /// Hopefully no infinite loops
         public recoverDirectoryFile(deletedFileName: string) {
             /// Search for deleted file in directory
