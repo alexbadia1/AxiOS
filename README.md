@@ -1,10 +1,6 @@
-# PeepOS
+# AxiOS
 
 AxiOS - a browser-based virtual Operating System in TypeScript
-
-    OR
-
-PeepOS - a browser-based virtual Operating System in TypeScript
 
 ## Grading
 
