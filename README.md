@@ -2,10 +2,6 @@
 
 AxiOS - a browser-based virtual Operating System in TypeScript
 
-    OR
-
-PeepOS - a browser-based virtual Operating System in TypeScript
-
 ## Grading
 
 Grade branch iProject 1 for iProject 1, branch iProject2 for iProject2, iProject3 for iProject3, iLabs for Labs etc.
