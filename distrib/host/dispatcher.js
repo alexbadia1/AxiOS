@@ -1,5 +1,5 @@
 /**
- * Now that I've found a free pdf version of the textbook, everything makes a little more sense...
+ * Now that I've found a FREE PDF version of the textbook, everything makes a little more sense...
  *
  * 5.1.4 Dispatcher
  * Another component involved in the CPU-scheduling function is the dispatcher. The dispatcher
@@ -27,18 +27,30 @@ var TSOS;
         constructor() { } /// constructor
         contextSwitch() {
             _Kernel.krnTrace("Switching context...");
-            /// Move current process to end of ready queue
+            /// if (current process isn't terminated)
+            ///     put the process back at the end of the ready queue
+            ///
+            /// else (current process is terminated)
+            ///     let the terminated current process get overwritten by the next process
+            ///     dequeud from the ready queue, WITHOUT re-queueing the terminated current process
+            ///     effectivley "removing" the terminated current process
             if (_Scheduler.currentProcess.processState !== "Terminated") {
                 /// Save current process cpu context
                 this.saveOldContextFromCPU(_Scheduler.currentProcess);
                 _Kernel.krnTrace(`Releasing process ${_Scheduler.currentProcess.processID} to cpu.`);
                 /// Enqueue the current process to end of Ready Queue
                 _Scheduler.currentProcess.processState = "Ready";
-                _Scheduler.readyQueue.push(_Scheduler.currentProcess);
+                _Scheduler.readyQueue.enqueueInterruptOrPcb(_Scheduler.currentProcess);
             } /// if
-            if (_Scheduler.readyQueue.length > 0) {
+            /// if (there are more processes)
+            ///     dequeue a process from the ready queue and set it as the new "current process"
+            ///
+            /// else (no more process)
+            ///     don't try to deqeueue and process from the ready queue, instead let the current
+            ///     process keep running until termination.
+            if (_Scheduler.readyQueue.getSize() > 0) {
                 /// Dequeue process from front of ready queue
-                _Scheduler.currentProcess = _Scheduler.readyQueue.shift();
+                _Scheduler.currentProcess = _Scheduler.readyQueue.dequeueInterruptOrPcb();
                 /// Load CPU context with new process context
                 if (_Scheduler.currentProcess.processState !== "Terminated") {
                     _Scheduler.currentProcess.processState = "Running";
@@ -47,6 +59,85 @@ var TSOS;
             } /// if
         } /// contextSwitch
         setNewProcessToCPU(newPcb) {
+            var segment = -1;
+            /// Make sure the process is in memory
+            /// I wonder how many people actually write out (pseudocode for) their ideas before programming away...
+            /// if (current process is on disk)
+            ///     if (ready queue length > 1)
+            ///         roll out the process at the end of the ready queue (ready queue length - 1)
+            ///     else if (this is the last process)
+            ///         roll out any terminated process in memory... maybe automatically roll out processes they terminate?
+            ///     Roll in process to memory segment that was rolled out
+            if (newPcb.volumeIndex === -1) {
+                var numProcessesInMemory = 0;
+                var pos = 0;
+                /// See how many process are in memory
+                while (pos < _ResidentList.residentList.length && numProcessesInMemory < 3) {
+                    if (_ResidentList.residentList[pos].volumeIndex >= 0 && _ResidentList.residentList[pos].volumeIndex <= 2) {
+                        numProcessesInMemory++;
+                    } /// if
+                    pos++;
+                } /// for
+                switch (numProcessesInMemory) {
+                    case 0:
+                        /// No processes in memory, roll into first segment
+                        _Swapper.rollIn(newPcb, 0);
+                        _Swapper.init();
+                        break;
+                    case 1:
+                        /// One process in memory, roll into second segment
+                        _Swapper.rollIn(newPcb, 1);
+                        _Swapper.init();
+                        break;
+                    case 2:
+                        /// Second process in memory, roll into third segment
+                        _Swapper.rollIn(newPcb, 2);
+                        _Swapper.init();
+                        break;
+                    default:
+                        /// Memory is full, pick a victim
+                        ///
+                        /// Processes to be rolled out
+                        if (_Scheduler.readyQueue.getSize() > 1) {
+                            /// Of the three processes on the disk, choose the one that is closest to the end of the ready queue
+                            // _StdOut.putText(`${this.victim()}`);
+                            segment = _Swapper.rollOut(this.victim());
+                            /// _StdOut.putText(`Roll Out Segment number: ${segment}`);
+                        } /// if
+                        else {
+                            var pos = 0;
+                            var found = false;
+                            while (pos < _ResidentList.residentList.length && !found) {
+                                if (_ResidentList.residentList[pos].volumeIndex !== -1 && _ResidentList.residentList[pos].processState === "Terminated") {
+                                    found = true;
+                                    segment = _Swapper.rollOut(_ResidentList.residentList[pos]);
+                                    ///_StdOut.putText(`Roll Out Segment number: ${segment}`);
+                                } /// if
+                                else {
+                                    pos++;
+                                } /// else
+                            } /// while
+                            /// If no terminated processes, roll out the first segment
+                            if (!found) {
+                                var i = 0;
+                                var firstProcessFound = false;
+                                while (i < _ResidentList.residentList.length && !firstProcessFound) {
+                                    if (_ResidentList.residentList[i].volumeIndex === 1) {
+                                        firstProcessFound = true;
+                                        segment = _Swapper.rollOut(_ResidentList.residentList[i]);
+                                        ///_StdOut.putText(`Roll Out Segment number: ${segment}`);
+                                    } /// if
+                                    else {
+                                        i++;
+                                    } /// else
+                                } /// while
+                            } /// if
+                        } /// else
+                        _Swapper.rollIn(newPcb, segment);
+                        _Swapper.init();
+                        break;
+                } /// switch
+            } /// if
             _Kernel.krnTrace(`Attaching process ${newPcb.processID} to cpu.`);
             _CPU.PC = newPcb.programCounter;
             _CPU.IR = newPcb.instructionRegister;
@@ -55,7 +146,7 @@ var TSOS;
             _CPU.Yreg = newPcb.yRegister;
             _CPU.Zflag = newPcb.zFlag;
             _CPU.localPCB = _Scheduler.currentProcess;
-        } /// contextSwitch
+        } /// setNewProcessToCPU
         saveOldContextFromCPU(pcb) {
             _Kernel.krnTrace(`Saving process ${pcb.processID} context from cpu.`);
             pcb.programCounter = _CPU.PC;
@@ -65,6 +156,18 @@ var TSOS;
             pcb.yRegister = _CPU.Yreg;
             pcb.zFlag = _CPU.Zflag;
         } /// saveContextFromCPU
+        victim() {
+            var max = -1;
+            var lastQueue = null;
+            // _StdOut.putText(`Ready queue size: ${_Scheduler.readyQueue.queues.length}`)
+            for (var i = 1 + Math.floor(_Scheduler.readyQueue.queues.length / 2); i < _Scheduler.readyQueue.queues.length; ++i) {
+                if (_Scheduler.readyQueue.getIndex(i).priority > max) {
+                    max = _Scheduler.readyQueue.getIndex(i).priority;
+                    lastQueue = _Scheduler.readyQueue.getIndex(i);
+                } /// if
+            } /// for
+            return lastQueue.getIndex(lastQueue.getSize() - 1);
+        } /// victim
     } /// class
     TSOS.Dispatcher = Dispatcher;
 })(TSOS || (TSOS = {})); /// module

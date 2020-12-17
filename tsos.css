@@ -1,19 +1,49 @@
 /* TSOS.css */
 
 body {
-  background: #909193 url(distrib/images/linen.png) repeat;
-  font-family: Helvetica, Verdana, Arial, sans-serif;
-  font-size: 12pt;
-  font-weight: normal;
+  /* background: #909193 url(distrib/images/linen.png) repeat; */
+  background: #1e1e1e;
+  color: #D4D4D4;
+  font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+  font-size: 10pt;
+  font-weight: lighter;
   font-style: normal;
 }
 
+/* width */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+/* Track */
+::-webkit-scrollbar-track {
+  border-radius: 10px;
+}
+ 
+/* Handle */
+::-webkit-scrollbar-thumb {
+  /* background: #bbbbbb; */
+  background: rgba(187, 187, 187, .3);
+  border-radius: 10px;
+}
+
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(187, 187, 187, .4);
+  border-radius: 10px;
+}
+
 h1 {
-  color: black;
-  font-size: 1.75rem;
+  color: #007acc;
+  padding-left: 1rem;
+  font-size: 2.85rem;
   font-weight: normal;
   font-style: normal;
-  border-bottom: 1px solid black;
+  border-bottom: .5px solid #bbbbbb;
+  margin-top: .2rem;
+  margin-bottom: .5rem;
+  padding-bottom: 0;
 }
 
 h2 {
@@ -31,17 +61,60 @@ h3 {
 }
 
 #display {
-  background-color:#DFDBC3;
-  border: 2px solid red;
+  margin-left: .75rem;
+  /* background-color:#DFDBC3; */
+  background-color: #1e1e1e;
   cursor: default;
 }
 
+.divButtonBar {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-evenly;
+  margin-top: .5rem;
+}
+
+#btnStartOS {
+  width: 5rem;
+  background-color: #007acc; /* Blue background */
+  border: none; /* Remove borders */
+  border-radius: 5px;
+  color: #D4D4D4; /* White text */
+  font-size: .7rem; /* Set a font size */
+  cursor: pointer; /* Mouse pointer on hover */
+  margin-left: -8px;
+}
+
 .normal_button {
-  width: 6.25rem;
+  width: 5rem;
+  background-color: #143e6c; /* Blue background */
+  border: none; /* Remove borders */
+  border-radius: 5px;
+  color: #D4D4D4; /* White text */
+  font-size: .7rem; /* Set a font size */
+  cursor: pointer; /* Mouse pointer on hover */
+}
+
+.normal_button:hover {
+  background-color:#2064ac;
+}
+
+#btnStartOS:hover {
+  background-color: #2064ac;
 }
 
 .single_step_button {
-  width: 9rem;
+  width: 6.5rem;
+  background-color: #143e6c; /* Blue background */
+  border: none; /* Remove borders */
+  border-radius: 5px;
+  color: #D4D4D4; /* White text */
+  font-size: .7rem; /* Set a font size */
+  cursor: pointer; /* Mouse pointer on hover */
+}
+
+.single_step_button:hover {
+  background-color: #2064ac;
 }
 
 .footerText {
@@ -49,6 +122,42 @@ h3 {
   font-family: Arial, Helvetica, sans-serif;
   font-size: 8pt;
   text-align: center;
+ }
+
+ #visual--memory--container {
+  width: 410px; 
+  max-height: 211px; 
+  overflow-x: hidden; 
+  overflow-y: hidden;
+}
+
+ #visual--memory--container:hover {
+   overflow-x: hidden;
+   overflow-y: scroll;
+ }
+
+ #visual--pcb {
+  width: 100%; 
+  max-height: 120px;
+  overflow-x: hidden;
+  overflow-y: hidden;
+  border-top: .5px solid #bbbbbb; border-bottom: .5px solid #bbbbbb;;
+ }
+
+ #visual--pcb:hover {
+    width: 100%; 
+    max-height: 120px;
+    overflow-x: hidden;
+    overflow-y: scroll;
+ }
+
+ #visual--disk--table--container {
+  max-height: 125px; 
+  overflow: hidden; 
+ }
+
+ #visual--disk--table--container:hover {
+  overflow: scroll; 
  }
 
  /* Alrighty, a grid layout quick and dirty...
@@ -59,12 +168,17 @@ h3 {
   actually supports this fancy grid layout.*/
   @supports (grid-area: auto) {
 
+    
+  /* TODO: 
+    - Actually change two a two column grid layout for mobile devices...
+    - Actualy change to a stack layout for smaller mobile like devices... 
+    */
+
   /*Screen is too small for 3 columns so make only 2 columns*/
     @media screen and (min-width: 56rem) {
         .container {
           margin: 30px auto;
           width: 100%;
-          min-height: 100vh;
           display: grid;
           grid-template-columns: 1fr 1fr; 
           grid-template-rows: 1fr 1fr;
@@ -102,20 +216,19 @@ h3 {
       .container {
         margin: 0;
         width: 100%;
-        height: 100vh;
         display: grid;
-        grid-template-columns: 1.4fr 1fr 2fr;
+        grid-template-columns: .525fr 2fr 1fr;
         grid-row: 1fr 1fr;
         /*I guess grid-gap is deprecated now... wow*/
-        column-gap: 1rem;
-        row-gap: .75rem;
+        /* column-gap: 1rem; */
+        /* row-gap: .75rem; */
       }
 
       /* [Descriptive comment here] */
       .item--1 {
         grid-row-start: 1;
         grid-column-start: 1;
-        /* background-color: green; */
+        background-color: #252526;
       }
 
       /* [Descriptive comment here] */
@@ -129,14 +242,16 @@ h3 {
       .item--3 {
         grid-row-start: 1;
         grid-column-start: 3;
-        background-color: white;
+        background-color: transparent;
+        border-left: .5px solid #bbbbbb;
       }
 
       /* [Descriptive comment here] */
       .item--4 {
         grid-row-start: 2;
         grid-column-start: 1;
-        /* background-color: red; */
+        background-color: #252526;
+        max-height: 150px;
       }
 
       /* [Descriptive comment here] */
@@ -144,7 +259,9 @@ h3 {
         grid-row-start: 2;
         grid-column-start: 2;
         grid-column: 2 / 4;
-        background-color: white;
+        background-color: transparent;
+        max-height: 150px;
+        border-top: .5px solid #bbbbbb;
       }
     }
 
