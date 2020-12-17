@@ -16,7 +16,7 @@
         - ID's in terms of a larger OS system can store more metadata
           (opposed to my OS where, conceptually, ID's represent "in-use", "free", "deleted, but overwrite-able")
         - ID manager can be loaded in O(n) time while allocating ID's in O(1) time. If done clever enough (probably using mathematical "tricks"),
-          the ID manager won't take up much space (I did not do this...)
+          the ID manager won't take up much space (I did not do the latter...)
           ~ May not even need an ID manager, as a checksum may suffice for the file if we stored more metadata (as we learned from Tokash), oh well...
      ------------ */
 var TSOS;

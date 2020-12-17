@@ -1,11 +1,14 @@
 /* ------------
      memoryManager.ts
      
-     Hopefully, this code models a memory manager in the OS.
-     For now I'm gonna add...
-     - partitions
+     The memory manager, manages memory... But what may this include you ask?
+     The memory manager will handle:
+        - Segmenting the memory
+        - Ideally when you load code in the shell should call a load function found in  the memory manager (I did not do that...)
     
-     Well after class on Monday September 14, 2020, apparently al we need is a constructor so yeah...
+        Note: 
+            - Segment numbers do not align with the indexing of the SimpleVolume[] array. So segment 2, if I remeber correctly, is really
+              array index 0. I know confusing, but shift() and unshift() are more expensive than push() and pop().
      ------------ */
 
 module TSOS {

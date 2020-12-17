@@ -279,7 +279,7 @@ module TSOS {
             _visualPcb.rows[1].cells[6].innerHTML = _CPU.Zflag;
             _visualPcb.rows[1].cells[7].innerHTML = _CPU.localPCB.priority;
             _visualPcb.rows[1].cells[8].innerHTML = _CPU.localPCB.processState;
-            _visualPcb.rows[1].cells[9].innerHTML = _CPU.localPCB.volumeIndex === -1 ? `Disk` : `Vol ${_CPU.localPCB.volumeIndex + 1}`;
+            _visualPcb.rows[1].cells[9].innerHTML = _CPU.localPCB.volumeIndex === -1 ? `Disk` : `Seg ${_CPU.localPCB.volumeIndex + 1}`;
         }/// updateVisualPcb
 
         public static visualizeInstructionRegister(newInsruction: string) {
@@ -514,7 +514,7 @@ module TSOS {
             table.rows[1].cells[8].innerHTML = pcb.processState;
 
             table.rows[0].cells[9].innerHTML = "Location";
-            table.rows[1].cells[9].innerHTML = pcb.volumeIndex === -1 ? `Disk` : `Vol ${pcb.volumeIndex + 1}`;
+            table.rows[1].cells[9].innerHTML = pcb.volumeIndex === -1 ? `Disk` : `Seg ${pcb.volumeIndex + 1}`;
         }/// dumpResidentList
 
         public static visualizeResidentList() {

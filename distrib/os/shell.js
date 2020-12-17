@@ -5,24 +5,28 @@
 
     Note: While fun and learning are the primary goals of all enrichment center activities,
           serious injuries may occur when trying to write your own Operating System.
+
+    Hint: A shell command should kinda follow this template:
+        public thisIsAShellCommand(args[]) {
+            if (args.length equals number of required shell arguments)
+                /// Cleanse the arguments
+                ///     Meaning, trim them, check for invalid characters, etc.
+                /// If (all arguments are "good")
+                ///     Enqueue interrupt in kernel interrupt queue OR call function from MemoryManager.ts, Disk.ts, etc.
+                ////        - This will depend on what the shell command is...
+                /// Else
+                ///     Tell user why they fuc -I mean- "did not meet the requirements" for the shell command...
+            else
+                -StdOut.putText("Shell command expected [insert number of arguments], but got [insert how many arguments the user actually gave]");
+        }/// thisIsAShellCommand
    ------------ */
 /// TODO: Write a base class / prototype for system services and let Shell inherit from it.
-/*
- *
- * Would you believe that comming to Marist I didn't know a single thing about programming? Everything I've learned has been from Marist and independent research
- * in between semesters (I feel like everyone else is light years ahead of me and I am playing catch up game).
- *
- * I assume everyone is getting >= 100% on these projects. And I messed up the easiest part on the Midterm
- * which at least now I will never forget. (I learn best through negative reinforcement)
- *
- *
-*/
 var TSOS;
 (function (TSOS) {
     class Shell {
         constructor() {
             /// Properties
-            this.promptStr = "C:\\AxiOS>"; /// Ohhhh [*lightbulb* ], to bad we don't have a multi-level file system...
+            this.promptStr = "C:\\AxiOS>"; /// Ohhhh *lightbulb goes off*, too bad we don't have a multi-level file system...
             this.commandList = [];
             this.curses = "[fuvg],[cvff],[shpx],[phag],[pbpxfhpxre],[zbgureshpxre],[gvgf]";
             this.apologies = "[sorry]";
@@ -1556,4 +1560,14 @@ var TSOS;
     } /// class
     TSOS.Shell = Shell;
 })(TSOS || (TSOS = {})); /// shell
+/*
+ *
+ * Would you believe that comming to Marist I didn't know a single thing about programming? Everything I've learned has been from Marist and independent research
+ * in between semesters (I feel like everyone else is light years ahead of me and I am playing catch up game).
+ *
+ * I assume everyone is getting >= 100% on these projects. And I messed up the easiest part on the Midterm
+ * which at least now I will never forget. (I learn best through negative reinforcement)
+ *
+ *
+*/ 
 //# sourceMappingURL=shell.js.map

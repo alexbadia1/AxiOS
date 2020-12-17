@@ -168,6 +168,12 @@ h3 {
   actually supports this fancy grid layout.*/
   @supports (grid-area: auto) {
 
+    
+  /* TODO: 
+    - Actually change two a two column grid layout for mobile devices...
+    - Actualy change to a stack layout for smaller mobile like devices... 
+    */
+
   /*Screen is too small for 3 columns so make only 2 columns*/
     @media screen and (min-width: 56rem) {
         .container {
