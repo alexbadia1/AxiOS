@@ -1,8 +1,10 @@
 module TSOS {
 
-    /// I might be making this up but I thought there were physical lights and "lock gates"
-    /// in memory that would represent read, write, etc access...
-    /// Am I delusional for doing this?
+    /*
+     * I might be making this up but I thought there were physical lights and "lock gates"
+     * in memory that would represent read, write, etc access...
+     * Am I delusional for doing this?
+    */
     export class Address {
         constructor(
             public physicalAddress,

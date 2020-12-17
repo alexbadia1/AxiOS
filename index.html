@@ -22,6 +22,7 @@
    <script type="text/javascript" src="distrib/host/memoryAccessor.js"></script>
    <script type="text/javascript" src="distrib/host/addressBlock.js"></script>
    <script type="text/javascript" src="distrib/host/dispatcher.js"></script>
+   <script type="text/javascript" src="distrib/host/disk.js"></script>
 
    <!-- Virtual OS Routines: Make sure Kernel code is last, since it needs those above it. -->
    <script type="text/javascript" src="distrib/os/interrupt.js"></script>
@@ -39,13 +40,16 @@
    <script type="text/javascript" src="distrib/os/processControlBlock.js"></script>
    <script type="text/javascript" src="distrib/os/residentList.js"></script>
    <script type="text/javascript" src="distrib/os/scheduler.js"></script>
+   <script type="text/javascript" src="distrib/os/deviceDriverDisk.js"></script>
+   <script type="text/javascript" src="distrib/os/swapper.js"></script>
 
    <!-- Other Routines -->
    <script type="text/javascript" src="distrib/utils.js"></script>
+   <script type="text/javascript" src="distrib/defragment.js"></script>
    <!-- Uncomment the line below to enable GLaDOS testing. -->
    <!-- Apparently GlaDos is ACTUALLY poisonous-->
-   <script type="text/javascript" src="http://alanclasses.github.io/TSOS/test/glados-ip3.js"></script>
-   <!-- <script type="text/javascript" src="test\myGlados.js"></script> -->
+   <script type="text/javascript" src="http://alanclasses.github.io/TSOS/test/glados-ip4.js"></script>
+   <!-- <script type="text/javascript" src="test\glados-ip4.js"></script> -->
 
 </head>
 
@@ -54,15 +58,11 @@
    <div class="container">
 
       <div class="item item--1">
-         <h1> AxiOS </h1>
+         <h1> AxiOS <input type="button" id="btnStartOS" name="brnStartOS" value="Start >>>" tabindex="0"
+            onclick="TSOS.Control.hostBtnStartOS_click(this);"></h1>
 
          <!-- Buttons -->
-         <div id="divButtonBar" style="margin:4px;">
-
-            <!-- Thanks for the Start Button -->
-            <input type="button" id="btnStartOS" name="brnStartOS" class="normal_button" value="Start" tabindex="0"
-               onclick="TSOS.Control.hostBtnStartOS_click(this);">
-
+         <div class="divButtonBar">
             <!-- Thanks for the Halt Button -->
             <input type="button" id="btnHaltOS" name="brnHaltOS" class="normal_button" disabled="disabled" value="Halt"
                tabindex="1"
@@ -72,7 +72,9 @@
             <input type="button" id="btnReset" name="brnReset" class="normal_button" disabled="disabled" value="Reset"
                tabindex="2"
                onclick="TSOS.Control.hostBtnReset_click(this); document.getElementById('divLog--status').innerText = 'Resetting';">
+         </div>
 
+         <div class="divButtonBar">
             <!-- TODO: Single Step -->
             <input type="button" id="btnSingleStepMode" name="btnSingleStep" class="single_step_button"
                disabled="disabled" value="Single Step ON" tabindex="3"
@@ -84,11 +86,53 @@
                onclick="TSOS.Control.hostBtnNextStep_click(this); document.getElementById('divLog--status').innerText = 'Single Step Mode: Next Step';">
          </div>
 
+         
+         <!-- Host Log -->
+         <div id="divLog" style = "margin-left: .5rem;" height = "100%" width = "100%">
+            <label>Host Log</label>
+            <br>
+            <label id="divLog--time">
+               Date: [Press Start]
+            </label>
+            <br>
+            <label id="divLog--date">
+               Time: [Press Start]
+            </label>
+            <br>
+            <label> Status: <label id=divLog--status>AxiOS Dead</label></label>
+            <br>
+               <textarea name="taHostLog" id="taHostLog" rows="21" cols="48"
+                  style='width: 98.75%; height: 100%; resize: none; background-color: transparent; color:#d4d4d4; border: none;'></textarea>
+         </div>
+        
+      </div>
+
+
+      <div class="item item--2">
+         <!-- Increase the height of the console just to fit the Black Lives Matter Message-->
+         <!-- Changes in height must be in increments of the line height, about 21px -->
+         <div id="divConsole" style="width:99%; height:585px; padding-right: .25rem; padding-bottom: .25rem;">
+            <canvas id="display" width="830px" height="585px" tabindex="3">
+            </canvas>
+         </div>
+
+         <!-- Source img https://windowsreport.com/bsod-error-0x000000ea/-->
+         <!-- I know using absolute positioning is a bit "crude"-->
+         <div id="bsod"
+            style="position: absolute; visibility: hidden; margin:6px; width:504px; height:549px; float:left; justify-content: center">
+            <img id="bsod--image" width="500px" height="565px" z-index="100" src="images/BSoD-10.jpg"
+               alt="Sorry for screwing up this image, it's been a while since I've done front end stuff">
+         </div>
+      </div>
+
+
+      <div class="item item--3" max-height="585px">
+
          CPU
 
          <!--CPU Information-->
          <div id="visual--cpu" style="width: 100%;">
-         <table id="visual--cpu--table" style="width: 100%; border: 1px solid black;">
+         <table id="visual--cpu--table" style="width: 100%; border-top: 1px solid #bbbbbb; border-bottom: 1px solid #bbbbbb;">
             <tr>
                <th><span> PC </span></th>
                <th><span> IR </span></th>
@@ -109,8 +153,8 @@
       </div>
          <!--Process Control Block Information-->
          Processes
-         <div id="visual--pcb" style="width: 100%;">
-            <table id="visual--pcb--table" style="width: 100%; border: 1px solid black;">
+         <div id="visual--pcb">
+            <table id="visual--pcb--table" style="width: 100%;">
                <tr>
                   <th><span> PID </span></th>
                   <th><span> PC </span></th>
@@ -138,8 +182,8 @@
             </table>
          </div>
          Memory
-         <div style="width: 100%; max-height: 211px; overflow: hidden; overflow-y: scroll; border: 1px solid black;">
-            <div style="width: 99.475%; border: 1px solid black;">
+         <div style="width: 99.275%; border: 1px solid #bbbbbb;">
+            <div id = "visual--memory--container">
                <!-- Functionality over fancy styling stuff for now... probably gonna switch this entire index.html to a simple flex layout 
             but now that I'm thinking about this, maybe a more modern grid layout. -->
                <Table id="visual--memory--table" style="width: 100%;"></Table>
@@ -147,60 +191,25 @@
          </div>
       </div>
 
-
-      <div class="item item--2">
-         <!-- Increase the height of the console just to fit the Black Lives Matter Message-->
-         <div id="divConsole" style="width:500px; height:565px; padding-right: .25rem; padding-bottom: .5rem;">
-            <canvas id="display" width="500px" height="565px" tabindex="3">
-            </canvas>
-         </div>
-
-         <!-- Source img https://windowsreport.com/bsod-error-0x000000ea/-->
-         <!-- I know using absolute positioning is a bit "crude"-->
-         <div id="bsod"
-            style="position: absolute; visibility: hidden; margin:6px; width:504px; height:549px; float:left; justify-content: center">
-            <img id="bsod--image" width="500px" height="565px" z-index="100" src="images/BSoD-10.jpg"
-               alt="Sorry for screwing up this image, it's been a while since I've done front end stuff">
-         </div>
-      </div>
-
-
-      <div class="item item--3">
-
-         <!-- Host Log -->
-         <div id="divLog">
-            <label>Host Log</label>
-            <br>
-            <label id="divLog--time">
-               Date: [Press Start]
-            </label>
-            <br>
-            <label id="divLog--date">
-               Time: [Press Start]
-            </label>
-            <br>
-            <label> Status: <label id=divLog--status>AxiOS Dead</label></label>
-            <br>
-            <label>
-               <textarea name="taHostLog" id="taHostLog" rows="26" cols="48"
-                  style='width: 98.75%; height: 100%; resize: none;'></textarea>
-            </label>
-         </div>
-      </div>
-
       <div class="item item--4">
-      </div>
-
-      <div class="item item--5">
 
          <!--User Input-->
          <div id="divUserProgramInput">
             <label>
                User Program Input
                <br>
-               <textarea name="taProgramInput" id="taProgramInput" rows="8" cols="48"
-                  style='width: 99.475%; height: 90%; resize: none; overflow-y: scroll; word-wrap: break-word;'></textarea>
+               <textarea name="taProgramInput" id="taProgramInput" rows="8" cols="22"
+                  style='width: calc(100% - 10px); height: 90%; resize: none; overflow-y: scroll; word-wrap: break-word; color: #D4D4D4; background: transparent; border: none; border-top: .5px solid #bbbbbb;'></textarea>
             </label>
+         </div>
+      </div>
+
+      <div class="item item--5">
+         <label style="margin-left: .5rem; border-bottom: 2px solid #bbbbbb;">
+            Disk
+         </label>
+         <!--Disk-->
+         <div id = 'visual--disk--table--container'>
          </div>
       </div>
    </div>
@@ -213,5 +222,4 @@
       Ted Codd, Stevie Ray Vaughan, and Ian Fleming.
    </p>
 </body>
-
 </html>

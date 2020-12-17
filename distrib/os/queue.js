@@ -10,11 +10,15 @@
 var TSOS;
 (function (TSOS) {
     class Queue {
-        constructor(q = new Array()) {
+        constructor(q = new Array(), priority = 1) {
             this.q = q;
+            this.priority = priority;
         }
         getSize() {
             return this.q.length;
+        }
+        getIndex(index) {
+            return this.q[index];
         }
         isEmpty() {
             return (this.q.length == 0);

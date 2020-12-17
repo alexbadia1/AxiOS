@@ -1,8 +1,10 @@
 var TSOS;
 (function (TSOS) {
-    /// I might be making this up but I thought there were physical lights and "lock gates"
-    /// in memory that would represent read, write, etc access...
-    /// Am I delusional for doing this?
+    /*
+     * I might be making this up but I thought there were physical lights and "lock gates"
+     * in memory that would represent read, write, etc access...
+     * Am I delusional for doing this?
+    */
     class Address {
         constructor(physicalAddress, data = '00', wLock = true, xLock = false) {
             this.physicalAddress = physicalAddress;

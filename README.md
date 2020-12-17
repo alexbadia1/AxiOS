@@ -1,4 +1,4 @@
-# PeepOS
+# AxiOS
 
 AxiOS - a browser-based virtual Operating System in TypeScript
 

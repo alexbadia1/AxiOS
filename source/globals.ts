@@ -15,8 +15,12 @@
 const APP_NAME: string    = "TSOS";
 const APP_VERSION: string = "0.07";
 
+/// Console Constants
+const INDENT_STRING = '  ';
+const INDENT_NUMBER = 16;
+
 // This is in ms (milliseconds) so 1000 = 1 second.
-const CPU_CLOCK_INTERVAL: number = 1000;
+const CPU_CLOCK_INTERVAL: number = 100;
 
 // Pages 23 (timer), 9 (interrupts), and 561 (interrupt priority).
 // NOTE: The timer is different from hardware/host clock pulses. Don't confuse these.
@@ -24,6 +28,7 @@ const TIMER_IRQ: number = 0;
 
 /// Hardware Interrupt
 const KEYBOARD_IRQ: number = 1;
+const DISK_IRQ: number = 13; /// uh oh, unlucky 13...
 
 /// Read/Write Console Interrupts
 const SYS_CALL_IRQ: number = 2;
@@ -36,6 +41,10 @@ const NEXT_STEP_IRQ: number = 5;
 /// Scheduling Interrupts
 const CONTEXT_SWITCH_IRQ: number = 6;
 const CHANGE_QUANTUM_IRQ: number = 7;
+const SET_SCHEDULE_ALGORITHM: number = 14;
+const PRIORITY: string = 'priority';
+const ROUND_ROBIN: string = 'rr';
+const FIRST_COME_FIRST_SERVE: string = 'fcfs';
 
 /// Create Process Interrupts
 const RUN_PROCESS_IRQ: number = 8;
@@ -53,6 +62,27 @@ const KILL_ALL_PROCESSES_IRQ: number = 12;
 
 /// Priority Queue Constants
 const ROOT_NODE = 0;
+
+/// Disk Constants
+///
+/// 16KB limit means 4 tracks, 8 sectors, 8 blocks (each 64 Bytes)
+const TRACK_LIMIT = 4;
+const SECTOR_LIMIT = 8;
+const BLOCK_LIMIT = 8;
+const BLOCK_SIZE_LIMIT = 64;
+const DATA_BLOCK_DATA_LIMIT = 59;
+const DIRECTORY_BLOCK_DATA_LIMIT = 50;
+const METADATA_BYTE_SIZE = 13;
+const FLAG_INDEXES = {start: 0, end: 3};
+const POINTER_INDEXES = {start: 4, end: 9};
+const DATE_INDEXES = {start: 10, end: 23};
+const FILE_SIZE_INDEXES = {start: 24, end: 27};
+const DIRECTORY_DATA_INDEXES = {start: 28, end: 128};
+const DATA_DATA_INDEXES= {start: 10, end: 128}
+const BLOCK_NULL_POINTER = "FFFFFF";
+const NEGATIVE_ZERO = 32_768;
+const FILE_META_DATA_LENGTH = 15;
+
 //
 // Global Variables
 // TODO: Make a global object and use that instead of the "_" naming convention in the global namespace.
@@ -67,8 +97,10 @@ var _Memory: TSOS.Memory;
 var _MemoryAccessor: TSOS.MemoryAccessor;
 
 var _Dispatcher: TSOS.Dispatcher;
-
+var _Swapper: TSOS.Swapper;
 var _Scheduler: TSOS.Scheduler;
+
+var _Disk: TSOS.Disk;
 
 /// Software (OS)
 var _MemoryManager: any = null;
@@ -109,9 +141,11 @@ var _OsShell: TSOS.Shell;
 
 // At least this OS is not trying to kill you. (Yet.)
 var _SarcasticMode: boolean = false;
+var _TwentyFourHourClock: boolean = false;
 
 // Global Device Driver Objects - page 12
 var _krnKeyboardDriver: TSOS.DeviceDriverKeyboard  = null;
+var _krnDiskDriver: TSOS.DeviceDriverDisk = null;
 
 var  _hardwareClockID: any = null;
 

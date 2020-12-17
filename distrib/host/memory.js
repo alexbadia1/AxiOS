@@ -29,7 +29,7 @@ var TSOS;
         ///
         /// This is because we need to know if the memory is read enabled,
         /// write enabled, and run enabled, as there is a physical lock in memory
-        /// if i remember correctly from gormanly's class
+        /// if I remember correctly from Gormanly's class
         getAddress(newAddress) {
             return this.addressBlock[newAddress];
         } ///read

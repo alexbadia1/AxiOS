@@ -40,6 +40,7 @@ module TSOS {
 
             /// Load the Keyboard Device Driver
             this.krnTrace("Loading the keyboard device driver.");
+
             /// "Construct" the "actual" KeyboardDevice Drives.
             _krnKeyboardDriver = new DeviceDriverKeyboard();
 
@@ -47,9 +48,21 @@ module TSOS {
             _krnKeyboardDriver.driverEntry();
             this.krnTrace(_krnKeyboardDriver.status);
 
+            /// Load the Disk Device Driver
+            this.krnTrace("Loading the disk device driver");
+
+            /// "Construct" the "actual" DiskDevice Drives.
+            _krnDiskDriver = new DeviceDriverDisk();
+
+            /// Call the driverEntry() initialization routine.
+            _krnDiskDriver.driverEntry();
+            this.krnTrace(_krnDiskDriver.status);
+
             //
             // ... more?
             //
+            _Disk = new Disk();
+            _Disk.init();
             _MemoryManager = new MemoryManager();
 
             /// Visualize Memory...
@@ -63,6 +76,11 @@ module TSOS {
             this.krnTrace("Creating and Launching the shell.");
             _OsShell = new Shell();
             _OsShell.init();
+
+
+            _StdOut.putText("New Volume does not contain a recognized file system. Please format disk before use!");
+            _StdOut.advanceLine();
+            _OsShell.putPrompt();
 
             /// Finally, initiate student testing protocol.
             if (_GLaDOS) {
@@ -96,11 +114,11 @@ module TSOS {
             if (_KernelInterruptPriorityQueue.getSize() > 0) {
 
                 // Process the first interrupt on the interrupt queue.
-                /// TODO (maybe): Implement a priority queue based on the IRQ number/id to enforce interrupt priority.
-                var interrupt = _KernelInterruptPriorityQueue.dequeue();
-                this.krnInterruptHandler(interrupt.data.irq, interrupt.data.params);
+                /// Implemented a priority queue of queues (not the most efficient I know)
+                var interrupt = _KernelInterruptPriorityQueue.dequeueInterruptOrPcb();
+                this.krnInterruptHandler(interrupt.irq, interrupt.params);
             }/// if
-            
+
             /// _CPU.isExecuting: controls if the cpu will try to read an instruction from memory
             ///
             /// Various things will change this including but not limited to:
@@ -116,7 +134,7 @@ module TSOS {
                     if (_NextStep) {
                         this.countCpuBurst();
                         _CPU.cycle();
-                        _Scheduler.roundRobinCheck();
+                        _Scheduler.checkSchedule();
                         TSOS.Control.updateVisualMemory();
                         TSOS.Control.updateVisualCpu();
                         TSOS.Control.updateVisualPcb();
@@ -129,7 +147,7 @@ module TSOS {
                 else {
                     this.countCpuBurst();
                     _CPU.cycle();
-                    _Scheduler.roundRobinCheck();
+                    _Scheduler.checkSchedule();
                     TSOS.Control.updateVisualMemory();
                     TSOS.Control.updateVisualCpu();
                     TSOS.Control.updateVisualPcb();
@@ -139,7 +157,7 @@ module TSOS {
                 /// TODO: Make the date and time update NOT dependent on the cpu actually cycling
                 this.getCurrentDateTime();
             }/// else
-            
+
             /// If there are no interrupts and there is nothing being executed then just be idle.
             else {
                 this.getCurrentDateTime();
@@ -155,15 +173,17 @@ module TSOS {
             ///
             /// Not the best solution I could think of, but the first,
             /// Call this a "temporary fix"
-            if (_Scheduler.currentProcess === null && _Scheduler.readyQueue.length === 0){
+            if (_Scheduler.currentProcess === null && _Scheduler.readyQueue.getSize() === 0) {
                 _CPU_BURST = 0;
             }/// if
-            else {_CPU_BURST++;}
+            else { _CPU_BURST++; }
 
             /// Wait time is time spent in the ready queue soo...
             /// Loop through Ready Queue and increment each pcb's wait time by 1 cycle
-            for (var i = 0; i < _Scheduler.readyQueue.length; ++i) {
-                _Scheduler.readyQueue[i].waitTime += 1;
+            for (var i = 0; i < _Scheduler.readyQueue.getSize(); ++i) {
+                for (var h = 0; h < _Scheduler.readyQueue.queues[i].getSize(); ++h) {
+                    _Scheduler.readyQueue.queues[i].q[h].waitTime += 1;
+                }/// for
             }/// for
 
             /// Turnaround Time is time running and in waiting queue...
@@ -172,16 +192,18 @@ module TSOS {
         }/// countCpuBurst
 
         /// Hopefully Updates the Date and Time
-        public getCurrentDateTime() {
+        public getCurrentDateTime(): string {
             var current = new Date();
             var day = String(current.getDate()).padStart(2, '0');
-            var month = String(current.getMonth()).padStart(2, '0');
+            var month = String(current.getMonth() + 1).padStart(2, '0');/// Well shit, months are 0 based
             var year = String(current.getFullYear()).padStart(2, '0');
             var hours = String(current.getHours()).padStart(2, '0');
             var minutes = String(current.getMinutes()).padStart(2, '0');
             var seconds = String(current.getSeconds()).padStart(2, '0');
             document.getElementById('divLog--date').innerText = `${month}/${day}/${year}`;
             document.getElementById('divLog--time').innerText = `${hours}:${minutes}:${seconds}`;
+
+            return `${month}${day}${year}${hours}${minutes}${seconds}`;
         }/// getCurrentDateTime
 
         //////////////////////////
@@ -221,6 +243,11 @@ module TSOS {
                     _StdIn.handleInput();
                     break;
 
+                case DISK_IRQ:
+                    /// Kernel mode device driver
+                    this.diskISR(params);
+                    break;
+
                 /// Read/Write Console Interrupts
                 case SYS_CALL_IRQ:
                     this.sysCallISR(params);
@@ -252,7 +279,9 @@ module TSOS {
                 case RUN_ALL_PROCESSES_IRQ:
                     this.runAllProcesesISR();
                     break;
-
+                case SET_SCHEDULE_ALGORITHM:
+                    this.setSchedule(params);
+                    break;
                 ///////////////////////////////
                 /// Exit Process Interrupts ///
                 ///////////////////////////////
@@ -322,8 +351,8 @@ module TSOS {
         public psISR() {
             for (var pos = 0; pos < _ResidentList.residentList.length; ++pos) {
                 pos === 0 ?
-                    _StdOut.putText(`  pid ${_ResidentList.residentList[pos].processID}: ${_ResidentList.residentList[pos].processState}`)
-                    : _StdOut.putText(`pid ${_ResidentList.residentList[pos].processID}: ${_ResidentList.residentList[pos].processState}`);
+                    _StdOut.putText(`  pid ${_ResidentList.residentList[pos].processID}: ${_ResidentList.residentList[pos].processState} - Priority ${_ResidentList.residentList[pos].priority} `)
+                    : _StdOut.putText(`pid ${_ResidentList.residentList[pos].processID}: ${_ResidentList.residentList[pos].processState} - Priority ${_ResidentList.residentList[pos].priority}`);
 
                 if (pos !== _ResidentList.residentList.length - 1) {
                     _StdOut.putText(`, `);
@@ -421,35 +450,44 @@ module TSOS {
                 }/// if
             }/// for
 
+            // if (_Scheduler.currentProcess !== null){
+            //     processWasLoaded = true;
+            // }/// if
             _Scheduler.runSchedule(processWasLoaded);
         }/// runAllProcessISR
 
         public terminateProcessISR() {
-            /// Set current process state to "Terminated" for clean up
-            _Scheduler.currentProcess.processState === "Terminated";
+            try {
+                /// Set current process state to "Terminated" for clean up
+                _Scheduler.currentProcess.processState === "Terminated";
 
-            if (_Scheduler.currentProcess.processState === "Terminated" && _Scheduler.readyQueue.length === 0) {
-                /// Remove the last process from the Ready Queue
-                /// by removing the last process from current process
-                _Scheduler.currentProcess = null;
+                if (_Scheduler.currentProcess.processState === "Terminated" && _Scheduler.readyQueue.getSize() === 0) {
+                    /// Remove the last process from the Ready Queue
+                    /// by removing the last process from current process
+                    _Scheduler.currentProcess = null;
 
-                /// "Turn Off" CPU
-                _CPU.isExecuting = false;
+                    /// "Turn Off" CPU
+                    _CPU.isExecuting = false;
 
-                /// Turn "off Single Step"
-                _SingleStepMode = false;
-                _NextStep = false;
+                    /// Turn "off Single Step"
+                    _SingleStepMode = false;
+                    _NextStep = false;
 
-                /// Reset visuals for Single Step
-                (<HTMLButtonElement>document.getElementById("btnNextStep")).disabled = true;
-                (<HTMLButtonElement>document.getElementById("btnSingleStepMode")).value = "Single Step ON";
+                    /// Reset visuals for Single Step
+                    (<HTMLButtonElement>document.getElementById("btnNextStep")).disabled = true;
+                    (<HTMLButtonElement>document.getElementById("btnSingleStepMode")).value = "Single Step ON";
 
-                /// Prompt for more input
-                _StdOut.advanceLine();
-                _OsShell.putPrompt();
+                    /// Prompt for more input
+                    _StdOut.advanceLine();
+                    _OsShell.putPrompt();
 
-                TSOS.Control.updateVisualPcb();
-            }/// if
+                    TSOS.Control.updateVisualPcb();
+                }/// if
+            }/// try
+
+            catch (e) {
+                _Kernel.krnTrace(e);
+            }/// catch
         }/// terminateProcessISR
 
         public killProcessISR(params) {
@@ -516,12 +554,15 @@ module TSOS {
 
         public killAllProcessesISR() {
             /// There are scheduled processes to kill
-            if (_Scheduler.readyQueue.length > 0 || _Scheduler.currentProcess !== null) {
+            if (_Scheduler.readyQueue.getSize() > 0 || _Scheduler.currentProcess !== null) {
 
                 /// Mark all process in the schedule queue as terminated
                 _Scheduler.currentProcess.processState = "Terminated";
-                for (var i = 0; i < _Scheduler.readyQueue.length; ++i) {
-                    _Scheduler.readyQueue[i].processState = "Terminated";
+
+                for (var i = 0; i < _Scheduler.readyQueue.getSize(); ++i) {
+                    for (var h = 0; h < _Scheduler.readyQueue.queues[i].getSize(); ++h) {
+                        _Scheduler.readyQueue.getIndex(i).getIndex(h).processState = "Terminated";
+                    }/// for
                 }/// for
                 // _Scheduler.terminatedAllProcess();
             }/// if
@@ -533,6 +574,185 @@ module TSOS {
                 _OsShell.putPrompt();
             }/// else
         }/// runAllProcessISR
+
+        public diskISR(params) {
+            /// params[0] == disk operation
+            if (params[0] === 'format') {
+                /// params [1] == -quick || -full
+                if (!_CPU.isExecuting) {
+                    if (!_SingleStepMode) {
+                        _krnDiskDriver.format(params[1]);
+                    }/// if 
+                    else {
+                        _StdOut.putText(`Disk cannot be formatted while in single step mode`);
+                        _StdOut.advanceLine();
+                        _StdOut.putText(`To be honest I ran out of time to fix this, so I just disabled it...`);
+                        _StdOut.advanceLine();
+                        _OsShell.putPrompt();
+                    }/// else
+                }/// if
+                else {
+                    _StdOut.putText(`Disk cannot be formatted while processes are running!`);
+                    _StdOut.advanceLine();
+                    _StdOut.putText(`Well, hello there! Evil Professor...`);
+                    _StdOut.advanceLine();
+                    _OsShell.putPrompt();
+                }
+            }/// if
+
+            /// Only allow disk functions on formatted disks
+            else if (_krnDiskDriver.formatted) {
+                _krnDiskDriver.isr(params);
+            }/// if
+
+            /// Not formatted, don't do anyting
+            else {
+                this.krnTrace("Disk is not yet formatted!");
+                _StdOut.putText(`You must format the drive disk before use!`);
+                _StdOut.advanceLine();
+                _OsShell.putPrompt();
+            }/// else
+        }/// diskISR
+
+        public setSchedule(params: string[]) {
+            var schedulingAgorithm: string = params[0];
+
+            /// Scheduling algorithm is already set to the one being passed
+            if (_Scheduler.schedulingMethod === schedulingAgorithm) {
+                _StdOut.putText(`Scheduling is already ${schedulingAgorithm}`);
+                _StdOut.advanceLine();
+                _OsShell.putPrompt();
+            }/// if
+
+            else if (!_CPU.isExecuting) {
+                _Scheduler.schedulingMethod = schedulingAgorithm;
+                _StdOut.putText(`Scheduling algorithm set to: ${schedulingAgorithm}`);
+                _StdOut.advanceLine();
+                _OsShell.putPrompt();
+            }/// else-if
+
+            /// Scheduling algorithm is different than the one being passed
+            else {
+                switch (schedulingAgorithm) {
+                    case ROUND_ROBIN:
+                        var tempRoundRobin: ProcessControlBlock[] = [];
+
+                        /// Set scheduling method to Round Robin
+                        _Scheduler.schedulingMethod = ROUND_ROBIN;
+                        _Scheduler.swapToUserQuantum();
+                        _Scheduler.startBurst = _CPU_BURST;
+
+                        /// Don't forget current process
+                        if (_Scheduler.currentProcess !== null) {
+                            _Scheduler.currentProcess.swapToDefaultPriority();
+                            tempRoundRobin.push(_Scheduler.currentProcess);
+                            _Scheduler.currentProcess = null;
+                        }/// if
+
+                        /// Dequeue every process and swap back to using the user defined priority
+                        while (_Scheduler.readyQueue.getSize() > 0) {
+                            var pcb: ProcessControlBlock = _Scheduler.readyQueue.dequeueInterruptOrPcb();
+                            pcb.swapToDefaultPriority();
+                            tempRoundRobin.push(pcb);
+                        }/// while
+
+                        /// Re-enqueue all process
+                        for (var p: number = 0; p < tempRoundRobin.length; ++p) {
+                            _Scheduler.readyQueue.enqueueInterruptOrPcb(tempRoundRobin[p]);
+                        }/// for
+
+                        /// Re-attach first process back to cpu...
+                        if (_Scheduler.currentProcess === null) {
+                            _Scheduler.currentProcess = _Scheduler.readyQueue.dequeueInterruptOrPcb();
+                            _Scheduler.currentProcess.processState === "Running";
+                            _Dispatcher.setNewProcessToCPU(_Scheduler.currentProcess);
+                        }/// if
+                        _StdOut.putText(`Scheduling algorithm set to: ${schedulingAgorithm}`);
+                        _StdOut.advanceLine();
+                        _OsShell.putPrompt();
+                        break;
+
+                    case FIRST_COME_FIRST_SERVE:
+                        var tempFcFs: number[] = [];
+
+                        /// Set scheduling method to First Come First Serve
+                        _Scheduler.schedulingMethod = FIRST_COME_FIRST_SERVE;
+                        _Scheduler.swapToFcFsQuantum();
+                        _Scheduler.startBurst = _CPU_BURST;
+
+                        /// Don't forget current process
+                        if (_Scheduler.currentProcess !== null) {
+                            tempFcFs.push(_Scheduler.currentProcess.processID);
+                            _Scheduler.currentProcess = null;
+                        }/// if
+
+                        /// Dequeue every process and swap back to using the user defined priority
+                        while (_Scheduler.readyQueue.getSize() > 0) {
+                            tempFcFs.push(_Scheduler.readyQueue.dequeueInterruptOrPcb().processID);
+                        }/// while
+
+                        /// Re-enqueue all process
+                        for (var p: number = 0; p < _ResidentList.residentList.length; ++p) {
+                            /// Only re-enqueue scheduled processes
+                            if (tempFcFs.includes(_ResidentList.residentList[p].processID)) {
+                                _ResidentList.residentList[p].swapToDefaultPriority();
+                                _Scheduler.readyQueue.enqueueInterruptOrPcb(_ResidentList.residentList[p]);
+                            }/// if
+                        }/// for
+
+                        /// Re-attach first process back to cpu...
+                        if (_Scheduler.currentProcess === null) {
+                            _Scheduler.currentProcess = _Scheduler.readyQueue.dequeueInterruptOrPcb();
+                            _Scheduler.currentProcess.processState === "Running";
+                            _Dispatcher.setNewProcessToCPU(_Scheduler.currentProcess);
+                        }/// if
+                        _StdOut.putText(`Scheduling algorithm set to: ${schedulingAgorithm}`);
+                        _StdOut.advanceLine();
+                        _OsShell.putPrompt();
+                        break;
+                    case PRIORITY:
+                        var tempPriority: ProcessControlBlock[] = [];
+
+                        /// Set scheduling method to Priority
+                        _Scheduler.schedulingMethod = PRIORITY;
+
+                        /// Don't forget current process
+                        if (_Scheduler.currentProcess !== null) {
+                            _Scheduler.currentProcess.swapToUserPriority();
+                            tempPriority.push(_Scheduler.currentProcess);
+                            _Scheduler.currentProcess = null;
+                        }/// if
+
+                        /// Dequeue every process and swap back to using the user defined priority
+                        while (_Scheduler.readyQueue.getSize() > 0) {
+                            var pcb: ProcessControlBlock = _Scheduler.readyQueue.dequeueInterruptOrPcb();
+                            pcb.swapToUserPriority();
+                            tempPriority.push(pcb);
+                        }/// while
+
+                        /// Re-enqueue all process
+                        for (var p: number = 0; p < tempPriority.length; ++p) {
+                            _Scheduler.readyQueue.enqueueInterruptOrPcb(tempPriority[p]);
+                        }/// for
+
+                        /// Re-attach first process back to cpu...
+                        if (_Scheduler.currentProcess === null) {
+                            _Scheduler.currentProcess = _Scheduler.readyQueue.dequeueInterruptOrPcb();
+                            _Scheduler.currentProcess.processState === "Running";
+                            _Dispatcher.setNewProcessToCPU(_Scheduler.currentProcess);
+                        }/// if
+                        _StdOut.putText(`Scheduling algorithm set to: ${schedulingAgorithm}`);
+                        _StdOut.advanceLine();
+                        _OsShell.putPrompt();
+                        break;
+                    default:
+                        _StdOut.putText(`Scheduling algorithm: ${schedulingAgorithm} not recognized!`);
+                        _StdOut.advanceLine();
+                        _OsShell.putPrompt();
+                        break;
+                }/// switch
+            }/// else
+        }/// setSchedule
 
         //
         // System Calls... that generate software interrupts via tha Application Programming Interface library routines.

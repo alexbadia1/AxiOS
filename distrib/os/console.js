@@ -51,7 +51,7 @@ var TSOS;
                 else if (chr === '^C') {
                     if (_CPU.isExecuting) {
                         /// Queue an interrupt for termination of the program
-                        _KernelInterruptPriorityQueue.enqueue(new TSOS.Node(new TSOS.Interrupt(KILL_ALL_PROCESSES_IRQ, [])));
+                        _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(KILL_ALL_PROCESSES_IRQ, []));
                         this.eraseText();
                         this.putText("^c");
                     } /// if
@@ -99,6 +99,7 @@ var TSOS;
                         'kill',
                         'killall',
                         'quantum',
+                        'format'
                     ];
                     var matches = [];
                     for (var pos = 0; pos < cmds.length; ++pos) {
@@ -130,6 +131,9 @@ var TSOS;
                 else if (chr === String.fromCharCode(38)) {
                     /// Arrow UP so start getting the the older commands
                     if (this.olderCommands.length > 0) {
+                        if (this.newerCommands.length > 10) {
+                            this.newerCommands.unshift();
+                        } /// if
                         /// Step 1: Push whatever is typed so far (the current buffer) to the "newer" commands stack.
                         this.newerCommands.push(this.buffer);
                         /// Step 2: Pop whateverver command is in the "older" command stack.
@@ -147,6 +151,9 @@ var TSOS;
                 else if (chr === String.fromCharCode(40)) {
                     /// Arrow DOWN so start getting the more recent commands
                     if (this.newerCommands.length > 0) {
+                        if (this.olderCommands.length > 10) {
+                            this.olderCommands.unshift();
+                        } /// if
                         /// Step 1: Push whatever is typed so far (the current buffer) to the "older" commands stack.
                         this.olderCommands.push(this.buffer);
                         /// Step 2: Pop whateverver command is in the "newer" command stack.
@@ -188,7 +195,9 @@ var TSOS;
                 ///
                 /// This prevents me from deleting the last letter on the line but the X position is still not
                 /// of the canvas yet.
-                if (this.currentXPosition <= 4) {
+                ///
+                /// Length of a space is...
+                if (this.currentXPosition <= 4 + INDENT_NUMBER) {
                     this.reverseLineWrap();
                 } /// if
                 /// Instead of using text, just want to measure a single character from my buffer
@@ -217,7 +226,7 @@ var TSOS;
             /// Buffer should be "empty" by now so let's actually empty it
             this.buffer = "";
         }
-        putText(text, indent = 0) {
+        putText(text, indent = INDENT_NUMBER) {
             /*  My first inclination here was to write two functions: putChar() and putString().
                 Then I remembered that JavaScript is (sadly) untyped and it won't differentiate
                 between the two. (Although TypeScript would. But we're compiling to JavaScipt anyway.)
@@ -276,9 +285,9 @@ var TSOS;
             /// Resetting the X postion moves us to the beiginning of the left side of the screen.
             ///
             /// We COULD add an abstracted version of an indent, but our master MS DOS doesn't so why should I?
-            /// 
             this.currentXPosition = myIndent;
             /// Drawing the remaining letters after the line-wrap.
+            /// this.putText("  ");
             _DrawingContext.drawText(this.currentFont, this.currentFontSize, this.currentXPosition, this.currentYPosition, myText);
             /// Move the current X position (copy-pasted).
             this.currentXPosition = this.currentXPosition + myOffset;

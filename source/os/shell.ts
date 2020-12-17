@@ -5,25 +5,28 @@
 
     Note: While fun and learning are the primary goals of all enrichment center activities,
           serious injuries may occur when trying to write your own Operating System.
+
+    Hint: A shell command should kinda follow this template:
+        public thisIsAShellCommand(args[]) {
+            if (args.length equals number of required shell arguments)
+                /// Cleanse the arguments
+                ///     Meaning, trim them, check for invalid characters, etc.
+                /// If (all arguments are "good")
+                ///     Enqueue interrupt in kernel interrupt queue OR call function from MemoryManager.ts, Disk.ts, etc.
+                ////        - This will depend on what the shell command is...
+                /// Else
+                ///     Tell user why they fuc -I mean- "did not meet the requirements" for the shell command...
+            else 
+                -StdOut.putText("Shell command expected [insert number of arguments], but got [insert how many arguments the user actually gave]");
+        }/// thisIsAShellCommand
    ------------ */
 
 /// TODO: Write a base class / prototype for system services and let Shell inherit from it.
 
-/* 
- *
- * Would you believe that comming to Marist I didn't know a single thing about programming? Everything I've learned has been from Marist and independent research
- * in between semesters (I feel like everyone else is light years ahead of me and I am playing catch up game).
- *
- * I assume everyone is getting >= 100% on these projects. And I messed up the easiest part on the Midterm
- * which at least now I will never forget. (I learn best through negative reinforcement)
- * 
- * 
-*/
-
 module TSOS {
     export class Shell {
         /// Properties
-        public promptStr = ">";
+        public promptStr = "C:\\AxiOS>"; /// Ohhhh *lightbulb goes off*, too bad we don't have a multi-level file system...
         public commandList = [];
         public curses = "[fuvg],[cvff],[shpx],[phag],[pbpxfhpxre],[zbgureshpxre],[gvgf]";
         public apologies = "[sorry]";
@@ -186,6 +189,7 @@ module TSOS {
                 killall - Kill all processes
                 quantum <int> - Let the user set the Round Robin Quantum (measured in CPU cycles)
             ***************************************************************************************/
+
             /// clearmem - Clear all memory partitions
             sc = new ShellCommand(this.shellClearMem,
                 'clearmem',
@@ -223,9 +227,98 @@ module TSOS {
             this.commandList[this.commandList.length] = sc;
 
             /*************************************************************************************
-            TODO: Implement iProject 4 Commands: 
-                ...
+            iProject4 Commands: 
+            Disk Operations
+                create <filename>: Create the file [filename] and display a message denoting success or failure
+                read <filename>: Read and display the contents of [filename] or display an error if something went wrong
+                write <filename> "data": Write data inside the quotes to [filename] and display a message denoting success or failure
+                delete <filename>: Remove [filename] from storage and display a message denoting success or failure
+                format: Initialize all blocks in all sectors in all tracks and display a message denoting success or failure
+                ls: List files currently stored on the disk
+                format -quick: initialize the first four bytes of every directory and data block
+                format -full: same as quick and also initializes bytes 4-63 in directory and data blocks too.
+                ls -l: lists all filenames [even hidden ones] as well as their size and create date.
+            Scheduling
+                setSchedule <rr, fcfs, priority> - selects a CPU scheduling algorithm
+                getSchedule - returns the current CPU scheduling program
             ***************************************************************************************/
+
+            /// format - Initialize all blocks in all sectors in all tracks and display a message denoting success or failure
+            /// Optional parameters: 
+            ///     format -quick: initialize the first four bytes of every directory and data block
+            ///     format -full: same as quick and also initializes bytes 4-63 in directory and data blocks too.
+            sc = new ShellCommand(this.shellFormat,
+                'format',
+                'Initialize blocks, sectors and tracks in disk');
+            this.commandList[this.commandList.length] = sc;
+
+            /// create <filename>: Create the file [filename] and display a message denoting success or failure
+            sc = new ShellCommand(this.shellCreate,
+                'create',
+                'Create the file [filename]');
+            this.commandList[this.commandList.length] = sc;
+
+            /// ls - List files currently stored on the disk
+            /// Optional parameters: 
+            ///     ls -l: lists all filenames [even hidden ones] as well as their size and create date.
+            sc = new ShellCommand(this.shellList,
+                'ls',
+                'List files currently stored on the disk');
+            this.commandList[this.commandList.length] = sc;
+
+            /// read <filename>: Read and display the contents of [filename] or display an error if something went wrong
+            sc = new ShellCommand(this.shellRead,
+                'read',
+                'Read and display the contents of [filename]');
+            this.commandList[this.commandList.length] = sc;
+
+            /// write <filename> "data": Write data inside the quotes to [filename] and display a message denoting success or failure
+            sc = new ShellCommand(this.shellWrite,
+                'write',
+                'Write data inside the quotes to [filename]');
+            this.commandList[this.commandList.length] = sc;
+
+            /// delete <filename>: Remove [filename] from storage and display a message denoting success or failure
+            sc = new ShellCommand(this.shellDelete,
+                'delete',
+                'Remove [filename] from storage');
+            this.commandList[this.commandList.length] = sc;
+
+            /// defrag: defragment disk drive and display a message denoting success or failure
+            sc = new ShellCommand(this.shellDefrag,
+                'defrag',
+                'defragment disk drive');
+            this.commandList[this.commandList.length] = sc;
+
+            /// getSchedule: returns currently selected sheduling algorithm
+            sc = new ShellCommand(this.shellGetSchedule,
+                'getschedule',
+                'returns currently selected sheduling algorithm');
+            this.commandList[this.commandList.length] = sc;
+
+            /// setSchedule <rr, fcfs, priority>: defragment disk drive and display a message denoting success or failure
+            sc = new ShellCommand(this.shellSetSchedule,
+                'setschedule',
+                'sets the currently selected scheduling algorithm');
+            this.commandList[this.commandList.length] = sc;
+
+            /// rename <file> <new filename>: changes the filename to the new name specified
+            sc = new ShellCommand(this.shellRename,
+                'rename',
+                'changes the filename to the new name specified');
+            this.commandList[this.commandList.length] = sc;
+
+            /// recover <filename>: attempts recovers the delete file
+            sc = new ShellCommand(this.shellRecover,
+                'recover',
+                'attempts recovers the delete file');
+            this.commandList[this.commandList.length] = sc;
+
+            /// copy <filename>: attempts copy the file
+            sc = new ShellCommand(this.shellCopy,
+                'copy',
+                'attempts copy the file');
+            this.commandList[this.commandList.length] = sc;
 
             /// Display the initial prompt.
             ///
@@ -471,7 +564,20 @@ module TSOS {
             killall - kill all processes
             quantum <int> - let the user set the Round Robin Quantum (measured in CPU cycles)
         
-        TODO: Implement iProject 4 Commands:
+        iProject4 Commands: 
+            Disk Operations
+                create <filename>: Create the file [filename] and display a message denoting success or failure
+                read <filename>: Read and display the contents of [filename] or display an error if something went wrong
+                write <filename> "data": Write data inside the quotes to [filename] and display a message denoting success or failure
+                delete <filename>: Remove [filename] from storage and display a message denoting success or failure
+                format: Initialize all blocks in all sectors in all tracks and display a message denoting success or failure
+                ls: List files currently stored on the disk
+                format -quick: initialize the first four bytes of every directory and data block
+                format -full: same as quick and also initializes bytes 4-63 in directory and data blocks too.
+                ls -l: lists all filenames [even hidden ones] as well as their size and create date.
+            Scheduling
+                setSchedule <rr, fcfs, priority> - selects a CPU scheduling algorithm
+                getSchedule - returns the current CPU scheduling program
         ***************************************************************************************/
         public shellMan(args: string[]) {
             if (args.length > 0) {
@@ -522,6 +628,38 @@ module TSOS {
                     case "quantum":
                         _StdOut.putText("quantum <int> - let the user set the Round Robin Quantum (measured in CPU cycles).");
                         break;
+                    case "format":
+                        _StdOut.putText("format <-quick|-full> - Initialize all blocks in all sectors in all tracks in disk.");
+                        break;
+                    case "create":
+                        _StdOut.putText("create <filename>: Create the file [filename] in disk");
+                        break;
+                    case "ls":
+                        _StdOut.putText("ls <-l> - List files currently stored on the disk.");
+                        break;
+                    case "read":
+                        _StdOut.putText("read <filename>: Read and display the contents of [filename].");
+                        break;
+                    case "write":
+                        _StdOut.putText("write <filename> 'data': Write data inside the quotes to [filename].");
+                        break;
+                    case "delete":
+                        _StdOut.putText("delete <filename>: Remove [filename] from storage.");
+                        break;
+                    case "defrag":
+                        _StdOut.putText("defrag: defragments disk drive.");
+                        break;
+                    case "setschedule":
+                        _StdOut.putText("setschedule: sets the current scheduling algorithm");
+                        break;
+                    case "getschedule":
+                        _StdOut.putText("getschedule: gets the current scheduling algorithm");
+                        break;
+                    case "rename":
+                        _StdOut.putText("rename <file> <new filename>: changes the filename to the new name specified");
+                        break;
+                    case "recover":
+                        _StdOut.putText("recover <filename>: attempts to recover the delted file");
                     default:
                         _StdOut.putText("No manual entry for " + args[0] + ".");
                 }/// switch
@@ -584,113 +722,185 @@ module TSOS {
             }/// else
         }/// shellStatus
 
-        /// load [<priority>] - Loads the specified user program 
-        public shellLoad() {
-            ///Regular expressions, smh.
-            ///
-            /// Getting and cleansing input
-            var userInput: string = _taProgramInput.value.trim();
-            userInput = userInput.toUpperCase().replace(/\s/g, '');
-            var hexPairList: Array<string> = new Array();
+        /// load [<priority>] - Loads the specified user program
+        ///
+        /// In hindsight, creating the process and all should not be in the shell...
+        public shellLoad(args: string[]) {
 
-            /// Test for hexadecimal characters using regular expression...
-            /// Learning hurts, ugh...
-            if (/^[A-F0-9]+$/i.test(userInput)) {
+            if (args.length <= 1 && args.length >= 0) {
+                /// Getting and cleansing input
+                var userInput: string = _taProgramInput.value.trim();
+                userInput = userInput.toUpperCase().replace(/\s/g, '');
 
-                /// Making sure there are no incomplete hex data pairs
-                if (userInput.length % 2 === 0) {
-                    /// Find a free simple volume
-                    ///
-                    /// May as well use first fit since the volumes are all the same fixed size...
-                    if (_MemoryManager.firstFit() === -1) {
-                        /// Memory is full
-                        _StdOut.putText("Memory is full!");
-                        _StdOut.advanceLine();
-                    } ///if
-                    else {
-                        /// Free Simple Volume was found
-                        var freeSpot: number = _MemoryManager.firstFit();
-                        var freeSimpleVolume: SimpleVolume = _MemoryManager.simpleVolumes[freeSpot];
+                /// Test for hexadecimal characters using regular expression...
+                if (/^[A-F0-9]+$/i.test(userInput)) {
 
-                        /// Create a Process Control BLock
-                        var newProcessControlBlock: ProcessControlBlock = new ProcessControlBlock();
+                    /// Making sure there are no incomplete hex data pairs
+                    if (userInput.length % 2 === 0) {
 
-                        /// Set state to new process as new until it is a resident
-                        newProcessControlBlock.processState = "New";
+                        /// Memory is full...
+                        if (_MemoryManager.firstFit() === -1) {
 
-                        /// Set location of the new process in memory segment
-                        newProcessControlBlock.volumeIndex = freeSpot;
+                            /// Try to write to the disk instead, remember it must be formatted first!
+                            if (_krnDiskDriver.formatted) {
+                                /// Create a Process Control Block
+                                var newProcessControlBlock: ProcessControlBlock = new ProcessControlBlock();
 
-                        /// Assign continuosly growing list of process id's
-                        newProcessControlBlock.processID = _ResidentList.size;
-                        _ResidentList.size++;
+                                /// Assign continuosly growing list of process id's and add to list of processes
+                                ///
+                                /// This is TEMPORARY and may need to be rolled back if no room on the disk
+                                /// Thus we will wait to actually push the pcb onto the resident list
+                                newProcessControlBlock.processID = _ResidentList.size;
+                                _ResidentList.size++;
 
-                        /// Add to list of processes
-                        _ResidentList.residentList.push(newProcessControlBlock);
+                                /// Create a swap file for said pcb
+                                newProcessControlBlock.swapFileName = `${_krnDiskDriver.hiddenFilePrefix}${_krnDiskDriver.swapFilePrefix}${newProcessControlBlock.processID}`;
 
-                        /// Show user said process id...
-                        ///
-                        /// What's this?! Temperate Literals? fancy... eh?
-                        /// (*whispers* Wow, I'm actually learning...)
-                        _StdOut.putText(`Process ID: ${newProcessControlBlock.processID}`);
-                        _StdOut.advanceLine();
+                                /// Now try to actually create the swap file and write to it if there's enough room
+                                ///
+                                /// Asyncronously...
+                                ///     Future<void> shellLoad() async {
+                                ///         Future<boolean> result = await _KernelInterruptPriorityQueue.enqueue(new TSOS.Interrupt(DISK_IRQ, ['create', args[0]]));
+                                ///         return result;
+                                ///     }/// shellLoad
+                                /// 
+                                /// Ya know, I might actually try to re do this in an asyncronous fashion in Dart and create a fultter app for it...
+                                var diskDriverResult: string = '';
+                                diskDriverResult = _krnDiskDriver.create(newProcessControlBlock.swapFileName);
+                                _StdOut.putText(`  ${diskDriverResult}`);
+                                _StdOut.advanceLine();
+                                /// File created for program
+                                if (!diskDriverResult.startsWith('Cannot create')) {
+                                    diskDriverResult = _krnDiskDriver.write(newProcessControlBlock.swapFileName, userInput);
+                                    _StdOut.putText(`  Program Succesfully ${diskDriverResult}`);
+                                    _StdOut.advanceLine();
 
-                        /// Load user input into free memory segment
-                        ///
-                        /// Split the input into pairs of 2
-                        for (var pos: number = 0; pos < userInput.length; pos += 2) {
-                            /// List splits into pairs nicely
-                            hexPairList.push("" + userInput[pos] + userInput[pos + 1]);
-                        }/// for
+                                    /// Program succesfully written to file
+                                    if (!diskDriverResult.startsWith('Cannot write')) {
+                                        newProcessControlBlock.volumeIndex = -1;
 
+                                        if (args.length === 1) {
+                                            /// Getting and cleansing input
+                                            var trimmedStringPriority: string = args[0].trim();
+                                            trimmedStringPriority = trimmedStringPriority.toUpperCase().replace(/\s/g, '');
+                                            if (/^[0-9]+$/i.test(trimmedStringPriority)) {
+                                                newProcessControlBlock.priority = parseInt(trimmedStringPriority);
+                                            }/// if
+                                        }/// if
 
-                        for (var logicalAddress = 0; logicalAddress < hexPairList.length; ++logicalAddress) {
+                                        /// Can safely add process to the resident queue
+                                        _ResidentList.residentList.push(newProcessControlBlock);
 
-                            /// Write to memory from hex pair list
-                            if (_MemoryAccessor.write(freeSimpleVolume, logicalAddress, hexPairList[logicalAddress])) {
-                                Control.hostLog(`Command ${hexPairList[logicalAddress]}: SUCCESSFUL WRITE to logical memory location: ${logicalAddress}!`);
-                            }/// if 
+                                        /// Update pcb state to resident as the process is now in the resident list
+                                        newProcessControlBlock.processState = "Resident";
+                                    }/// if
+
+                                    /// Not enough room to write to the file so roll back process control block changes
+                                    else {
+                                        /// Undo the increase to resident list size
+                                        _ResidentList.size--;
+                                    }/// else
+                                }/// if
+
+                                /// Not enough room to create the file so roll back process control block changes
+                                else {
+                                    /// Undo the increase to resident list size
+                                    _ResidentList.size--;
+                                }
+                            }/// if
+
+                            /// Disk ain't formatted doofus!
                             else {
-                                Control.hostLog(`Command ${hexPairList[logicalAddress]}: FAILED to WRITE to logical memory location: ${logicalAddress}!`);
+                                _Kernel.krnTrace("Disk is not yet formatted!");
+                                _StdOut.putText("You must format the drive disk before use!");
                             }/// else
+                        } ///if
 
-                            /// console.log(_MemoryAccessor.read(freeSimpleVolume, logicalAddress));
-                        }/// for
+                        /// Memory not full...
+                        else {
+                            /// Free Simple Volume was found
+                            var freeSpot: number = _MemoryManager.firstFit();
+                            var freeSimpleVolume: SimpleVolume = _MemoryManager.simpleVolumes[freeSpot];
 
-                        /// Protect volumes from being written into by accident...
-                        ///
-                        /// Each individual address at the memory level will be locked to to prevent such overflow issues
-                        freeSimpleVolume.writeLock();
+                            /// Create a Process Control Block
+                            /// State is "New" until put in resident list
+                            var newProcessControlBlock: ProcessControlBlock = new ProcessControlBlock();
+                            newProcessControlBlock.processState = "New";
 
-                        ///
-                        /// If the program is properly loaded into memory... 
-                        /// Update the process control block state to show it is loaded in memory
-                        newProcessControlBlock.processState = "Resident";
-                    } ///else
-                }/// if 
+                            /// Set location of the new process in memory segment
+                            newProcessControlBlock.volumeIndex = freeSpot;
 
-                /// The user inputted an odd amount of hex characters meaning there is an unmatched pair, so 
-                /// print out to the console that is ain't gonna work.
+                            /// Set Priority
+                            if (args.length === 1) {
+                                /// Getting and cleansing input
+                                var trimmedStringPriority: string = args[0].trim();
+                                trimmedStringPriority = trimmedStringPriority.toUpperCase().replace(/\s/g, '');
+                                if (/^[0-9]+$/i.test(trimmedStringPriority)) {
+                                    newProcessControlBlock.priority = parseInt(trimmedStringPriority);
+                                }/// if
+                            }/// if
+
+                            /// Assign continuosly growing list of process id's and add to list of processes
+                            newProcessControlBlock.processID = _ResidentList.size;
+                            _ResidentList.size++;
+                            _ResidentList.residentList.push(newProcessControlBlock);
+
+                            /// Show user said process id...
+                            _StdOut.putText(`Process ID: ${newProcessControlBlock.processID}`);
+                            _StdOut.advanceLine();
+
+                            var hexPair: string = '';
+                            var logicalAddress: number = 0;
+                            for (var pos: number = 0; pos < MAX_SIMPLE_VOLUME_CAPACITY * 2; pos += 2) {
+
+                                /// Read two characters at a time...
+                                if (userInput[pos] + userInput[pos + 1]) {
+                                    hexPair = userInput[pos] + userInput[pos + 1];
+                                }/// if
+                                else {
+                                    hexPair = '00';
+                                }/// else
+
+                                _MemoryAccessor.write(_MemoryManager.simpleVolumes[freeSpot], logicalAddress, hexPair)
+
+                                logicalAddress++;
+                            }/// for
+
+                            /// Protect volumes from being written into by accident...
+                            /// Each individual address at the memory level will be locked to to prevent such overflow issues
+                            freeSimpleVolume.writeLock();
+
+                            /// Nothing went wrong, update pcb state to resident as the process is now in the resident list
+                            newProcessControlBlock.processState = "Resident";
+                        } ///else
+                    }/// if 
+
+                    /// The user inputted an odd amount of hex characters meaning there is an unmatched pair, so 
+                    /// print out to the console that is ain't gonna work.
+                    else {
+                        _StdOut.putText("Invalid Hex Data.");
+                        _StdOut.advanceLine();
+                        _StdOut.putText("Hex Command or Hex Data is incomplete.");
+                        _StdOut.advanceLine();
+                        _StdOut.putText("Type \'help\' for, well... help.");
+                        _StdOut.advanceLine();
+                    }
+                } /// if
                 else {
                     _StdOut.putText("Invalid Hex Data.");
                     _StdOut.advanceLine();
-                    _StdOut.putText("Hex Command or Hex Data is incomplete.");
-                    _StdOut.advanceLine();
                     _StdOut.putText("Type \'help\' for, well... help.");
                     _StdOut.advanceLine();
-                }
-            } /// if
+                }/// else
+            }/// if
+
+            /// Too many arguments
             else {
-                _StdOut.putText("Invalid Hex Data.");
-                _StdOut.advanceLine();
-                _StdOut.putText("Type \'help\' for, well... help.");
+                _StdOut.putText(`${INDENT_STRING}Usage: load <int> Expected 0 or 1 arguments, but got ${args.length}`);
                 _StdOut.advanceLine();
             }/// else
 
             /// Update Visual Memory
-            ///
-            /// Regardless of success or fail, just cause I want to be able to make sure memory
-            /// ain't doin anything funky...
             TSOS.Control.updateVisualMemory();
         }/// shellLoad
 
@@ -728,7 +938,7 @@ module TSOS {
                 _StdOut.putText("" + ans);
 
             } else {
-                _StdOut.putText("Usage: magic eightball <string>  Please supply a string.");
+                _StdOut.putText(`${INDENT_STRING}Usage: magic eightball <string>  Please supply a string.`);
             }//if-else
         }/// shellMagicEightball
 
@@ -758,7 +968,7 @@ module TSOS {
                     }/// while
 
                     if (!found) {
-                        _StdOut.putText(`No process control blocks found with pid: ${parseInt(args[0])}.`);
+                        _StdOut.putText(`${INDENT_STRING}No process control blocks found with pid: ${parseInt(args[0])}.`);
                         _StdOut.advanceLine();
                     }/// if
 
@@ -772,19 +982,19 @@ module TSOS {
                         ///     > run 1
                         /// No matter what order, should still schedule the processes in round robin fashion...
                         /// Use Single Step to see what's "really" happening...
-                        _KernelInterruptPriorityQueue.enqueue(new Node (new TSOS.Interrupt(RUN_PROCESS_IRQ, [curr, args[0]])));
+                        _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(RUN_PROCESS_IRQ, [curr, args[0]]));
                     }/// else
                 }/// try
                 catch (e) {
                     _StdOut.putText(`${e}`);
-                    _StdOut.putText(`Usage: run <int> please supply a process id.`);
+                    _StdOut.putText(`${INDENT_STRING}Usage: run <int> please supply a process id.`);
                     _StdOut.advanceLine();
                 }/// catch
             }/// if
 
             /// Not only 1 argument was given
             else {
-                _StdOut.putText(`Usage: run <int> Expected 1 arguments, but got ${args.length}`);
+                _StdOut.putText(`${INDENT_STRING}Usage: run <int> Expected 1 arguments, but got ${args.length}`);
                 _StdOut.advanceLine();
             }/// else
         }/// run
@@ -802,29 +1012,50 @@ module TSOS {
 
         /// clearmem - clear all memory partitions
         public shellClearMem() {
-            var tempSize = _ResidentList.residentList.length;
             /// Processes are NOT running, safe to clear memory
-            if (!_CPU.isExecuting || (_Scheduler.currentProcess === null && _Scheduler.readyQueue.length === 0)) {
-                /// Grab each volume and write "unlock" them
-                for (var vol: number = 0; vol < _MemoryManager.simpleVolumes.length; ++vol) {
-                    _MemoryManager.simpleVolumes[vol].writeUnlock();
+            if (!_CPU.isExecuting || (_Scheduler.currentProcess === null && _Scheduler.readyQueue.getSize() === 0)) {
+                var processToRemove: ProcessControlBlock[] = [];
 
-                    /// Write in 00's for the entire volume
-                    for (var logicalAddress: number = 0; logicalAddress < MAX_SIMPLE_VOLUME_CAPACITY; ++logicalAddress) {
-                        _MemoryAccessor.write(_MemoryManager.simpleVolumes[vol], logicalAddress, "00");
-                    }/// for
+                /// Loop through resident list 
+                for (var p: number = 0; p < _ResidentList.residentList.length; ++p) {
+
+                    /// Find each process that is in memory
+                    if (_ResidentList.residentList[p].volumeIndex === 0 || _ResidentList.residentList[p].volumeIndex === 1 || _ResidentList.residentList[p].volumeIndex === 2) {
+                        /// Unlock volume
+                        _MemoryManager.simpleVolumes[_ResidentList.residentList[p].volumeIndex].writeUnlock();
+
+                        /// Write in 00's for the entire volume
+                        for (var logicalAddress: number = 0; logicalAddress < MAX_SIMPLE_VOLUME_CAPACITY; ++logicalAddress) {
+                            _MemoryAccessor.write(_MemoryManager.simpleVolumes[_ResidentList.residentList[p].volumeIndex], logicalAddress, "00");
+                        }/// for
+
+                        /// Push to list to remove
+                        processToRemove.push(_ResidentList.residentList[p]);
+                    }/// if
                 }/// for
 
-                /// Remove processes from the Resident List that were stored in these volumes
-                _ResidentList.residentList = _ResidentList.residentList.filter(pcb => (pcb.volumeIndex > 2));
-                
+                for (var pToRemove: number = 0; pToRemove < processToRemove.length; ++pToRemove) {
+                    var found: boolean = false;
+                    var pos: number = 0;
+                    while (pos < _ResidentList.residentList.length && !found) {
+                        if (processToRemove[pToRemove].processID === _ResidentList.residentList[pos].processID) {
+                            found = true;
+                        }/// if
+                        else {
+                            pos++;
+                        }/// else
+                    }/// while
+
+                    _ResidentList.residentList.splice(pos, 1);
+                }/// for
+
                 // words.filter(word => word.length > 6);
-                _StdOut.putText("Memory Cleared");
+                _StdOut.putText(`${INDENT_STRING}Memory Cleared`);
                 _StdOut.advanceLine();
             }/// if
 
             else {
-                _StdOut.putText("Cannot clear memory while processes running!");
+                _StdOut.putText(`${INDENT_STRING}Cannot clear memory while processes running!`);
                 _StdOut.advanceLine();
             }/// else
 
@@ -835,7 +1066,7 @@ module TSOS {
         public shellRunAll() {
             /// Check if the resident queue is full or not...
             if (_ResidentList.residentList.length === 0) {
-                _StdOut.putText(`No process control blocks found.`);
+                _StdOut.putText(`${INDENT_STRING}No process control blocks found.`);
                 _StdOut.advanceLine();
             }/// if
             else {
@@ -846,23 +1077,22 @@ module TSOS {
                 ///     > runall
                 /// No matter what order, should still schedule the processes in round robin fashion...
                 /// Use Single Step to see what's "really" happening...
-                _KernelInterruptPriorityQueue.enqueue(new Node(new TSOS.Interrupt(RUN_ALL_PROCESSES_IRQ, [])));
+                _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(RUN_ALL_PROCESSES_IRQ, []));
             }/// else
         }/// runall
 
         /// ps - display the PID and state of all processes
         public shellPs() {
-            _KernelInterruptPriorityQueue.enqueue(new Node (new TSOS.Interrupt(PS_IRQ, [])));
+            _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(PS_IRQ, []));
         }///ps
 
         /// kill <pid> - kills one process (specified by process ID)
         public shellKill(args: string[]) {
-
             if (args.length === 1) {
-                
+
                 /// Check if the resident queue is full or not...
                 if (_ResidentList.residentList.length === 0) {
-                    _StdOut.putText(`No process control blocks found.`);
+                    _StdOut.putText(`${INDENT_STRING}No process control blocks found.`);
                     _StdOut.advanceLine();
                 }/// if
                 else {
@@ -873,26 +1103,26 @@ module TSOS {
                     ///     > killall
                     /// No matter what order, should still kill the processes
                     /// Use Single Step to see what's "really" happening...
-                    _KernelInterruptPriorityQueue.enqueue(new Node (new TSOS.Interrupt(KILL_PROCESS_IRQ, [args])));
+                    _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(KILL_PROCESS_IRQ, [args]));
                 }/// else
             }/// if
 
             /// More than one argument was given
             else {
-                _StdOut.putText(`Usage: kill <int> Expected 1 arguments, but got ${args.length}`);
+                _StdOut.putText(`${INDENT_STRING}Usage: kill <int> Expected 1 argument, but got ${args.length}`);
                 _StdOut.advanceLine();
             }/// else
         }/// kill
 
         /// killall - kill all processes
         public shellKillAll() {
-            _KernelInterruptPriorityQueue.enqueue(new Node (new TSOS.Interrupt(KILL_ALL_PROCESSES_IRQ, [])));
+            _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(KILL_ALL_PROCESSES_IRQ, []));
         }/// kill all processes
 
         /// quantum <int> - let the user set the Round Robin Quantum (measured in CPU cycles)
         public shellQuantum(args: string[]) {
-            if (_Scheduler.schedulingMethod !== "Round Robin"){
-                _StdOut.putText(`Quantum cannot be changed while using ${_Scheduler.schedulingMethod} schheduling!`);
+            if (_Scheduler.schedulingMethod !== "Round Robin") {
+                _StdOut.putText(`${INDENT_STRING}Quantum cannot be changed while using ${_Scheduler.schedulingMethod} schheduling!`);
                 _StdOut.advanceLine();
                 return;
             }/// if
@@ -908,46 +1138,410 @@ module TSOS {
 
                     /// Save old quanta
                     var oldDecimalQuanta = _Scheduler.quanta;
-                    
+
                     /// Set the new quantum...
                     /// New quanta must be a positive integer
-                    if (parseInt(trimmedStringQuanta, 10) > 0){
+                    if (parseInt(trimmedStringQuanta, 10) > 0) {
                         /// Could process as interrupt to allow for changing the quantum mid cycle...
                         /// Actually just don't allow it, too much brain damage already...
                         /// interrupt it is
-                        _KernelInterruptPriorityQueue.enqueue(new Node (new TSOS.Interrupt(CHANGE_QUANTUM_IRQ, [oldDecimalQuanta, parseInt(trimmedStringQuanta, 10)])));
+                        _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(CHANGE_QUANTUM_IRQ, [oldDecimalQuanta, parseInt(trimmedStringQuanta, 10)]));
                     }/// else-if
 
                     /// Invalid Quantum
                     else {
-                        
-                        _StdOut.putText(`Usage: quantum <int>  Please supply a positive, non-zero, decimal integer only.`);
+
+                        _StdOut.putText(`${INDENT_STRING}Usage: quantum <int>  Please supply a positive, non-zero, decimal integer only.`);
                         _StdOut.advanceLine();
                     }/// else
                 }/// if
 
                 /// Error, a character other than [0-9] was detected
                 else {
-                    _StdOut.putText("Usage: quantum <int>  Please supply a positive decimal number only.");
+                    _StdOut.putText(`${INDENT_STRING}Usage: quantum <int>  Please supply a positive decimal number only.`);
                     _StdOut.advanceLine();
                 }/// else
             }/// if 
 
             /// ERROR, More than one argument given
             else {
-                _StdOut.putText(`Usage: quantum <int> Expected 1 arguments, but got ${args.length}`);
+                _StdOut.putText(`${INDENT_STRING}Usage: quantum <int> Expected 1 arguments, but got ${args.length}`);
                 _StdOut.advanceLine();
             }/// else
         }/// shellQuantum
 
-        /*************************************************************************************
-        TODO Implement iProject4 Commands: 
-            ...
-        ***************************************************************************************/
+        /*****************************************************************************************************
+        iProject4 Commands: 
+            Disk Operations
+                create <filename>: Create the file [filename] and display a message denoting success or failure
+                read <filename>: Read and display the contents of [filename] or display an error if something went wrong
+                write <filename> "data": Write data inside the quotes to [filename] and display a message denoting success or failure
+                delete <filename>: Remove [filename] from storage and display a message denoting success or failure
+                format: Initialize all blocks in all sectors in all tracks and display a message denoting success or failure
+                ls: List files currently stored on the disk
+                format -quick: initialize the first four bytes of every directory and data block
+                format -full: same as quick and also initializes bytes 4-63 in directory and data blocks too.
+                ls -l: kists all filenames [even hidden ones] as wella s their size and create date.
+            Scheduling
+                setSchedule <rr, fcfs, priority> - selects a CPU scheduling algorithm
+                getSchedule - returns the current CPU scheduling program
+        *****************************************************************************************************/
+
+        /// format -full: same as quick and also initializes bytes 4-63 in directory and data blocks too.
+        public shellFormat(args) {
+            /// No arguments === Normal Format
+            /// OR
+            /// 1 argument === -quick || -full format
+            if (args.length === 0) {
+                _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(DISK_IRQ, ['format', 'no-arg']));
+            }/// if
+
+            else if (args.length === 1) {
+                if (args[0] === '-full' || args[0] === '-quick') {
+                    _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(DISK_IRQ, ['format', args[0].toLowerCase()]));
+                }/// if
+
+                else {
+                    _StdOut.putText(`${INDENT_STRING}Invalid argument: ${args[0]} try instead...`);
+                    _StdOut.advanceLine();
+                    _StdOut.putText(`${INDENT_STRING}${INDENT_STRING}format`);
+                    _StdOut.advanceLine();
+                    _StdOut.putText(`${INDENT_STRING}${INDENT_STRING}format -quick`);
+                    _StdOut.advanceLine();
+                    _StdOut.putText(`${INDENT_STRING}${INDENT_STRING}format -full`);
+                    _StdOut.advanceLine();
+                }/// else
+            }/// else-if
+
+            /// Either negative arguments were (imposibly) given
+            /// OR more than 1 arg was given, so complain...
+            else {
+                _StdOut.putText(`${INDENT_STRING}Usage: format <string> Expected 0 or 1 arguments, but got ${args.length}`);
+                _StdOut.advanceLine();
+            }/// else
+        }/// shellFormat
+
+        /// create <filename>: Create the file [filename] and display a message denoting success or failure
+        public shellCreate(args: string[]) {
+            /// Make sure filename.length <= 60 Bytes
+            if (args.length === 1) {
+
+                /// no empty file names
+                if (args[0].trim().replace(" ", "").length === 0) {
+                    _StdOut.putText(`${INDENT_STRING}Usage: create <filename> Expected 1 arguments, but got 0`);
+                }/// if
+
+                else {
+                    /// Prevent swap file names and hidden file names from being used
+                    if (!args[0].startsWith(`${_krnDiskDriver.hiddenFilePrefix}${_krnDiskDriver.swapFilePrefix}`)) {
+                        /// Minus 4 Bytes of the block metadata (containing the pointer and what not)
+                        if (args[0].length < BLOCK_SIZE_LIMIT - FILE_META_DATA_LENGTH) {
+                            _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(DISK_IRQ, ['create', args[0]]));
+                        }/// if
+
+                        else {
+                            _StdOut.putText(`${INDENT_STRING}Usage: create <filename> Expected <= 60 Bytes, but got ${args.length} Bytes`);
+                            _StdOut.advanceLine();
+                        }/// else
+                    }/// if
+
+                    else {
+                        _StdOut.putText(`${INDENT_STRING}Usage: <filename> cannot start with ".!"`);
+                        _StdOut.advanceLine();
+                    }/// else
+                }/// else
+            }/// if
+
+            /// More than one argument was given
+            else {
+                _StdOut.putText(`${INDENT_STRING}Usage: create <filename> Expected 1 arguments, but got ${args.length}`);
+                _StdOut.advanceLine();
+            }/// else
+        }/// shelCreate
+
+        /// ls: List files currently stored on the disk
+        public shellList(args) {
+            /// No arguments given so skip hidden files
+            if (args.length === 0) {
+                /// TODO: create disk interrupt to list files
+                _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(DISK_IRQ, ['list', 'no-arg']));
+            }/// if
+
+            /// Make sure only one argument is given
+            else if (args.length === 1) {
+
+                /// Make sure one arg is "-l" for hidden files
+                if (args[0] === "-l") {
+                    /// TODO: create disk interrupt to list files
+                    _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(DISK_IRQ, ['list', args[0]]));
+                }/// if
+
+                else {
+                    _StdOut.putText(`${INDENT_STRING}Usage: ls <-l> Expected 0 or 1 arguments, but got ${args.length}`);
+                    _StdOut.advanceLine();
+                }/// else
+            }/// if
+
+            /// More than one argument was given
+            else {
+                _StdOut.putText(`${INDENT_STRING}Usage: ls <-l> Expected 0 or 1 arguments, but got ${args.length}`);
+                _StdOut.advanceLine();
+            }/// else
+        }/// shellList
+
+        /// read <filename>: Read and display the contents of [filename] or display an error if something went wrong
+        public shellRead(args) {
+
+            /// Make sure only one argument is given
+            if (args.length === 1) {
+
+                /// Create read interrupt
+                _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(DISK_IRQ, ['read', args[0]]));
+            }/// if
+
+            /// More than or less than one argument was given
+            else {
+                _StdOut.putText(`${INDENT_STRING}Usage: read <filename> Expected 1 argument, but got ${args.length}`);
+                _StdOut.advanceLine();
+            }/// else
+        }/// read
+
+        public shellWrite(args: string[]) {
+
+            /// At least two args were given...
+            if (args.length > 1) {
+                var fileName = args.shift();
+
+                /// Concatenate list of args into one string separated by spaces...
+                var formattedArgs: string = args.join(' ');
+
+                /// Make sure more than one arg was given
+                if (formattedArgs.startsWith('"') && formattedArgs.endsWith('"')) {
+
+                    /// Not a swap file, safe to write too
+                    if (!fileName.startsWith('.!')) {
+                        /// Create write interrupt
+                        _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(DISK_IRQ, ['write', [fileName, formattedArgs.replace(/["]/g, "").trim()]]));
+                    }/// if
+
+                    /// Swap file
+                    else {
+                        _StdOut.putText(`${INDENT_STRING}Cannot write to a swap file!`);
+                    }/// else
+                }/// if
+
+                /// Text must be in quotes
+                else {
+                    _StdOut.putText(`${INDENT_STRING}Usage: write <filename> <"[text]"> Expected 2 arguments, but got ${args.length}`);
+                    _StdOut.advanceLine();
+                }/// else
+            }/// if
+            /// More than or less than one argument was given
+            else {
+                _StdOut.putText(`${INDENT_STRING}Usage: write <filename> <"[text]"> Expected 2 arguments, but got ${args.length}`);
+                _StdOut.advanceLine();
+            }/// else
+        }/// shellWrite
+
+        /// delete <filename>: Remove [filename] from storage
+        public shellDelete(args: string[]) {
+            /// Make sure only one argument is given
+            if (args.length === 1) {
+
+                /// Not a swap file, safe to delete
+                if (!args[0].startsWith(`${_krnDiskDriver.hiddenFilePrefix}${_krnDiskDriver.swapFilePrefix}`)) {
+                    /// Create delete interrupt
+                    _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(DISK_IRQ, ['delete', args[0]]));
+                }/// if
+
+                /// Swap file
+                else {
+                    /// TODO: kill process on disk... acgually don't
+                    _StdOut.putText(`${INDENT_STRING}Cannot delete swap files!`);
+                }/// else
+            }/// if
+
+            /// More than or less than one argument was given
+            else {
+                _StdOut.putText(`${INDENT_STRING}Usage: delete <filename> Expected 1 argument, but got ${args.length}`);
+                _StdOut.advanceLine();
+            }/// else
+        }/// shellDelete
+
+        public shellRecover(args: string[]) {
+            if (args.length === 1) {
+                var filename: string = args[0].trim().replace(" ", "");
+
+                /// Not a swap file
+                if (!filename.startsWith(`${_krnDiskDriver.hiddenFilePrefix}${_krnDiskDriver.swapFilePrefix}`)) {
+
+                    /// No interrupt needed as long as no one else but the user is recovering non-swap files...
+                    _StdOut.putText(`${INDENT_STRING}${_krnDiskDriver.recoverDirectoryFile(filename)}`);
+                    _StdOut.advanceLine();
+                }/// if
+
+                /// Swap file
+                else {
+                    _StdOut.putText(`${INDENT_STRING}Cannot recover a swap file!`);
+                    _StdOut.advanceLine();
+                }/// else
+            }/// if
+
+            /// More than or less than one argument was given
+            else {
+                _StdOut.putText(`${INDENT_STRING}Usage: recover <filename> Expected 1 argument, but got ${args.length}`);
+                _StdOut.advanceLine();
+            }/// else
+        }/// shellRecover
+
+        public shellDefrag(args) {
+            if (args.length === 0) {
+                _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(DISK_IRQ, ['defrag']));
+            }/// else 
+            else {
+                _StdOut.putText(`${INDENT_STRING}Usage: defrag Expected 0 arguments, but got ${args.length}`);
+                _StdOut.advanceLine();
+            }/// else
+        }/// shellDefrag
+
+        public shellGetSchedule(args: string[]) {
+            if (args.length === 0) {
+                _StdOut.putText(`${INDENT_STRING}Current Scheduling Algorithm: ${_Scheduler.schedulingMethod}`);
+            }/// if
+            else {
+                _StdOut.putText(`${INDENT_STRING}Usage: getscedule Expected 0 arguments, but got ${args.length}`);
+                _StdOut.advanceLine();
+            }/// else
+        }///
+
+        public shellSetSchedule(args: string[]) {
+            if (args.length === 1) {
+                switch (args[0]) {
+                    case ROUND_ROBIN:
+                        _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(SET_SCHEDULE_ALGORITHM, [ROUND_ROBIN]));
+                        break;
+                    case FIRST_COME_FIRST_SERVE:
+                        _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(SET_SCHEDULE_ALGORITHM, [FIRST_COME_FIRST_SERVE]));
+                        break;
+                    case PRIORITY:
+                        _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(SET_SCHEDULE_ALGORITHM, [PRIORITY]));
+                        break;
+                    default:
+                        _StdOut.putText(`${INDENT_STRING}Invalid Schedulng Algorithm, try:`);
+                        _StdOut.advanceLine();
+                        _StdOut.putText(`${INDENT_STRING}${INDENT_STRING}${ROUND_ROBIN}`);
+                        _StdOut.advanceLine();
+                        _StdOut.putText(`${INDENT_STRING}${INDENT_STRING}${FIRST_COME_FIRST_SERVE}`);
+                        _StdOut.advanceLine();
+                        _StdOut.putText(`${INDENT_STRING}${INDENT_STRING}${PRIORITY}`);
+                        _StdOut.advanceLine();
+                        break;
+                }/// switch
+            }/// if
+            else {
+                _StdOut.putText(`${INDENT_STRING}Usage: setscedule Expected 1 argument, but got ${args.length}`);
+                _StdOut.advanceLine();
+            }/// else
+        }/// shellSetSchedule
+
+        public shellRename(args: string[]) {
+            if (args.length === 2) {
+                var oldFileName: string = args[0].trim().replace(" ", "");
+                var newFileName: string = args[1].trim().replace(" ", "");
+                /// no empty file names
+                if (oldFileName.length === 0 || newFileName.length === 0) {
+                    _StdOut.putText(`${INDENT_STRING}Usage: not acceptable file name!`);
+                }/// if
+
+                /// Don't allow swap files to be renamed
+                if (!oldFileName.startsWith(`${_krnDiskDriver.hiddenFilePrefix}${_krnDiskDriver.swapFilePrefix}`)) {
+                    var newFileNameInHex: string = _krnDiskDriver.englishToHex(newFileName).toUpperCase();
+                    /// make sure data is not too big
+                    if (newFileNameInHex.length < 100) {
+
+                        /// New name is not a swap file name
+                        if (!newFileName.startsWith(`${_krnDiskDriver.hiddenFilePrefix}${_krnDiskDriver.swapFilePrefix}`)) {
+
+                            /// Interrupt not necessary, unless anyone other than the user is renaming the file...
+                            _StdOut.putText(`${INDENT_STRING}${_krnDiskDriver.rename(oldFileName, newFileNameInHex)}`);
+                            _StdOut.advanceLine();
+                        }/// if
+
+                        /// New filename cannot be a swap file name
+                        else {
+                            _StdOut.putText(`${INDENT_STRING}New filename cnnot start with${_krnDiskDriver.hiddenFilePrefix}${_krnDiskDriver.swapFilePrefix}`);
+                            _StdOut.advanceLine();
+                        }/// else
+                    }/// if
+
+                    /// new name too big... No Buffer Overflows here!
+                    else {
+                        _StdOut.putText(`${INDENT_STRING}New filename is too long!`);
+                        _StdOut.advanceLine();
+                    }/// else
+
+                }/// if
+
+                /// Cannot rename a swap file
+                else {
+                    _StdOut.putText(`${INDENT_STRING}Cannot rename swap files!`);
+                    _StdOut.advanceLine();
+                }/// else
+            }/// if
+
+            else {
+                _StdOut.putText(`${INDENT_STRING}Usage: rename <file> <newname> Expected 2 argument, but got ${args.length}`);
+                _StdOut.advanceLine();
+            }/// else
+        }/// shellRename
+
+        /// Kind of a last minute thing...
+        public shellCopy(args: string[]) {
+            /// Make sure filename.length <= 60 Bytes
+            if (args.length === 2) {
+                var oldFile = args[0].trim().replace(" ", "");
+                var newFile = args[1].trim().replace(" ", "");
+
+                /// no empty file names
+                if (oldFile.length === 0 || newFile.length === 0) {
+                    _StdOut.putText(`${INDENT_STRING}Usage: not acceptable file name!`);
+                }/// if
+
+                else {
+                    /// Prevent swap file names and hidden file names from being used
+                    if (!oldFile.startsWith(`${_krnDiskDriver.hiddenFilePrefix}${_krnDiskDriver.swapFilePrefix}`) && !newFile.startsWith(`${_krnDiskDriver.hiddenFilePrefix}${_krnDiskDriver.swapFilePrefix}` )) {
+
+                        /// Minus 4 Bytes of the block metadata (containing the pointer and what not)
+                        if (args[0].length < BLOCK_SIZE_LIMIT - FILE_META_DATA_LENGTH) {
+                            _StdOut.putText(`${INDENT_STRING}${_krnDiskDriver.copyDirectoryFile(oldFile, newFile)}`);
+                            _StdOut.advanceLine();
+                        }/// if
+
+                        else {
+                            _StdOut.putText(`${INDENT_STRING}Usage: copy <filename> Expected <= 60 Bytes, but got ${args.length} Bytes`);
+                            _StdOut.advanceLine();
+                        }/// else
+                    }/// if
+
+                    else {
+                        _StdOut.putText(`${INDENT_STRING}Usage: copy <filename> cannot start with ".!"`);
+                        _StdOut.advanceLine();
+                    }/// else
+                }/// else
+            }/// if
+
+            /// More than one argument was given
+            else {
+                _StdOut.putText(`${INDENT_STRING}Usage: create <filename> Expected 1 arguments, but got ${args.length}`);
+                _StdOut.advanceLine();
+            }/// else
+        }/// shellCopy
 
         /********************
          * ASCII art for BLM
          ********************/
+
+
         public blackLivesMatter() {
             /// I may be a computer scientist... but I'm also a progressive!
             ///
@@ -1236,7 +1830,40 @@ module TSOS {
             /// OKAY, so now to the ACTUAL porgram
             _StdOut.advanceLine();
             _StdOut.advanceLine();
+
+            // var q = new PriorityQueue();
+
+            // _StdOut.putText("Testing the priority queue");
+            // _StdOut.advanceLine();
+
+            // var z = 10;
+            // for (var j = 0; j < 10; ++j) {
+            //     q.enqueueInterruptOrPcb({data: `Node: ${j.toString()} | Priority: ${z}`, priority: z});
+            //     z--;
+            // }/// for
+
+            // _StdOut.putText(`${q.print()}`);
+            // _StdOut.advanceLine();
+
+            // for (var g = 0; g < 10; ++g) {
+            //     _StdOut.putText(`${q.print()}`);
+            // _StdOut.advanceLine();
+            //     _StdOut.putText(q.dequeueInterruptOrPcb().data);
+            //     _StdOut.advanceLine();
+            // }/// for
             /// Onwards to putPrompt();!
         }/// blackLivesMatter
     }/// class
 }/// shell
+
+
+/* 
+ *
+ * Would you believe that comming to Marist I didn't know a single thing about programming? Everything I've learned has been from Marist and independent research
+ * in between semesters (I feel like everyone else is light years ahead of me and I am playing catch up game).
+ *
+ * I assume everyone is getting >= 100% on these projects. And I messed up the easiest part on the Midterm
+ * which at least now I will never forget. (I learn best through negative reinforcement)
+ * 
+ * 
+*/

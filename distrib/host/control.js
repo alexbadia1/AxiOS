@@ -51,8 +51,11 @@ var TSOS;
                 // the global (and properly capitalized) _GLaDOS variable.
                 _GLaDOS = new Glados();
                 _GLaDOS.init();
-            }
-        }
+            } /// if
+        } /// hostInit
+        ///////////////
+        /// Buttons ///
+        ///////////////
         static hostLog(msg, source = "?") {
             // Note the OS CLOCK.
             var clock = _OSclock;
@@ -64,18 +67,22 @@ var TSOS;
             var taLog = document.getElementById("taHostLog");
             taLog.value = str + taLog.value;
             // TODO in the future: Optionally update a log database or some streaming service.
-        }
+        } /// hostLog
         //
         // Host Events
         //
         static hostBtnStartOS_click(btn) {
             // Disable the (passed-in) start button...
             btn.disabled = true;
+            document.getElementById('btnStartOS').style.backgroundColor = "#143e6c";
             // .. enable the Halt and Reset buttons ...
             /// and the single step buttons
             document.getElementById("btnHaltOS").disabled = false;
+            document.getElementById("btnHaltOS").style.backgroundColor = "#007acc";
             document.getElementById("btnReset").disabled = false;
+            document.getElementById("btnReset").style.backgroundColor = "#007acc";
             document.getElementById("btnSingleStepMode").disabled = false;
+            document.getElementById("btnSingleStepMode").style.backgroundColor = "#007acc";
             // .. set focus on the OS console display ...
             document.getElementById("display").focus();
             // ... Create and initialize the CPU (because it's part of the hardware)  ...
@@ -92,6 +99,8 @@ var TSOS;
             _ResidentList.init();
             /// ... Create and initialize Dispatcher
             _Dispatcher = new TSOS.Dispatcher();
+            /// ... Create and initialixe Swapper
+            _Swapper = new TSOS.Swapper();
             /// ... Create and initialize Scheduler
             _Scheduler = new TSOS.Scheduler();
             // ... then set the host clock pulse ...
@@ -101,7 +110,7 @@ var TSOS;
             document.getElementById('divLog--status').innerText = 'AxiOS Alive';
             _Kernel = new TSOS.Kernel();
             _Kernel.krnBootstrap(); // _GLaDOS.afterStartup() will get called in there, if configured.
-        }
+        } /// hostBtnStartOS_click
         static hostBtnHaltOS_click(btn) {
             Control.hostLog("Emergency halt", "host");
             Control.hostLog("Attempting Kernel shutdown.", "host");
@@ -110,36 +119,51 @@ var TSOS;
             // Stop the interval that's simulating our clock pulse.
             clearInterval(_hardwareClockID);
             // TODO: Is there anything else we need to do here?
-        }
+        } /// hostBtnHaltOS_click
         static hostBtnReset_click(btn) {
             // The easiest and most thorough way to do this is to reload (not refresh) the document.
             location.reload(true);
             // That boolean parameter is the 'forceget' flag. When it is true it causes the page to always
             // be reloaded from the server. If it is false or not specified the browser may reload the
             // page from its cache, which is not what we want.
-        }
+        } /// hostBtnReset_click
+        /************************************************************************************************
+        iProject2 Buttons and Display:
+            Provides the ability to single-step execution (via GUI buttons):
+                - hostBtnSingleStep_click(): toggles single step mode on or off
+                - hostBtnNextStep_click(): performs one kernel clock pulse per button press
+                - intializeVisualMemory(): called on start up of os to create the table for memory
+                - updateVisualMemory(): called after every cpu cycle to visually update the memory table
+                - updateVisualCpu(): called after every cpu cycle to visually update the cpu table
+                - updateVisualPcb(): called after every cpu cycle to visually update the process table
+                - visualizeInstructionRegister()
+                - formatToHexWithPadding(): formats decimal string to hexadecimal
+        **************************************************************************************************/
         static hostBtnSingleStep_click(btn) {
-            /// Enable Next Step Button
-            ///
-            ///Enter Single step mode...
-            /// Or out of single step mode..
-            ///
             /// Must do this first so the text label updates properly
             _SingleStepMode = !_SingleStepMode;
+            /// Single Step Mode active
             if (_SingleStepMode) {
+                /// Enable the "Next Step" button
                 document.getElementById("btnNextStep").disabled = false;
+                document.getElementById("btnNextStep").style.backgroundColor = "#007acc";
+                /// Show user that single step mode is ON
                 document.getElementById("btnSingleStepMode").value = "Single Step OFF";
             } /// if
+            /// Single Step Mode 
             else {
+                /// Enable the "Next Step" button
                 document.getElementById("btnNextStep").disabled = true;
+                document.getElementById("btnNextStep").style.backgroundColor = '#143e6c';
+                /// Visually show user that single step mode is OFF
                 document.getElementById("btnSingleStepMode").value = "Single Step ON";
             } /// else
-            _KernelInterruptPriorityQueue.enqueue(new TSOS.Node(new TSOS.Interrupt(SINGLE_STEP_IRQ, [])));
-        }
+            _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(SINGLE_STEP_IRQ, []));
+        } /// hostBtnSingleStep_click
         static hostBtnNextStep_click(btn) {
             /// Process single step interrupt
-            _KernelInterruptPriorityQueue.enqueue(new TSOS.Node(new TSOS.Interrupt(NEXT_STEP_IRQ, [])));
-        }
+            _KernelInterruptPriorityQueue.enqueueInterruptOrPcb(new TSOS.Interrupt(NEXT_STEP_IRQ, []));
+        } /// hostBtnNextStep_click
         static initializeVisualMemory() {
             /// Increment by 8 on order to create a row every 8 bytes
             for (var physicalAddressRow = 0; physicalAddressRow < _MemoryAccessor.mainMemorySize() / 8; ++physicalAddressRow) {
@@ -200,7 +224,7 @@ var TSOS;
             _visualPcb.rows[1].cells[6].innerHTML = _CPU.Zflag;
             _visualPcb.rows[1].cells[7].innerHTML = _CPU.localPCB.priority;
             _visualPcb.rows[1].cells[8].innerHTML = _CPU.localPCB.processState;
-            _visualPcb.rows[1].cells[9].innerHTML = `Vol ${_CPU.localPCB.volumeIndex + 1}`;
+            _visualPcb.rows[1].cells[9].innerHTML = _CPU.localPCB.volumeIndex === -1 ? `Disk` : `Seg ${_CPU.localPCB.volumeIndex + 1}`;
         } /// updateVisualPcb
         static visualizeInstructionRegister(newInsruction) {
             /// Instruction Register
@@ -214,8 +238,24 @@ var TSOS;
             paddedhexNumber = paddedhexNumber.substr(paddedhexNumber.length - 2).toUpperCase();
             return paddedhexNumber;
         } /// formatToHexWithPadding
+        static formatToHexWithPaddingTwoBytes(decimalNum) {
+            var hexNumber = decimalNum.toString(16);
+            /// Add left 0 padding
+            var paddedhexNumber = "0000" + hexNumber;
+            paddedhexNumber = paddedhexNumber.substr(paddedhexNumber.length - 4).toUpperCase();
+            return paddedhexNumber;
+        } /// formatToHexWithPadding
+        static formatToHexWithPaddingSevenBytes(date) {
+            var monthInHex = parseInt(date.substring(0, 2)).toString(16).padStart(2, '0'); /// Month
+            var dayInHex = parseInt(date.substring(2, 4)).toString(16).padStart(2, '0'); /// Day
+            var yearInHex = parseInt(date.substring(4, 8)).toString(16).padStart(4, '0'); /// Year
+            var hoursInHex = parseInt(date.substring(8, 10)).toString(16).padStart(2, '0'); /// Hours
+            var minutesInHex = parseInt(date.substring(10, 12)).toString(16).padStart(2, '0'); /// Minutes
+            var secondsInHex = parseInt(date.substring(12, 14)).toString(16).padStart(2, '0'); /// Seconds
+            return monthInHex + dayInHex + yearInHex + hoursInHex + minutesInHex + secondsInHex;
+        } /// formatToHexWithPadding
         /*************************************************************************************
-        iProject4 Display:
+        iProject3 Display:
             calculateAvergeWaitTime()
             calculateAverageTurnAroundTime()
             showCPUBurstUsage()
@@ -341,7 +381,7 @@ var TSOS;
             var table = document.createElement('table');
             table.setAttribute("id", "tempTable");
             table.style.width = "100%";
-            table.style.border = "1px solid black";
+            table.style.borderTop = "1px solid #bbbbbb";
             var rowWithHeaders = document.createElement('tr');
             var rowWithValues = document.createElement('tr');
             table.appendChild(rowWithHeaders);
@@ -361,42 +401,88 @@ var TSOS;
                 rowWithHeaders.appendChild(headerCell);
             } /// for
             _visualResidentList.appendChild(table);
-            for (var i = 0; i < 1; ++i) {
-                table.rows[0].cells[0].innerHTML = "PID";
-                table.rows[1].cells[0].innerHTML = pcb.processID.toString();
-                table.rows[0].cells[1].innerHTML = "PC";
-                table.rows[1].cells[1].innerHTML = this.formatToHexWithPadding(pcb.programCounter);
-                table.rows[0].cells[2].innerHTML = "IR";
-                table.rows[1].cells[2].innerHTML = pcb.instructionRegister;
-                table.rows[0].cells[2].innerHTML = "ACC";
-                table.rows[1].cells[3].innerHTML = pcb.accumulator;
-                table.rows[0].cells[4].innerHTML = "X";
-                table.rows[1].cells[4].innerHTML = pcb.xRegister;
-                table.rows[0].cells[5].innerHTML = "Y";
-                table.rows[1].cells[5].innerHTML = pcb.yRegister;
-                table.rows[0].cells[6].innerHTML = "Z";
-                table.rows[1].cells[6].innerHTML = pcb.zFlag.toString();
-                table.rows[0].cells[7].innerHTML = "Priority";
-                table.rows[1].cells[7].innerHTML = pcb.priority.toString();
-                table.rows[0].cells[8].innerHTML = "State";
-                table.rows[1].cells[8].innerHTML = pcb.processState;
-                table.rows[0].cells[9].innerHTML = "Location";
-                table.rows[1].cells[9].innerHTML = `Vol ${pcb.volumeIndex + 1}`;
-            } /// for
+            table.rows[0].cells[0].innerHTML = "PID";
+            table.rows[1].cells[0].innerHTML = pcb.processID.toString();
+            table.rows[0].cells[1].innerHTML = "PC";
+            table.rows[1].cells[1].innerHTML = this.formatToHexWithPadding(pcb.programCounter);
+            table.rows[0].cells[2].innerHTML = "IR";
+            table.rows[1].cells[2].innerHTML = pcb.instructionRegister;
+            table.rows[0].cells[2].innerHTML = "ACC";
+            table.rows[1].cells[3].innerHTML = pcb.accumulator;
+            table.rows[0].cells[4].innerHTML = "X";
+            table.rows[1].cells[4].innerHTML = pcb.xRegister;
+            table.rows[0].cells[5].innerHTML = "Y";
+            table.rows[1].cells[5].innerHTML = pcb.yRegister;
+            table.rows[0].cells[6].innerHTML = "Z";
+            table.rows[1].cells[6].innerHTML = pcb.zFlag.toString();
+            table.rows[0].cells[7].innerHTML = "Priority";
+            table.rows[1].cells[7].innerHTML = pcb.priority.toString();
+            table.rows[0].cells[8].innerHTML = "State";
+            table.rows[1].cells[8].innerHTML = pcb.processState;
+            table.rows[0].cells[9].innerHTML = "Location";
+            table.rows[1].cells[9].innerHTML = pcb.volumeIndex === -1 ? `Disk` : `Seg ${pcb.volumeIndex + 1}`;
         } /// dumpResidentList
         static visualizeResidentList() {
+            /// Visually refreshing the "Ready Queue" requires deleting the pre-existing tables.
+            /// Obviously on the first iteration there will be no pre-existing tables, so just catch the error
+            /// and continue building the table.
             try {
-                document.getElementById("tempTable").parentNode.removeChild(document.getElementById("tempTable"));
-                document.getElementById("tempTable").parentNode.removeChild(document.getElementById("tempTable"));
+                for (var i = 0; i < _ResidentList.size - 1; ++i) {
+                    document.getElementById("tempTable").parentNode.removeChild(document.getElementById("tempTable"));
+                } /// for
             } /// try
             catch (e) {
                 _Kernel.krnTrace(e);
                 _Kernel.krnTrace("No resident list to delete.");
             } /// catch
-            for (var index = 0; index < _Scheduler.readyQueue.length; ++index) {
-                this.createVisualResidentList(_Scheduler.readyQueue[index]);
+            for (var index = 0; index < _Scheduler.readyQueue.getSize(); ++index) {
+                for (var nestedIndex = 0; nestedIndex < _Scheduler.readyQueue.queues[index].getSize(); ++nestedIndex) {
+                    this.createVisualResidentList(_Scheduler.readyQueue.queues[index].q[nestedIndex]);
+                } /// for
             } /// for
         } /// visualizeResidentList
+        /**
+         * iProject4 Control Methods
+         *
+         */
+        static updateVisualDisk() {
+            _Kernel.krnTrace('Updated visual disk!');
+            /// Get table
+            try {
+                document.getElementById("visual--disk--table").parentNode.removeChild(document.getElementById("visual--disk--table"));
+            } /// try
+            catch (e) { }
+            ;
+            var table = document.createElement('table');
+            table.setAttribute("id", "visual--disk--table");
+            table.style.border = "none";
+            /// Check to see if disk is formatted
+            if (!_krnDiskDriver.formatted) {
+                _Kernel.krnTrace('Not formatted');
+                return;
+            } /// if
+            /// Create Headers and append the header row
+            // var rowWithHeaders = document.createElement('tr');
+            // rowWithHeaders.appendChild(document.createElement('td').appendChild(document.createTextNode('Key')));
+            // rowWithHeaders.appendChild(document.createElement('td').appendChild(document.createTextNode('Value')));
+            // table.appendChild(rowWithHeaders);
+            /// Create each block in the 16KB Disk
+            for (var trackNum = 0; trackNum < TRACK_LIMIT; ++trackNum) {
+                for (var sectorNum = 0; sectorNum < SECTOR_LIMIT; ++sectorNum) {
+                    for (var blockNum = 0; blockNum < BLOCK_LIMIT; ++blockNum) {
+                        /// Create a row
+                        var rowWithValues = document.createElement('tr');
+                        /// var key = document.createElement('td').appendChild(document.createTextNode(`(${trackNum}, ${sectorNum}, ${blockNum})`));
+                        var value = document.createElement('td');
+                        value.style.whiteSpace = 'nowrap';
+                        value.appendChild(document.createTextNode(`(${trackNum}, ${sectorNum}, ${blockNum}) | ${sessionStorage.getItem(`${TSOS.Control.formatToHexWithPadding(trackNum)}${TSOS.Control.formatToHexWithPadding(sectorNum)}${TSOS.Control.formatToHexWithPadding(blockNum)}`)}`));
+                        rowWithValues.appendChild(value);
+                        table.appendChild(rowWithValues);
+                    } /// for
+                } /// for
+            } /// for
+            document.getElementById('visual--disk--table--container').appendChild(table);
+        } /// updateVisualDisk
     } /// class
     TSOS.Control = Control;
 })(TSOS || (TSOS = {})); /// module

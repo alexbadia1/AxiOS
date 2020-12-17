@@ -10,11 +10,17 @@
 
 module TSOS {
     export class Queue {
-        constructor(public q = new Array()) {
-        }
+        constructor(
+            public q = new Array(),
+            public priority = 1,
+        ) {}
 
         public getSize() {
             return this.q.length;
+        }
+
+        public getIndex(index: number) {
+            return this.q[index];
         }
 
         public isEmpty(){
