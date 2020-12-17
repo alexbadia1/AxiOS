@@ -6,8 +6,6 @@ AxiOS - a browser-based virtual Operating System in TypeScript
 
 Grade branch iProject 1 for iProject 1, branch iProject2 for iProject2, iProject3 for iProject3, iLabs for Labs etc.
 
-Master:
-<<<<<<< HEAD
 - [Origin Master (Up to Date as of Decmeber 17, 2020)](https://github.com/alexbadia1/myAlanClasses/tree/master)
 
 Branches: 
