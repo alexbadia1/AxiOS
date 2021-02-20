@@ -76,71 +76,79 @@ All tests are located in the /docs/test and are implemented as javascript script
 ### Creating your own test
 
 ```
-/// Greet the user
-///
-/// This init() function is called immediately on start up as this test is called in index.html
-/// and describes what this test actually, well, tests.
-this.init() = function () {
-alert('[Insert your message here. Try to make this message describe what the test is doing]')
-}// function
+function Glados() {
+  this.version 2112;
+
+  /// Greet the user
+  ///
+  /// This init() function is called immediately on start up as this test is called in index.html
+  /// and describes what this test actually, well, tests.
+  this.init = function () {
+  alert('[Insert your message here. Try to make this message describe what the test is doing]')
+  }// init
 
 
-/// Tests are performed here
-this.afterStartup = function() {
+  /// Tests are performed here
+  this.afterStartup = function() {
 
-/// Input text into the console
-///
-/// Here, I authomatically type the word "apple" into the console.
-///
-/// Note: Letters must be inputted one character at a time!
-/// Multiple characters are used to represent special user keyboard input and may cause unforseeable issues.
-_KernelInputQueue.enqueue('a');
-_KernelInputQueue.enqueue('p');
-_KernelInputQueue.enqueue('p');
-_KernelInputQueue.enqueue('l');
-_KernelInputQueue.enqueue('e');
+  /// Input text into the console
+  ///
+  /// Here, I authomatically type the word "apple" into the console.
+  ///
+  /// Note: Letters must be inputted one character at a time!
+  /// Multiple characters are used to represent special user keyboard input and may cause unforseeable issues.
+  _KernelInputQueue.enqueue('a');
+  _KernelInputQueue.enqueue('p');
+  _KernelInputQueue.enqueue('p');
+  _KernelInputQueue.enqueue('l');
+  _KernelInputQueue.enqueue('e');
 
-/// Note even spaces must be loaded as such 
-_KernelInputQueue.enqueue(' ');
+  /// Note even spaces must be loaded as such 
+  _KernelInputQueue.enqueue(' ');
 
-/// To simulate the 'enter' key use
-TSOS.Kernel.prototype.krninterruptHandler(Keyboard_IRQ, [13, false]);
+  /// To simulate the 'enter' key use
+  TSOS.Kernel.prototype.krninterruptHandler(Keyboard_IRQ, [13, false]);
 
-/// Load a program 
-///
-/// To enter data into the program text box 
-/// Use simple DOM manipulation and set the text equal to whatever string input you want
-document.getElementById("taProgramInput).value = "[String value here]"
-}
+  /// Load a program 
+  ///
+  /// To enter data into the program text box 
+  /// Use simple DOM manipulation and set the text equal to whatever string input you want
+  document.getElementById("taProgramInput).value = "[String value here]"
+  }// afterstartup
+}// Glados
 
 ```
 
 ### Sample test
 
 ```
-/// Sample test
-/// 
-/// Loads a simple program and runs it.
-this.init() = function () {
-alert('This test loads a simple program and runs it');
-}// function
+function Glados() {
+  this.version 2112;
+  
+  /// Sample test
+  /// 
+  /// Loads a simple program and runs it.
+  this.init = function () {
+  alert('This test loads a simple program and runs it');
+  }// init
 
 
-/// Tests are performed here
-this.afterStartup = function() {
+  /// Tests are performed here
+  this.afterStartup = function() {
 
-/// Load a program 
-document.getElementById("taProgramInput).value = "A9 00";
+  /// Load a program 
+  document.getElementById("taProgramInput).value = "A9 00";
 
-/// Input 'load' command to console
-_KernelInputQueue.enqueue('l');
-_KernelInputQueue.enqueue('o');
-_KernelInputQueue.enqueue('a');
-_KernelInputQueue.enqueue('d');
+  /// Input 'load' command to console
+  _KernelInputQueue.enqueue('l');
+  _KernelInputQueue.enqueue('o');
+  _KernelInputQueue.enqueue('a');
+  _KernelInputQueue.enqueue('d');
 
-/// "Press" 'enter' to run load command
-TSOS.Kernel.prototype.krninterruptHandler(Keyboard_IRQ, [13, false]);
-}
+  /// "Press" 'enter' to run load command
+  TSOS.Kernel.prototype.krninterruptHandler(Keyboard_IRQ, [13, false]);
+  }// afterstartup
+}// Galdos
 ```
 
 ## Built With
