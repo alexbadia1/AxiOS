@@ -156,7 +156,7 @@ TSOS.Kernel.prototype.krninterruptHandler(Keyboard_IRQ, [13, false]);
 - Rebecca Murphy -enhancments-
 - Alex Badia -implemented new features-
 
-## Oh and yeah, grading
+## Oh and yeah, grading...
 (isn't just building this enough?)
 
 Grade branch iProject 1 for iProject 1, branch iProject2 for iProject2, iProject3 for iProject3, iLabs for Labs etc.
