@@ -79,7 +79,7 @@ All tests are located in the /docs/test and are implemented as javascript script
 /// Greet the user
 ///
 /// This init() function is called immediately on start up as this test is called in index.html
-/// and describes what this test actuakky, wel, tests.
+/// and describes what this test actually, well, tests.
 this.init() = function () {
 alert('[Insert your message here. Try to make this message describe what the test is doing]')
 }// function
