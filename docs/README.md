@@ -31,11 +31,12 @@ First you'll need to setup typescript
 1. Install the [npm](https://www.npmjs.org/) package manager if you don't already have it.
 2. Run `npm install -g typescript` to get the TypeScript Compiler. (You may need to do this as root.)
 
-IDE SUPPORT
+#### IDE SUPPORT
 
 IDE's like Visual Studio Code, IntelliJ and probably others already support TypeScript-to-JavaScript compilation.
+Make sure you have the necessary plugins installed for your IDE.
 
-NO IDE SUPPORT
+#### NO IDE SUPPORT
 
 You'll need to automate the compilation process with something like Gulp.
 
@@ -55,7 +56,11 @@ Edit your TypeScript files in the source/scripts directory.
 
 ## Running the tests
 
-All tests are located in the /docs/test and are implemented as javascript scripts. These tests are called GlaDos, do not break them!
+All tests are located in the /docs/test and are implemented as javascript scripts. These tests are called GlaDos, do not break them! These scripts will use 
+a combination of the DOM and the KernelInputQueue to automate typing keyboard characters into the OS.
+
+### How to run a test
+
 To enable GlaDos for tests:
 
 1. Navigate to the index.html
@@ -66,7 +71,13 @@ To enable GlaDos for tests:
 You can easily change which script is run by modifying the 'src' of `<script type = "text/javascript" src = "test\glados-ip4.js"> <script>`.
 it is recommended keeping all of you test files in the /docs/test and maintain the GlaDos naming conventions.
 
-All tests are located in the /docs/test and are implemented as javascript scripts. 
+All tests are located in the /docs/test and are implemented as javascript scripts.
+
+### Creating your own test
+
+
+
+
 ## Grading
 
 Grade branch iProject 1 for iProject 1, branch iProject2 for iProject2, iProject3 for iProject3, iLabs for Labs etc.
