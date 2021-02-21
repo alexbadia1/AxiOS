@@ -5,7 +5,7 @@ AxiOS - a browser-based virtual Operating System in TypeScript
 This was Alan's Operating Systems class initial project. See https://www.labouseur.com/courses/os/ for details. 
 It was originally developed by Alan and then enhanced by Bob Nisco and Rebecca Murphy over the years. 
 
-The purpose of this branch serves to maintain and improve the quality of the code base for AxiOS.
+*The purpose of this branch serves to maintain and improve the quality of the code base for AxiOS*.
 
 ## Getting Started
 
